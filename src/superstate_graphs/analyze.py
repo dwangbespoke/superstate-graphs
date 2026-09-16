@@ -702,6 +702,8 @@ only JSON. All labels remain provisional LLM judgments, never execution guarante
 
 # Public protocol fingerprint used by the downstream task constructor.
 JUDGE_PROMPT = DECISION_JUDGE_PROMPT + "\n---TRANSFER---\n" + TRANSFER_JUDGE_PROMPT
+JUDGE_DECODING = {"decision": {"thinking": True, "max_tokens": 8192},
+                  "transfer": {"thinking": True, "max_tokens": 12288}}
 LABEL_SCHEMA = {"type": "object", "additionalProperties": False,
     "properties": {"label": {"type": "string", "enum": ["supported", "contradicted", "unknown"]},
                    "rationale": {"type": "string"}}, "required": ["label", "rationale"]}
@@ -782,6 +784,39 @@ def _bounded_evidence(value: Any, maximum_bytes: int) -> dict:
             "note": "Incomplete evidence; cannot support a claim requiring omitted content."}
 
 
+def _judge_structured_output(client: CachedClient, system: str, payload: dict,
+                             schema: dict, stage: str, attempts_dir: Path) -> tuple[dict, list[dict], bool]:
+    """Only exhausted structured-output failures become explicit technical unknowns."""
+    name = "local_decision_v4" if stage == "decision" else "operation_transfer_v4"
+    labels = ("decision",) if stage == "decision" else ("local_transfer", "full_segment_transfer")
+    try:
+        parsed, attempts = structured_output(client, system, json.dumps(payload, ensure_ascii=False),
+            schema, name, lambda value: validate_judgment(value, schema, labels), attempts_dir,
+            **JUDGE_DECODING[stage])
+        return parsed, attempts, False
+    except ValueError as error:
+        # structured_output emits this exact terminal error only after its two
+        # schema/empty-content attempts. API network/auth/context failures are
+        # not caught here and must stop the run for diagnosis.
+        if not str(error).startswith(f"{name} failed both schema/role attempts:"):
+            raise
+        attempts = [json.loads(path.read_text()) for path in sorted(attempts_dir.glob("attempt-*.json"))]
+        label = {"label": "unknown", "rationale":
+                 "Technical unknown: the judge exhausted its bounded structured-output attempts; "
+                 "no semantic compatibility judgment was obtained. See saved raw attempts."}
+        parsed = {key: dict(label) for key in labels}
+        parsed["typed_role_bindings"] = []
+        if stage == "decision":
+            parsed.update(local_decision_A="", local_decision_B="", shared_local_decision="",
+                          material_differences=[])
+        else:
+            parsed.update(prerequisites=[], expected_effects=[])
+        save(attempts_dir / "technical_unknown.json", {"stage": stage, "error": str(error),
+             "decoding": JUDGE_DECODING[stage], "judgment": parsed,
+             "note": "No semantic contradiction or support is inferred from technical failure."})
+        return parsed, attempts, True
+
+
 def judge_pair(client: CachedClient, prefix_A: dict, prefix_B: dict,
                observed_segment_after_B: dict, attempts_dir: Path) -> tuple[dict, dict]:
     """Prefix-only local decision, then fixed local episode and full transfer.
@@ -792,10 +827,8 @@ def judge_pair(client: CachedClient, prefix_A: dict, prefix_B: dict,
     episodes = witnessed_operations(observed_segment_after_B)
     prefixes = {"prefix_A": prefix_A, "prefix_B": prefix_B}
     # The first call physically cannot see which action B chose or what followed.
-    decision, decision_attempts = structured_output(client, DECISION_JUDGE_PROMPT,
-        json.dumps(prefixes, ensure_ascii=False), DECISION_SCHEMA, "local_decision_v4",
-        lambda value: validate_judgment(value, DECISION_SCHEMA, ("decision",)),
-        attempts_dir / "decision", max_tokens=2200)
+    decision, decision_attempts, decision_unknown = _judge_structured_output(client,
+        DECISION_JUDGE_PROMPT, prefixes, DECISION_SCHEMA, "decision", attempts_dir / "decision")
     local = _bounded_evidence(episodes[0], 18000)
     full = _bounded_evidence(episodes, 36000)
     transfer_input = {**prefixes, "prefix_only_decision_judgment": decision,
@@ -804,11 +837,8 @@ def judge_pair(client: CachedClient, prefix_A: dict, prefix_B: dict,
         "step_ids": [str(episode["step_id"]) for episode in episodes],
         "segment_provenance": {key: observed_segment_after_B.get(key) for key in
                                ("source", "source_id", "target_id", "transition_evidence")}}
-    transfer, transfer_attempts = structured_output(client, TRANSFER_JUDGE_PROMPT,
-        json.dumps(transfer_input, ensure_ascii=False), TRANSFER_SCHEMA, "operation_transfer_v4",
-        lambda value: validate_judgment(value, TRANSFER_SCHEMA,
-                                       ("local_transfer", "full_segment_transfer")),
-        attempts_dir / "transfer", max_tokens=2400)
+    transfer, transfer_attempts, transfer_unknown = _judge_structured_output(client,
+        TRANSFER_JUDGE_PROMPT, transfer_input, TRANSFER_SCHEMA, "transfer", attempts_dir / "transfer")
     # An incomplete episode may still exhibit a contradiction, but must never
     # receive supported for its unobserved remainder. Preserve the raw response.
     scope_overrides = []
@@ -822,7 +852,11 @@ def judge_pair(client: CachedClient, prefix_A: dict, prefix_B: dict,
     combined = {**decision, **transfer, "decision_typed_role_bindings": decision["typed_role_bindings"],
         "splice": transfer["local_transfer"],
         "role_bindings": {item["role"]: f"B={item['B']} -> A={item['A']}" for item in bindings},
-        "protocol_version": "prefix_decision_and_scoped_transfer_v4",
+        "protocol_version": "prefix_decision_and_scoped_transfer_v4_reasoning",
+        "judge_decoding": JUDGE_DECODING,
+        "technical_unknown": decision_unknown or transfer_unknown,
+        "technical_unknown_stages": [stage for stage, unknown in
+                                      (("decision", decision_unknown), ("transfer", transfer_unknown)) if unknown],
         "operation_scope": "first_witnessed_execution_episode",
         "judged_operation_step_ids": [str(episodes[0]["step_id"])],
         "full_segment_step_ids": [str(item["step_id"]) for item in episodes],
@@ -846,6 +880,10 @@ def make_probes(pairs: list[tuple[History, History]], segments: list[dict], refl
         provenance = out / "frozen_judgments" / f"{probe_id}.json"
         record = {"probe_id": probe_id, "left_id": left.history_id, "right_id": right.history_id,
                   "judge_prompt_sha256": fingerprint(JUDGE_PROMPT), "judge_model": reflector.model,
+                  "judge_decoding": JUDGE_DECODING,
+                  "judge_protocol_sha256": fingerprint({"prompt": JUDGE_PROMPT,
+                      "decision_schema": DECISION_SCHEMA, "transfer_schema": TRANSFER_SCHEMA,
+                      "decoding": JUDGE_DECODING}),
                   "input_sha256": fingerprint(payload), "independent_of_candidate": True,
                   "evidence_tier": "proxy", "judgment": parsed, "segment_source": segment["source"]}
         record["structured_attempts"] = attempts

@@ -64,6 +64,17 @@ remain a model-generated approximation of the history, not certified sufficient
 statistics.
 # Frozen-judge protocol correction
 
+The revised local-decision protocol still rejected all 68 decisions when the
+35B judge ran without reasoning. A bounded same-pair diagnostic kept its prompt,
+schema, and input fixed and enabled reasoning: the judge then correctly recognized
+the shared unresolved backend-identification decision. The transfer diagnostic
+exhausted its 6,144-token reasoning budget without a final label. Production
+therefore uses reasoning with 8,192 decision tokens and 12,288 transfer tokens.
+Exhausted response attempts are recorded as technical unknowns, not semantic
+contradictions. The nonthinking bank is retained in
+`results/analysis_v1/previous_v4_nonthinking` and the diagnostic receipts are retained
+under `results/analysis_v1/diagnostics/thinking_same_pair_v4`.
+
 The first frozen bank labeled all 68 sampled pairs contradicted. An adversarial
 review found a concrete mismatch with the intended abstraction: two initial
 histories both needed to identify `$DB_TYPE`, yet the judge rejected them because

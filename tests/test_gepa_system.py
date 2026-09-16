@@ -348,6 +348,41 @@ def test_protocol_retains_concrete_negative_judgment_without_optimistic_repair(r
     decision["decision"]["rationale"] = reason
     assert validate_judgment(decision, DECISION_SCHEMA, ("decision",))["decision"] == {
         "label": "contradicted", "rationale": reason}
+
+
+@pytest.mark.parametrize("failure", ["malformed", "empty_final"])
+def test_exhausted_judge_structure_becomes_technical_unknown_with_saved_attempts(tmp_path, failure):
+    from superstate_graphs.analyze import (DECISION_JUDGE_PROMPT, DECISION_SCHEMA,
+                                           _judge_structured_output)
+    class Client:
+        def __init__(self):
+            self.calls = []
+        def call(self, messages, **kwargs):
+            self.calls.append(kwargs)
+            if failure == "empty_final":
+                raise ValueError("reflector: empty final content; finish_reason=length")
+            return '{"analysis":"I ignored the requested structure"}'
+    client = Client()
+    result, attempts, technical = _judge_structured_output(client, DECISION_JUDGE_PROMPT,
+        {"prefix_A": {}, "prefix_B": {}}, DECISION_SCHEMA, "decision", tmp_path)
+    assert technical and result["decision"]["label"] == "unknown"
+    assert result["typed_role_bindings"] == []
+    assert len(client.calls) == 2 and len(attempts) == 2
+    assert all(call["thinking"] is True and call["max_tokens"] == 8192 for call in client.calls)
+    assert (tmp_path / "attempt-0.json").exists() and (tmp_path / "technical_unknown.json").exists()
+
+
+def test_judge_network_failure_remains_actionable_and_transfer_budget_is_explicit(tmp_path):
+    from superstate_graphs.analyze import (TRANSFER_JUDGE_PROMPT, TRANSFER_SCHEMA,
+                                           _judge_structured_output)
+    class Client:
+        def call(self, messages, **kwargs):
+            assert kwargs["thinking"] is True and kwargs["max_tokens"] == 12288
+            raise TimeoutError("Endpoint is unavailable")
+    with pytest.raises(TimeoutError, match="unavailable"):
+        _judge_structured_output(Client(), TRANSFER_JUDGE_PROMPT, {}, TRANSFER_SCHEMA,
+                                 "transfer", tmp_path)
+    assert not (tmp_path / "technical_unknown.json").exists()
 def test_concurrent_cache_writers_leave_one_complete_json(tmp_path):
     from concurrent.futures import ThreadPoolExecutor
     from superstate_graphs.analyze import save
