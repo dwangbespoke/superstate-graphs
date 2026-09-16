@@ -1,0 +1,8 @@
+sg_profile_6a8ba1bfe2:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /app/database/retail.duckdb
+      schema: sg_6a8ba1bfe2
+      threads: 2

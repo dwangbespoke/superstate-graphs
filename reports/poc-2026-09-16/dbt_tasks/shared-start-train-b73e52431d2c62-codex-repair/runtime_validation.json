@@ -1,0 +1,56 @@
+{
+  "status": "validated",
+  "errors": [],
+  "base_image": "ghcr.io/snowflake-labs/data-eng-bench-base@sha256:ef92b6ef197a89ff1d8b371aaf5de19343003abc462991ddeedb1b1005e2e04b",
+  "spec_sha256": "1bac49a009a65f13ebb43b08b317b66aa12b635ac42e68ea5213374e9165e03f",
+  "limitations": [
+    "Execution agreement does not establish semantic preservation of the targeted decision.",
+    "The reference query and oracle share a generator; this is not independent correctness evidence.",
+    "Results are checked on one pinned warehouse, not adversarial or perturbed data.",
+    "No learner difficulty, pooled variance, or training benefit is established by these checks."
+  ],
+  "sandbox_id": "sb-swBObuN2y4qBA9HErMOYW4",
+  "phases": {
+    "before_starting_files": {
+      "matches": false,
+      "error": "ValueError: Target must be a materialized BASE TABLE; found []"
+    },
+    "starting_dbt": {
+      "returncode": 2,
+      "stdout": "09:27:59  Running with dbt=1.10.22\n09:27:59  Encountered an error:\nRuntime Error\n  \n  dbt encountered an error while trying to read your profiles.yml file.\n  \n  The profiles.yml file at /app/sg_project/profiles.yml is empty\n  \n",
+      "stderr": ""
+    },
+    "starting_result": {
+      "matches": false,
+      "error": "ValueError: Target must be a materialized BASE TABLE; found []"
+    },
+    "oracle_dbt": {
+      "returncode": 0,
+      "stdout": "09:28:01  Running with dbt=1.10.22\n09:28:01  Registered adapter: duckdb=1.10.0\n09:28:01  Unable to do partial parsing because saved manifest not found. Starting full parse.\n09:28:02  Found 1 model, 484 macros\n09:28:02  \n09:28:02  Concurrency: 2 threads (target='dev')\n09:28:02  \n09:28:03  1 of 1 START sql table model sg_6a8ba1bfe2.sg_result_6a8ba1bfe2 ................ [RUN]\n09:28:03  1 of 1 OK created sql table model sg_6a8ba1bfe2.sg_result_6a8ba1bfe2 ........... [OK in 0.12s]\n09:28:03  \n09:28:03  Finished running 1 table model in 0 hours 0 minutes and 1.02 seconds (1.02s).\n09:28:03  \n09:28:03  Completed successfully\n09:28:03  \n09:28:03  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=1\n",
+      "stderr": ""
+    },
+    "oracle_result": {
+      "matches": true,
+      "reason": "equal",
+      "actual_rows": 34,
+      "expected_rows": 34,
+      "relation_type": "BASE TABLE"
+    }
+  },
+  "started_at_epoch": 1789550876.9261446,
+  "pristine_database_sha256": "cddd207c9bdf2c0e2a85440038a95c8262bb8327f8849bcfee29be4fb24da5ba",
+  "reference": {
+    "columns": [
+      "state_province",
+      "order_date",
+      "order_count",
+      "total_revenue",
+      "avg_order_value",
+      "revenue_per_customer",
+      "orders_per_customer"
+    ],
+    "row_count": 34
+  },
+  "finished_at_epoch": 1789550885.077635,
+  "sandbox_terminated": true
+}

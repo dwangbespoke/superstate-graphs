@@ -1,0 +1,73 @@
+{
+  "generation_assistance": "Codex critic repair of a Qwen proposal",
+  "interpretation": "Assisted executable example, not an unassisted task-generation success.",
+  "proposal_sha256": "7bc55922791d4bc774e8536cd47929acddb9798746a5c4f69f280b0b1834f054",
+  "proposal_source": "results/codex_task_repairs/cohort_channel.json",
+  "repair_notes": {
+    "method": "Codex-assisted repair, not unassisted Qwen generation",
+    "source_proposal": "results/generated_dbt_tasks/shared-start-validation-1d77ffda5df853/constructor_attempts/attempt_03/rejection.json",
+    "source_sha256": "8bc1f6ba990055e3dcc1e74d3cab156def738504dc62569c0235f5bfebc8e0bb",
+    "changes": [
+      "Replaced nonexistent FACT_SALES.FULL_DATE with the actual DATE_KEY to DIM_DATE join.",
+      "Replaced customer-per-purchase-month pseudo-cohorts with one first-purchase-date cohort and deterministic first-sale acquisition channel per customer.",
+      "Removed the invalid cohort \u00d7 channel Cartesian product; output grain is cohort_date \u00d7 acquisition channel.",
+      "Defined exact-day 0/7/30/90 retention; removed month truncation and cumulative comparisons that included earlier events.",
+      "Defined 90-day-mature cohort eligibility to avoid right censoring; excludes unmatched date keys, retains unmatched acquisition channels as UNKNOWN.",
+      "Defined all economics over each assigned customer's inclusive first 90 days, attributed to acquisition channel; clarified recorded TOTAL_AMOUNT and safe division without deleting legitimate zeroes.",
+      "Added exact output grain, rounding, null, tie, missing-dimension and type requirements to instruction; removed impossible dual-backend SQL portability claim.",
+      "Corrected false context/submission claims and bound actual delivery text; retained the incomplete starter profile/model and backend-discovery target.",
+      "Marked changed terminal semantics, original replay contradiction, single-backend and common-oracle/reference limitations explicitly."
+    ],
+    "actual_schema_evidence": {
+      "FACT_SALES": "DATE_KEY, CUSTOMER_KEY, CHANNEL_KEY, TIME_KEY, ORDER_ID, SALE_KEY, TOTAL_AMOUNT, PROFIT_AMOUNT, DISCOUNT_AMOUNT",
+      "DIM_DATE": "DATE_KEY, FULL_DATE",
+      "DIM_CHANNEL": "CHANNEL_KEY, CHANNEL_CODE",
+      "dataset_quirks": "57 FACT_SALES rows have no matching DIM_DATE; 10 sales have no matching DIM_CHANNEL; FACT_SALES customer identity count differs from DIM_CUSTOMER, so eligibility is defined on dated sales."
+    },
+    "read_only_validation": {
+      "status": "reference_validated",
+      "rows": 725,
+      "columns": [
+        "cohort_date",
+        "month_start",
+        "channel_key",
+        "channel_code",
+        "cohort_size",
+        "order_count",
+        "day_0_customers",
+        "day_7_customers",
+        "day_30_customers",
+        "day_90_customers",
+        "revenue",
+        "profit",
+        "discount_amount",
+        "margin_rate",
+        "avg_order_value",
+        "discount_rate",
+        "day_0_retention",
+        "day_7_retention",
+        "day_30_retention",
+        "day_90_retention"
+      ],
+      "total_eligible_cohort_customers": 774,
+      "all_day0_equal_cohort_size": true,
+      "independent_python_temporal_check": "All 725 group identities, cohort sizes, and exact-day 0/7/30/90 counts agree with a separate Python calculation over 5,000 eligible dated sale rows.",
+      "eligible_dated_sale_rows": 5000,
+      "retained_customer_counts_by_day": {
+        "0": 774,
+        "7": 1,
+        "30": 1,
+        "90": 5
+      }
+    },
+    "modal_validation": "not run; root will invoke bounded runtime validator",
+    "limitations": [
+      "Codex-assisted repair of a failed Qwen-generated proposal; not an unassisted Qwen synthesis success.",
+      "Both source witnesses start before backend discovery. Later source segments are not replayed, and the new analytical goal/ground truth was materially specified during repair.",
+      "The runtime is pinned to one backend, and the grader does not enforce the chronological act of reading DB_TYPE; an agent might infer or guess the configuration.",
+      "No learned difficulty, continuation variance, or training lift is measured.",
+      "The oracle and reference use identical SQL, so their runtime agreement is not independent semantic evidence."
+    ]
+  },
+  "result_status": "validated"
+}

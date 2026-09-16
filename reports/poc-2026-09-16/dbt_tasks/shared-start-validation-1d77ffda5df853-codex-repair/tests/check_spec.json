@@ -1,0 +1,6 @@
+{
+  "target_schema": "sg_991dec701d",
+  "target_relation": "sg_result_991dec701d",
+  "required_relation_type": "BASE TABLE",
+  "ordered": false
+}

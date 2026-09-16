@@ -1,0 +1,164 @@
+[
+  {
+    "rollout_id": "dbt-customer-geographic__9DRtpzm",
+    "recorded_policy_calls": 30,
+    "last_prefix_call_index": 29,
+    "trajectory_agent_occurrences": 30,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [
+      31
+    ],
+    "terminal_tail_execution_step_ids": [
+      31
+    ],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-customer-geographic__PbThYLY",
+    "recorded_policy_calls": 30,
+    "last_prefix_call_index": 29,
+    "trajectory_agent_occurrences": 30,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [
+      31
+    ],
+    "terminal_tail_execution_step_ids": [
+      31
+    ],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-daily-order-summary__629Mq8D",
+    "recorded_policy_calls": 27,
+    "last_prefix_call_index": 26,
+    "trajectory_agent_occurrences": 27,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [
+      28
+    ],
+    "terminal_tail_execution_step_ids": [],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-daily-order-summary__aeoscED",
+    "recorded_policy_calls": 22,
+    "last_prefix_call_index": 21,
+    "trajectory_agent_occurrences": 22,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [
+      23
+    ],
+    "terminal_tail_execution_step_ids": [],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-fix-cac-payback-waterfall__RzYkUu5",
+    "recorded_policy_calls": 31,
+    "last_prefix_call_index": 30,
+    "trajectory_agent_occurrences": 30,
+    "unaligned_visible_occurrences": 1,
+    "terminal_tail_step_ids": [
+      31
+    ],
+    "terminal_tail_execution_step_ids": [
+      31
+    ],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-fix-cac-payback-waterfall__ZeXpKcZ",
+    "recorded_policy_calls": 30,
+    "last_prefix_call_index": 29,
+    "trajectory_agent_occurrences": 30,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [
+      31
+    ],
+    "terminal_tail_execution_step_ids": [
+      31
+    ],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-fix-daily-cohorts__fkn5cqi",
+    "recorded_policy_calls": 26,
+    "last_prefix_call_index": 25,
+    "trajectory_agent_occurrences": 25,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [],
+    "terminal_tail_execution_step_ids": [],
+    "terminal_response_omitted": false,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "no_additional_recorded_tail; terminal coverage not independently established",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-fix-daily-cohorts__zXAjF6V",
+    "recorded_policy_calls": 30,
+    "last_prefix_call_index": 29,
+    "trajectory_agent_occurrences": 30,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [
+      31
+    ],
+    "terminal_tail_execution_step_ids": [
+      31
+    ],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-retail-task-01-channel-reven__WyXmjUB",
+    "recorded_policy_calls": 30,
+    "last_prefix_call_index": 29,
+    "trajectory_agent_occurrences": 30,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [
+      31
+    ],
+    "terminal_tail_execution_step_ids": [
+      31
+    ],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  },
+  {
+    "rollout_id": "dbt-retail-task-01-channel-reven__buKdMAr",
+    "recorded_policy_calls": 30,
+    "last_prefix_call_index": 29,
+    "trajectory_agent_occurrences": 30,
+    "unaligned_visible_occurrences": 0,
+    "terminal_tail_step_ids": [
+      31
+    ],
+    "terminal_tail_execution_step_ids": [
+      31
+    ],
+    "terminal_response_omitted": true,
+    "tail_evidence_status": "timestamp_bounded_tail_after_final_prefix",
+    "coverage_label": "prefix_graph_excludes_terminal_response_tail",
+    "note": "Nodes are pre-decision prefixes; final response/outcome is never inserted into classifier histories."
+  }
+]

@@ -1,0 +1,25 @@
+name: sg_project_991dec701d
+version: '1.0'
+profile: sg_profile_991dec701d
+model-paths:
+- models
+analysis-paths:
+- analyses
+test-paths:
+- tests
+seed-paths:
+- seeds
+macro-paths:
+- macros
+snapshot-paths:
+- snapshots
+target-path: target
+clean-targets:
+- target
+- dbt_packages
+models:
+  sg_project_991dec701d:
+    sg_991dec701d:
+      +materialized: table
+    +materialized: table
+config-version: 2

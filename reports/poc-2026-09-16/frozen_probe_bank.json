@@ -1,0 +1,1458 @@
+{
+  "sha256": "8d05cf30cc0b59e803148f7ac4a9415d0a257acfb52423a5b961ef9f146ed40c",
+  "probes": [
+    {
+      "probe_id": "train-4c98aa11b0e1ec",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h000",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4c98aa11b0e1ec.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the same immediate local decision: determining the database backend by checking the $DB_TYPE environment variable before proceeding with dbt configuration. This unresolved information need is identical in both cases, despite differences in final output schemas (geographic_analytics vs daily_analytics) and model requirements. The immediate operation (checking $DB_TYPE) is not changed by the final goal constraints."
+      },
+      "splice": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4c98aa11b0e1ec.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "full_segment": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4c98aa11b0e1ec.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-b73e52431d2c62",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h000",
+      "right_id": "dbt-daily-order-summary__aeoscED/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-b73e52431d2c62.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the same immediate local decision: determining the database backend by checking the $DB_TYPE environment variable before proceeding with code generation. Both have the same unresolved information need regarding the value of $DB_TYPE. While the final tasks differ (geographic_analytics vs daily_analytics schemas, different models), the immediate prerequisite operation is identical."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-b73e52431d2c62.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed episode (Step 2) consists of environment inspection commands (echo $DB_TYPE, ls -la /app/, ls -la /app/dbt_models_*/). These commands are valid prerequisites for Prefix A, which explicitly requires checking $DB_TYPE and acknowledges the existence of the reference directories. The logical operation (gathering environment state) and observed effects (backend type, directory structure) are preserved and useful at A without conflict with A's task requirements at this stage."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-b73e52431d2c62.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence (Steps 2-5) includes Step 4, which creates project artifacts that directly contradict Prefix A's requirements. Specifically, B creates a profile named 'dbt_project' (A requires 'retail_dw_master'), a target schema 'daily_analytics' (A requires 'geographic_analytics'), and a model 'daily_order_summary' (A requires 'stg_customer_addresses', 'stg_orders', 'fct_state_customers'). These structural and naming conflicts prevent coherent transfer of the full segment to A."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-abc315e78989d6",
+      "left_id": "dbt-customer-geographic__PbThYLY/h000",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-abc315e78989d6.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the same immediate local decision: determining the database backend by checking the $DB_TYPE environment variable before proceeding with dbt configuration. This unresolved information need is identical in both cases, despite differences in final output schemas (geographic_analytics vs daily_analytics) and model requirements. The immediate operation (checking $DB_TYPE) is not changed by the final goal constraints."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-abc315e78989d6.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first episode performs generic environment discovery (echo $DB_TYPE, ls -la). Prefix A explicitly requires checking $DB_TYPE and verifying directory structure before writing code. The commands and their effects (revealing backend type and directory existence) are directly applicable and necessary for A's initial state without contradiction or missing prerequisites for this specific step."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-abc315e78989d6.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete segment inspects reference models (e.g., stg_sfdc__campaigns) and queries only ORDERS.ORDERS. Prefix A requires source tables CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS, and specific models (stg_customer_addresses, fct_state_customers). The segment fails to provide evidence for CUSTOMER.CUSTOMER_ADDRESSES schema or A's required model logic, making the full sequence incoherent for A's task."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-de31d4a29fe6cc",
+      "left_id": "dbt-customer-geographic__PbThYLY/h000",
+      "right_id": "dbt-daily-order-summary__aeoscED/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-de31d4a29fe6cc.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the same immediate local decision: determining the database backend by checking the $DB_TYPE environment variable before proceeding with dbt configuration. This unresolved information need is identical in both cases, despite differences in final output schemas (geographic_analytics vs daily_analytics) and model requirements. The immediate operation (checking $DB_TYPE) is not changed by the final goal constraints."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-de31d4a29fe6cc.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed episode (Step 2) consists of environment reconnaissance commands (echo $DB_TYPE, ls -la) that are valid prerequisites for Prefix A. Prefix A requires checking $DB_TYPE before writing code and acknowledges the existence of reference directories. The logical operation (backend discovery) and observed effect (DuckDB backend, directory structure) are preserved without violating A's constraints. No specific model or schema content is committed in this episode, allowing substitution of later artifacts to match A's requirements."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-de31d4a29fe6cc.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete sequence includes Step 4 which creates specific artifacts (dbt_project.yml, profiles.yml, daily_order_summary.sql) with content incompatible with Prefix A. Prefix A requires profile name 'retail_dw_master' (B uses 'dbt_project'), schema 'geographic_analytics' (B uses 'daily_analytics'), and specific models (stg_customer_addresses, stg_orders, fct_state_customers) vs B's 'daily_order_summary'. Transferring B's exact commands would produce artifacts failing A's verification due to known conflicts in configuration and model definitions."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-11e92d255cce61",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h000",
+      "right_id": "dbt-daily-order-summary__aeoscED/h004",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-11e92d255cce61.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's immediate decision is to check the $DB_TYPE environment variable to determine the database backend before creating any project files. Prefix B's immediate decision is to fix the SQL model's source reference and add materialization configuration after the project structure has already been created. Additionally, the task requirements differ materially: Prefix A targets the 'geographic_analytics' schema with 'fct_state_customers' model, while Prefix B targets the 'daily_analytics' schema with 'daily_order_summary' model. The state of progress also differs: Prefix A has not created the project, while Prefix B has created the project files."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-11e92d255cce61.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A requires creating a dbt project from scratch and checking $DB_TYPE before writing code. The first witnessed episode from B assumes the project already exists and runs 'dbt compile' on specific models ('daily_order_summary') that do not match A's required models ('fct_state_customers', 'stg_customer_addresses'). The logical operation (compile existing project) is invalid at A's state (no project). The commands 'cd /app/dbt_project' would fail as the directory does not exist at A, and the SQL content is task-specific to B's 'Daily Order Summary' goal rather than A's 'Geographic Analysis'.\n\nEvidence: Prefix A: 'Create a dbt project in /app/dbt_project [message 0]', 'Check $DB_TYPE environment variable [message 0]'. Episode B: 'cd /app/dbt_project && dbt compile', 'depends on a source named orders.orders which was not found'.\n\nBindings: schema (A: geographic_analytics, B: daily_analytics), task_goal (A: Customer Geographic Analysis, B: Daily Order Summary), project_state (A: not_created, B: created), backend_check (A: required_before_code, B: assumed_known)."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-11e92d255cce61.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete segment from B is driven by the 'Daily Order Summary' task requirements (schema: daily_analytics, model: daily_order_summary). Prefix A requires the 'Customer Geographic Analysis' task (schema: geographic_analytics, model: fct_state_customers). Transferring B's segment would create/write files for the wrong task, violating A's task requirements and schema constraints. The SQL logic, model names, and source configurations in the B segment are specific to the Daily Order Summary task and do not map to A's requirements.\n\nEvidence: Prefix A: 'Target schema must be geographic_analytics', 'Create fct_state_customers.sql'. Segment B: 'schema: daily_analytics', 'daily_order_summary.sql', 'ref('orders')'.\n\nPrerequisites: A: Check $DB_TYPE, create /app/dbt_project. B: Project exists, source definitions missing.\n\nExpected Effects: A: Project created with geographic_analytics schema. B: Compilation errors resolved for daily_order_summary."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "6"
+      ]
+    },
+    {
+      "probe_id": "train-1b9b7545dd2f29",
+      "left_id": "dbt-customer-geographic__PbThYLY/h000",
+      "right_id": "dbt-daily-order-summary__aeoscED/h004",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-1b9b7545dd2f29.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's immediate decision is to check the $DB_TYPE environment variable to determine the database backend before creating any project files. Prefix B's immediate decision is to fix the SQL model's source reference and add materialization configuration after the project structure has already been created. Additionally, the task requirements differ materially: Prefix A targets the 'geographic_analytics' schema with 'fct_state_customers' model, while Prefix B targets the 'daily_analytics' schema with 'daily_order_summary' model. The state of progress also differs: Prefix A has not created the project, while Prefix B has created the project files."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-1b9b7545dd2f29.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed episode from B assumes a dbt project already exists at /app/dbt_project with specific source configurations. Prefix A has not created any project files yet (decision is to check $DB_TYPE before writing code). The episode's commands (export DBT_PROFILES_DIR, dbt compile) would fail at A because the project structure doesn't exist. Additionally, B's source reference 'orders.orders' conflicts with A's requirement to use 'CUSTOMER.CUSTOMER_ADDRESSES' and 'ORDERS.ORDERS' with different schema 'geographic_analytics' vs B's 'daily_analytics'. The compilation error encountered (source not found) is specific to B's configuration and cannot be meaningfully transferred to A's state."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-1b9b7545dd2f29.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment shows iterative debugging of source references for B's specific task (daily_order_summary model, daily_analytics schema). This entire sequence is built around B's task requirements which fundamentally differ from A's requirements: A needs fct_state_customers model with geographic_analytics schema, LEFT JOIN from addresses to orders, specific output columns (state_province, customer_count, order_count, total_revenue, avg_order_value, revenue_per_customer, orders_per_customer), while B needs daily_order_summary with different columns (order_date, order_count, total_revenue). The source configurations, filtering logic, and model structures are incompatible. A's task requires checking $DB_TYPE first and creating project from scratch, while B's segment assumes project exists with specific source definitions. The segment's operations cannot preserve logical operation or intended effect at A."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "6"
+      ]
+    },
+    {
+      "probe_id": "train-9c58a1910ac7c4",
+      "left_id": "dbt-daily-order-summary__629Mq8D/h000",
+      "right_id": "dbt-fix-cac-payback-waterfall__RzYkUu5/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-9c58a1910ac7c4.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the identical immediate local decision to check the $DB_TYPE environment variable to determine the database backend (DuckDB or Snowflake) before configuring profiles.yml. This matches the supported example where different final outputs (daily_analytics vs analytics) are allowed despite the shared local decision to discover DB_TYPE. Neither prefix has observed the DB_TYPE value yet, and both require this fact to proceed with the profiles.yml configuration."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-9c58a1910ac7c4.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first episode (Step 2) consists of checking $DB_TYPE, listing /app, and checking the reference project directory. The reference project artifact (dbt_transforms in B) can be groundedly substituted with A's reference project (dbt_models_duckdb) as both are explicitly defined in their respective prefixes. The logical operation (verify reference exists) and effect (confirm directory structure) are preserved. The DB_TYPE check is required by both prefixes regardless of the final backend value. The failure of the reference directory check in B (due to B's specific path) does not invalidate the operation for A, where the substituted path exists per A's known facts. Task-specific model names do not invalidate the backend discovery episode per instructions. Bindings: $DB_TYPE, /app, Reference Project Directory (dbt_transforms -> dbt_models_duckdb). Prerequisites: Check $DB_TYPE, verify /app structure, verify reference project exists. Expected Effects: Identify backend, confirm directory layout, confirm reference availability."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-9c58a1910ac7c4.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete segment (Steps 2-7) includes commands specific to B's task domain (e.g., grep -l -i marketing, cat rpt_cac_payback_period.sql). These commands target artifacts (marketing models, CAC payback model) that do not exist or are not relevant to A's task (orders, daily_order_summary). There is no grounded artifact binding to substitute 'marketing' with 'orders' or the specific model files. The effects (finding marketing data, reading CAC logic) are not coherent with A's prerequisites (building order summary). The segment requires rewriting the algorithm to fit A, which is prohibited. Bindings: Task Model/Source (marketing -> orders). Prerequisites: Locate marketing data, read CAC model. Expected Effects: Build CAC model. Conflict: A requires order data, not marketing data."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-5fe014b343fdf9",
+      "left_id": "dbt-daily-order-summary__aeoscED/h000",
+      "right_id": "dbt-fix-cac-payback-waterfall__RzYkUu5/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-5fe014b343fdf9.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the identical immediate local decision to check the $DB_TYPE environment variable to determine the database backend (DuckDB or Snowflake) before configuring profiles.yml. This matches the supported example where different final outputs (daily_analytics vs analytics) are allowed despite the shared local decision to discover DB_TYPE. Neither prefix has observed the DB_TYPE value yet, and both require this fact to proceed with the profiles.yml configuration."
+      },
+      "splice": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-5fe014b343fdf9.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "full_segment": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-5fe014b343fdf9.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-41bc21dbd6378d",
+      "left_id": "dbt-customer-geographic__PbThYLY/h006",
+      "right_id": "dbt-daily-order-summary__aeoscED/h004",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-41bc21dbd6378d.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different immediate local decisions due to different task requirements, target schemas, and project structures. Prefix A must modify existing staging models (stg_customer__customer_addresses.sql, stg_orders.sql) to add specific filters, create a new marts model (fct_state_customers.sql), and update the dbt_project.yml schema to 'geographic_analytics' within the /app/dbt_models_duckdb/ directory. Prefix B must verify a source reference in a new model (daily_order_summary.sql) and add materialization configuration within a fresh /app/dbt_project/ directory targeting the 'daily_analytics' schema. The artifacts, schemas, and immediate operations differ significantly."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-41bc21dbd6378d.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode from B uses project path /app/dbt_project/ with export DBT_PROFILES_DIR=/app/dbt_project, but prefix A's project exists at /app/dbt_models_duckdb/. The episode's compile command targets B's specific project structure and source configuration (orders.orders), which differs from A's existing staging models (stg_customer__customer_addresses.sql, stg_orders.sql) and source definitions. The logical operation (dbt compile) could execute at A, but the artifact bindings, source references, and immediate context are not transferable without modification. The episode's error (source not found) would manifest differently at A due to different source configurations and project structure."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-41bc21dbd6378d.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence from B involves iterative source reference fixes for a fresh project at /app/dbt_project/ targeting daily_analytics schema. Prefix A requires geographic_analytics schema, different model files (fct_state_customers.sql vs daily_order_summary.sql), and modification of existing staging models rather than creating new ones. B's sequence creates staging models and sources.yml, but A already has staging models that need filter modifications. The source configuration approach (adding sources to dbt_project.yml) might partially transfer, but the specific source names, table references, and model requirements differ fundamentally. The complete sequence's end state (daily_order_summary model) does not match A's required output (fct_state_customers model with geographic analysis)."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "6"
+      ]
+    },
+    {
+      "probe_id": "train-91ea3d9ff41c31",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h012",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h016",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-91ea3d9ff41c31.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The prefixes face different immediate local decisions due to different tasks, project locations, and required artifacts. Prefix A is working on the Customer Geographic Analysis task in /app/dbt_models_duckdb, where the immediate decision is to verify dbt and run dbt build on existing models (fct_state_customers). Prefix B is working on the Daily Order Summary task in /app/dbt_project, where the immediate decision is to verify dbt and fix missing source configuration for raw_orders. The tasks, project directories, and specific model artifacts differ materially, making the local decisions incompatible despite the shared need to verify dbt functionality."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-91ea3d9ff41c31.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode (step 18: dbt --version) is a generic version check command that does not depend on task-specific artifacts. At prefix A, the same command with path substitution (/app/dbt_models_duckdb instead of /app/dbt_project) would produce identical logical operation (verifying dbt installation) and effect (displaying version information). The command failure in B's later steps does not affect this initial episode's transferability. Prerequisites: dbt installed at /usr/local/bin/dbt (known at both A and B). Expected effect: version output display."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-91ea3d9ff41c31.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment (steps 18-22) includes model creation and execution that cannot transfer to A. Key contradictions: (1) Different model artifacts - B creates daily_order_summary.sql with direct table reference 'ORDERS.ORDERS', while A has fct_state_customers.sql using ref() to staging models. (2) Different source configuration - B uses direct table reference (which failed with 'Table with name ORDERS.ORDERS does not exist'), while A uses sources.yml with ref() bindings. (3) Different task requirements - B aggregates orders by date, A aggregates customer addresses to orders with LEFT JOIN. (4) The failure in step 22 reveals B's table reference approach is invalid for this database schema, which would not apply to A's ref() approach. The logical operation and intended effect are not preserved across the different model structures and source configurations."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "18"
+      ]
+    },
+    {
+      "probe_id": "train-ea7e6b562fc999",
+      "left_id": "dbt-customer-geographic__PbThYLY/h006",
+      "right_id": "dbt-daily-order-summary__aeoscED/h013",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-ea7e6b562fc999.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different local decisions due to different tasks, project paths, and immediate operational needs. Prefix A requires modifying existing project files (sources.yml, staging models, marts model) to meet geographic analysis requirements, while Prefix B requires deciding whether to execute dbt run to materialize a compiled model for a daily order summary task. The artifacts and schemas involved are incompatible (geographic_analytics vs daily_analytics, /app/dbt_models_duckdb/ vs /app/dbt_project/). This constitutes a material difference in the local decision, not broad topical similarity."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-ea7e6b562fc999.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode from B (step 15) cannot transfer to A due to fundamental architectural differences: (1) Project paths differ (/app/dbt_project/ vs /app/dbt_models_duckdb/), (2) Target schemas differ (daily_analytics vs geographic_analytics), (3) SQL approach differs (B uses direct table queries ORDERS.ORDERS while A requires source() references), (4) Model requirements differ (B has single model daily_order_summary while A requires multiple models: stg_customer_addresses.sql, stg_orders.sql, fct_state_customers.sql). The SQL content cannot be preserved under substitution because direct table queries are incompatible with A's source-based architecture. The failure reason in B (table not found) is specific to B's direct query approach and would not apply to A's source-based approach, making the observed effect non-transferable."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-ea7e6b562fc999.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence from B (steps 15-18) cannot transfer to A due to: (1) Debugging steps are B-specific (checking ORDERS.ORDERS table existence, fixing date() function for DuckDB), (2) A requires source() references which have different configuration requirements than B's direct queries, (3) The segment ends with failure (date() function error), indicating the intended effect was not achieved, (4) A requires multiple staging and marts models while B only has a single model, (5) The SQL fixes (removing ORDERS.ORDERS qualification, fixing date() function) are specific to B's direct query approach and do not apply to A's source-based architecture. While the debugging methodology could theoretically transfer, the specific operations and fixes are incompatible with A's requirements."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "15"
+      ]
+    },
+    {
+      "probe_id": "train-c1b3b927d3c906",
+      "left_id": "dbt-customer-geographic__PbThYLY/h006",
+      "right_id": "dbt-daily-order-summary__aeoscED/h008",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-c1b3b927d3c906.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A faces the immediate decision of implementing specific SQL logic (filters, joins, aggregations) and schema configuration for a geographic analysis mart in an existing project (/app/dbt_models_duckdb/). Prefix B faces the immediate decision of resolving a source resolution compilation error in a fresh project (/app/dbt_project). The local decisions differ: A is about content implementation and schema mapping, while B is about debugging source definition syntax. The projects, target schemas, and model requirements are distinct artifacts."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-c1b3b927d3c906.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed episode from B creates a simple aggregation model (daily_order_summary.sql) that directly queries 'ORDERS.ORDERS' and fails due to staging model source dependency. At prefix A, the task requires creating fct_state_customers.sql with LEFT JOIN logic between customer addresses and orders, modifying existing staging models with specific filters (is_default_shipping, status), and creating sources.yml. The episode's direct SQL approach doesn't preserve the required JOIN operation, and the source dependency failure pattern differs (B's 'raw.orders' vs A's 'customer/CUSTOMER_ADDRESSES' and 'enterprise_db/ORDERS'). The logical operation of 'write model + compile' is similar, but the artifact substitutions needed are too extensive to constitute a grounded transfer."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-c1b3b927d3c906.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment (steps 10-14) resolves the source error by removing the staging directory entirely and removing source configuration from dbt_project.yml. This directly contradicts prefix A's requirements: (1) staging models must be modified, not removed, to implement required filters (is_default_shipping, status); (2) sources.yml must be created to define source references; (3) the model must implement LEFT JOIN logic between customer addresses and orders, not simple aggregation; (4) the target schema must be 'geographic_analytics' not 'daily_analytics'. The segment's solution approach (eliminate staging/sources) is incompatible with A's task requirements (preserve and modify staging, add sources)."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "10"
+      ]
+    },
+    {
+      "probe_id": "train-b933bb2624a854",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h006",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h016",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-b933bb2624a854.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different local decisions due to different task requirements, project locations, and immediate technical blockers. Prefix A is working on an existing project (`dbt_models_duckdb`) to modify staging models (`stg_customer_addresses.sql`, `stg_orders.sql`) with specific filters and create a mart model (`fct_state_customers.sql`) for geographic analysis. Prefix B is working on a fresh project (`/app/dbt_project`) to fix missing source configuration for a single model (`daily_order_summary.sql`) for daily order summary. The immediate operations (modifying existing filters vs configuring sources in new project) and artifact bindings (different project paths, schemas, and model names) are incompatible."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-b933bb2624a854.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode from B (step 18) contains command 'cd /app/dbt_project && dbt --version' which references project path /app/dbt_project/. At prefix A, the project location is dbt_models_duckdb/ (known fact: 'dbt_models_duckdb directory exists with dbt project structure [message 2]'). The path /app/dbt_project/ does not exist at prefix A, making this command inexecutable without invalid substitution. Grounded typed artifact substitutions require the artifact path to exist at the target prefix, which it does not here."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-b933bb2624a854.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment from B (steps 18-22) includes model creation and execution that fundamentally conflicts with prefix A's requirements: (1) Project location conflict - B uses /app/dbt_project/ while A uses dbt_models_duckdb/; (2) Model name conflict - B creates daily_order_summary.sql while A requires stg_customer_addresses.sql, stg_orders.sql, fct_state_customers.sql; (3) Schema conflict - B uses daily_analytics while A requires geographic_analytics; (4) Execution failure - B's segment ends with 'Catalog Error: Table with name ORDERS.ORDERS does not exist!' indicating the approach fails; (5) Task requirements differ - B's task is daily order summary while A's task is geographic analysis with specific filters. These are material differences that prevent coherent transfer."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "18"
+      ]
+    },
+    {
+      "probe_id": "train-829b6da608d301",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h006",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h010",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-829b6da608d301.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different local decisions regarding project structure and immediate artifacts. Prefix A is working within an existing project structure (`dbt_models_duckdb`) and needs to modify existing staging models (`stg_customer_addresses.sql`, `stg_orders.sql`) to add specific filters. Prefix B is required to create a fresh, standalone dbt project at `/app/dbt_project` (explicitly avoiding existing directories) and configure new `profiles.yml` and `dbt_project.yml` files. Additionally, Prefix A has confirmed the schema of `CUSTOMER.CUSTOMER_ADDRESSES` and `ORDERS.ORDERS`, while Prefix B still has unresolved conflicts regarding the existence of specific columns (`ORDERED_AT`, `STATUS`) in `ORDERS.ORDERS` based on recent observations. The immediate operations (modifying existing SQL vs creating new project structure) are incompatible."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-829b6da608d301.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed episode from B creates a fresh dbt project at /app/dbt_project with new dbt_project.yml and profiles.yml files. Prefix A already has an existing dbt project at dbt_models_duckdb and needs to modify existing staging models (stg_customer_addresses.sql, stg_orders.sql), not create a new project. The project creation commands in B's episode are incompatible with A's existing project structure and task requirements. Additionally, B's episode creates daily_order_summary.sql while A requires fct_state_customers.sql with different join logic and aggregation requirements."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-829b6da608d301.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence includes project initialization (mkdir, dbt_project.yml, profiles.yml creation), model creation, and verification steps. All project initialization commands conflict with A's existing dbt project at dbt_models_duckdb. The model creation in B targets daily_order_summary with different schema (daily_analytics) and different source configuration (raw_orders.ORDERS) compared to A's requirements (geographic_analytics schema, customer.ORDERS source). The verification commands (dbt --version, ls commands) are specific to the new project path /app/dbt_project which doesn't match A's project location. These are material conflicts that cannot be resolved through artifact substitution."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "12"
+      ]
+    },
+    {
+      "probe_id": "train-4bc2d49302d671",
+      "left_id": "dbt-daily-order-summary__aeoscED/h013",
+      "right_id": "dbt-fix-cac-payback-waterfall__RzYkUu5/h000",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4bc2d49302d671.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A has already determined DB_TYPE=duckdb and compiled the model, with the immediate decision being whether to execute dbt run to materialize the table. Prefix B has not determined DB_TYPE yet and has not created the project, with the immediate decision being to check the DB_TYPE environment variable to configure the backend. The information state regarding DB_TYPE is known in A but unknown in B, and the immediate operations (materialization vs. environment discovery) are materially different."
+      },
+      "splice": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4bc2d49302d671.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "full_segment": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4bc2d49302d671.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-405519ea437342",
+      "left_id": "dbt-daily-order-summary__aeoscED/h013",
+      "right_id": "dbt-fix-cac-payback-waterfall__ZeXpKcZ/h000",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-405519ea437342.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A has already determined DB_TYPE=duckdb and compiled the model, with the immediate decision being whether to execute dbt run to materialize the table. Prefix B has not determined DB_TYPE yet and has not created the project, with the immediate decision being to check the DB_TYPE environment variable to configure the backend. The information state regarding DB_TYPE is known in A but unknown in B, and the immediate operations (materialization vs. environment discovery) are materially different."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-405519ea437342.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A knows DB_TYPE=duckdb (message 2), making echo $DB_TYPE redundant. Episode command ls -la dbt_transforms/ targets B's reference project (marketing data), which is irrelevant to A's daily_order_summary task (message 0). Logical operation of environment discovery for marketing data does not map to A's materialization state."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-405519ea437342.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Segment explores dbt_models_duckdb for marketing models (steps 4-7). Prefix A uses direct query ORDERS.ORDERS (message 17, 24). Segment operations (reading marketing configs) are irrelevant to A's task. Prerequisites for marketing data discovery are not met at A."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-1edd4ec560f82a",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h029",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h021",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-1edd4ec560f82a.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different immediate local decisions and operate on different artifacts. Prefix A has successfully built the `fct_state_customers` model and its immediate decision is to **validate** the output (check row count, NULLs, columns) to confirm task completion. Prefix B has a failed build for the `daily_order_summary` model and its immediate decision is to **fix** a table reference error (`ORDERS.ORDERS` vs `ORDERS`). These are distinct operations (validation vs. debugging) on different models (`fct_state_customers` vs `daily_order_summary`) with different task requirements (Geographic Analysis vs. Daily Order Summary). Evidence: A states 'The immediate unresolved decision is whether the task is complete or if additional validation steps are needed' and lists 'Query the fct_state_customers table' as a possible operation. B states 'The immediate decision is whether to use a direct table reference... or configure a dbt source' and lists 'Update the model to reference just ORDERS' as a possible operation."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-1edd4ec560f82a.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's first execution episode writes daily_order_summary.sql and runs dbt for that model, while A's task requires fct_state_customers validation. Different SQL logic (daily aggregation vs geographic aggregation), different output schemas (order_date/order_count/total_revenue vs state_province/customer_count/order_count/total_revenue/avg_order_value/revenue_per_customer/orders_per_customer), and different project paths (/app/dbt_project vs /app/dbt_models_duckdb) make this transfer incompatible. A's immediate decision is validation of existing models, not creation of new ones."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-1edd4ec560f82a.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's complete sequence (steps 23-27) creates and validates daily_order_summary, which is a different task from A's geographic analysis. The SQL references ORDERS.ORDERS for daily aggregation, while A requires LEFT JOIN from customer addresses to orders grouped by state_province. A's task requirements specify ~51 states/territories, no NULLs, and specific columns that B's model does not produce. The project structure, schema names (daily_analytics vs geographic_analytics), and model names are fundamentally different."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "23"
+      ]
+    },
+    {
+      "probe_id": "train-ee170ceb7d3547",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h023",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h021",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-ee170ceb7d3547.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's immediate decision is whether to inspect existing model files (stg_orders.sql, fct_state_customers.sql) for logic correctness before building, or to proceed with dbt build. Prefix B's immediate decision is how to correct a runtime error regarding table references (ORDERS.ORDERS vs ORDERS) in the daily_order_summary model. These decisions address different artifacts (geographic_analytics vs daily_analytics schemas) and different information needs (logic verification vs table reference resolution). The tasks are distinct SQL operations (customer distribution vs daily order summary), and the unresolved conflicts differ (potential logic mismatch vs catalog error)."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-ee170ceb7d3547.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first episode from B (create SQL file + run dbt build) transfers to A under artifact substitution because: (1) logical operation is identical (write SQL, execute dbt build), (2) intended effect is the same (successful model compilation and execution), (3) A already successfully built stg_customer_addresses demonstrating dbt build works at A, (4) both use same DuckDB backend at /app/database/retail.duckdb, (5) ORDERS.ORDERS table exists per B's evidence and A uses same database path. Artifact substitution (daily_order_summary.sql -> stg_orders.sql) is valid for the operation type, even if SQL logic differs for A's requirements."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-ee170ceb7d3547.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete segment from B cannot transfer to A because: (1) B's verification steps check daily_order_summary columns (order_date, order_count, total_revenue) while A requires different columns (state_province, customer_count, order_count, total_revenue, avg_order_value, revenue_per_customer, orders_per_customer), (2) A has unresolved conflicts about existing model logic that must be addressed before building, (3) B's segment shows successful completion without conflict resolution, (4) A's validation requirements (51 states, no NULLs, non-negative values) differ from B's (order date aggregation), (5) A's task requires inspecting existing models first per decision, while B's segment assumes fresh model creation."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "23"
+      ]
+    },
+    {
+      "probe_id": "train-fec0f0289556c5",
+      "left_id": "dbt-daily-order-summary__aeoscED/h008",
+      "right_id": "dbt-fix-cac-payback-waterfall__ZeXpKcZ/h000",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-fec0f0289556c5.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A is debugging a specific dbt compilation error regarding a source definition ('raw.orders') in an already created project structure with known DB_TYPE. Prefix B is at the initialization stage, needing to check the DB_TYPE environment variable and create the project structure from scratch. The immediate local decisions differ: A resolves a configuration error, while B performs environment setup and discovery."
+      },
+      "splice": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-fec0f0289556c5.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "full_segment": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-fec0f0289556c5.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-cfdd092fb81abe",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h012",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h010",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-cfdd092fb81abe.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A faces the decision to verify dbt functionality and build existing models (fct_state_customers.sql), while Prefix B faces the decision to check column schema details or create a new project structure (daily_order_summary.sql). These are materially different local decisions (execution vs setup) with different project states (models exist vs project needs creation)."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-cfdd092fb81abe.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode from B (Python command to check ORDERS.ORDERS columns) cannot be meaningfully transferred to A. At prefix A, column schema information is already known from prior attempts (messages 13, 16, 20 show ORDERS.ORDERS columns including ORDERED_AT, GRAND_TOTAL, STATUS). The episode's logical operation (schema discovery) and intended effect (informing new model creation) are already satisfied at A. Additionally, the artifact bindings differ fundamentally: B's episode supports creating daily_order_summary.sql for a fresh project, while A has existing fct_state_customers.sql models that need validation. The episode's purpose is incompatible with A's state of having pre-built models awaiting build execution."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-cfdd092fb81abe.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence from B (steps 12-17: schema check, mkdir, dbt_project.yml, daily_order_summary.sql, profiles.yml, dbt --version) cannot be transferred to A. Key conflicts: (1) Project location mismatch - B creates /app/dbt_project while A has models in /app/dbt_models_duckdb with unresolved conflict about correct location; (2) Profile name conflict - B uses 'dbt_project' while A uses 'retail_dw_master'; (3) Schema conflict - B uses 'daily_analytics' while A uses 'marts'; (4) Model content conflict - B creates daily_order_summary.sql with different aggregation logic than A's fct_state_customers.sql; (5) Path format conflict - B uses absolute path '/app/database/retail.duckdb' while A uses relative path '../database/retail.duckdb'; (6) Prerequisites mismatch - B assumes fresh project creation while A assumes existing models need validation. The complete B sequence would overwrite or conflict with A's existing project state."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "12"
+      ]
+    },
+    {
+      "probe_id": "train-cd55b9b03bdac1",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h017",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h016",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-cd55b9b03bdac1.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's immediate local decision is to remove duplicate model files (models/staging/customer/stg_customer_addresses.sql, models/staging/orders/stg_orders.sql) to resolve a naming conflict. Prefix B's immediate local decision is to add source configuration to dbt_project.yml or update the model SQL to reference tables directly, as the source 'raw_orders' is undefined. These are materially different operations (file deletion vs configuration editing) addressing different specific blockers (duplicate names vs missing source definition). A requires resolving file system duplicates [message 34], while B requires resolving configuration gaps [message 25, 27]."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-cd55b9b03bdac1.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's first episode commands (dbt --version, cat > model.sql, dbt ls, dbt run) focus on creating a new model and testing it. A's state requires deleting duplicate model files to resolve a compilation error. The logical operation of 'creating' (B) contradicts A's need to 'delete' files. B's runtime error (Table not found) also differs from A's compilation error (Duplicate name). The episode does not preserve the intended effect of resolving the naming conflict at A."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-cd55b9b03bdac1.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's complete segment ends in a runtime failure (dbt run ERROR) and creates a model irrelevant to A's task. A requires successful dbt build execution after resolving naming conflicts. B's sequence lacks the necessary file deletion operations and results in an error state, failing to meet A's goal of successful materialization. The prerequisites (source config vs file cleanup) and effects (creation vs deletion) are incoherent for transfer."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "18"
+      ]
+    },
+    {
+      "probe_id": "train-a5198917b34de7",
+      "left_id": "dbt-customer-geographic__PbThYLY/h017",
+      "right_id": "dbt-daily-order-summary__aeoscED/h008",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-a5198917b34de7.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The prefixes face different immediate local decisions and information needs due to different project contexts, tasks, and error states."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-a5198917b34de7.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's first episode fails due to source config 'raw.orders' not found in dbt_project.yml, whereas A's source conflict was resolved by removing duplicate _enterprise_sources.yml and using sources.yml. A's source configuration context differs, so the specific failure effect is not guaranteed. Additionally, B's commands write 'daily_order_summary.sql' with Daily SQL logic, which cannot be substituted for A's required 'fct_state_customers.sql' with Geographic SQL without rewriting the algorithm, violating the constraint to not rewrite the algorithm."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-a5198917b34de7.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's complete segment includes Step 11: 'rm -rf models/staging', which deletes the staging directory. A's task requires staging models ('stg_customer_addresses.sql', 'stg_orders.sql') in 'models/staging/geographic/'. Deleting 'models/staging' at A would destroy required artifacts, making the segment incoherent with A's prerequisites."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "10"
+      ]
+    },
+    {
+      "probe_id": "train-a5c177499a27ff",
+      "left_id": "dbt-daily-order-summary__629Mq8D/h026",
+      "right_id": "dbt-customer-geographic__9DRtpzm/h012",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-a5c177499a27ff.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A faces the immediate decision to submit the completed task for grading, as the model has run successfully and output verified. Prefix B faces the immediate decision to verify dbt functionality and build the models, as the task is not yet complete and dbt execution status is unconfirmed. The tasks themselves differ (Daily Order Summary vs Customer Geographic Analysis) with incompatible artifact bindings (daily_analytics/daily_order_summary vs geographic_analytics/fct_state_customers). The immediate local decisions (submit vs build/verify) are materially different."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-a5c177499a27ff.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode from B involves debugging duplicate model names in a staging structure (stg_customer_addresses exists in two locations). Prefix A has a completed single-model structure (daily_order_summary) with no duplicates. Running B's commands at A would result in 'Model not found' errors rather than the specific compilation error observed in B. The logical operation (debugging staging conflicts) and intended effect (build success) are not preserved in A's context (task completion/submission). Artifact bindings (project paths, model names) are not grounded in A's state."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-a5c177499a27ff.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence from B is a debugging workflow specific to B's project state (duplicate files in staging directories). Prefix A's state is 'Task Complete' with a different project structure. The sequence relies on prerequisites (staging models, duplicate file structure) that do not exist at A. Transferring this sequence would not produce coherent prerequisites or effects at A, as A does not require model building or conflict resolution."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "14"
+      ]
+    },
+    {
+      "probe_id": "train-3f94feba9e2e87",
+      "left_id": "dbt-daily-order-summary__aeoscED/h021",
+      "right_id": "dbt-customer-geographic__9DRtpzm/h006",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-3f94feba9e2e87.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The prefixes face materially different immediate local decisions and information needs. Prefix A is at the completion stage, deciding to submit for grading after successful execution. Prefix B is at the implementation stage, deciding to create and modify models. The task requirements, schemas, and project paths differ significantly."
+      },
+      "splice": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-3f94feba9e2e87.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first episode from B queries CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS at /app/database/retail.duckdb. While the database path matches A, A's prefix-only knowledge only confirms ORDERS table exists, not CUSTOMER schema. The command could execute if CUSTOMER exists, but we lack explicit evidence. The logical operation (schema exploration) could produce the same effect, but the purpose doesn't align with A's completed task. Without confirmation CUSTOMER schema exists at A, this is unknown."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-3f94feba9e2e87.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete B segment creates staging/marts models (stg_customer_addresses, stg_orders, fct_state_customers) in dbt_models_duckdb with geographic_analytics schema. A requires daily_order_summary in /app/dbt_project with daily_analytics schema. The project paths differ (/app/dbt_project vs dbt_models_duckdb), schemas differ (daily_analytics vs geographic_analytics/staging/marts), and models differ (daily_order_summary vs B's staging/mart models). A's task is already complete while B's is in implementation. The B sequence creates artifacts that don't match A's requirements, making transfer contradicted."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "8"
+      ]
+    },
+    {
+      "probe_id": "train-eec3e477e8e46c",
+      "left_id": "dbt-fix-cac-payback-waterfall__ZeXpKcZ/h029",
+      "right_id": "dbt-customer-geographic__9DRtpzm/h006",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-eec3e477e8e46c.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different local decisions and are working on different tasks. Prefix A is debugging a dbt compilation error (syntax error) for the `rpt_cac_payback_waterfall_fixed` model where SQL works in DuckDB but fails in dbt. Prefix B is implementing new staging and mart models (`stg_customer_addresses`, `stg_orders`, `fct_state_customers`) for a Customer Geographic Analysis task. The immediate decisions differ (investigate compilation error vs. create models) and the artifacts differ (`rpt_cac_payback_waterfall_fixed.sql` vs `fct_state_customers.sql`)."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-eec3e477e8e46c.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first episode (Step 8) explores schema of CUSTOMER_ADDRESSES and ORDERS. Prefix A debugs rpt_cac_payback_waterfall_fixed which uses ANALYTICS.FACT_MARKETING_SPEND. The tables and task (schema discovery vs syntax debugging) differ. Evidence: A's decision field states 'investigate why dbt compilation fails... examining the compiled SQL file'. B's episode commands 'python3 -c ... SELECT * FROM CUSTOMER.CUSTOMER_ADDRESSES'. No logical operation transfer possible for syntax error debugging via schema exploration of unrelated tables."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-eec3e477e8e46c.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The full segment builds new models (stg_customer_addresses, stg_orders, fct_state_customers) and sources.yml. Prefix A needs to fix an existing model (rpt_cac_payback_waterfall_fixed). Tasks (build vs fix) and artifacts are incompatible. Evidence: A's known facts include 'The compiled SQL file exists at target/compiled/...'. B's segment includes 'mkdir -p dbt_models_duckdb/sources' and creating 'sources.yml'. Prerequisites differ (existing project vs building project)."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "8"
+      ]
+    },
+    {
+      "probe_id": "train-de5e88944e9911",
+      "left_id": "dbt-customer-geographic__PbThYLY/h023",
+      "right_id": "dbt-daily-order-summary__aeoscED/h000",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-de5e88944e9911.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A is debugging a compilation error in an existing project (/app/dbt_models_duckdb) caused by a snapshot dependency on an undefined source (customer.CUSTOMERS), with DB_TYPE already known as duckdb. Prefix B is initializing a new standalone project (/app/dbt_project) and must first determine the DB_TYPE environment variable before any code is written. The immediate decisions differ: resolving a snapshot source mismatch vs. determining the database backend for project setup. The tasks are also distinct (geographic analysis vs. daily order summary). Evidence shows A has DB_TYPE known while B has it as an unresolved question."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-de5e88944e9911.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's knowledge state explicitly knows DB_TYPE=duckdb, whereas B's first episode treats it as an unknown to be discovered. Running B's 'echo $DB_TYPE' command at A contradicts the prefix-only knowledge state that this value is already resolved. Additionally, B's episode is part of a 'new project initialization' logical operation, while A is in a 'debugging existing project' state, making the intended effect (environment setup for new project) incoherent with A's goal (resolving compilation error in existing project). Evidence: A's known_facts state 'DB_TYPE is duckdb'; B's task_requirement states 'Run echo $DB_TYPE... BEFORE you write any code'.\n\nBindings:\n1. Artifact: DB_TYPE env var. A: Known (duckdb). B: Unknown (requires check).\n2. Artifact: Project Path. A: /app/dbt_models_duckdb (exists). B: /app/dbt_project (needs creation).\n3. Artifact: Snapshot File. A: snapshots/scd_customers.sql (exists, causes error). B: N/A.\n4. Artifact: Model Goal. A: Fix fct_state_customers.sql. B: Create daily_order_summary.sql."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-de5e88944e9911.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's complete sequence creates a new standalone project at /app/dbt_project with specific files (daily_order_summary.sql, profiles.yml for dbt_project). Transferring this to A would create a new project alongside A's existing debugging target (/app/dbt_models_duckdb), failing to address A's specific compilation error (snapshot dependency on customer.CUSTOMERS). The prerequisites (creating new project structure) and effects (new project materialization) are incoherent with A's goal (fixing existing project). Evidence: B's commands 'mkdir -p /app/dbt_project' and 'cat > /app/dbt_project/dbt_project.yml'; A's known_facts 'The project is being built in /app/dbt_models_duckdb'.\n\nBindings:\n1. Artifact: Project Directory. A: /app/dbt_models_duckdb. B: /app/dbt_project.\n2. Artifact: Profile Name. A: retail_dw_master. B: dbt_project.\n3. Artifact: Target Model. A: fct_state_customers.sql. B: daily_order_summary.sql.\n4. Artifact: Target Schema. A: geographic_analytics. B: daily_analytics."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-74fdde17c20cbb",
+      "left_id": "dbt-customer-geographic__PbThYLY/h000",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h021",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-74fdde17c20cbb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's immediate decision is to determine the database backend by checking the $DB_TYPE environment variable before writing any code. Prefix B's immediate decision is to fix a table reference error in an existing model (ORDERS.ORDERS vs ORDERS) after a dbt run failure. Prefix A has not yet determined $DB_TYPE, while Prefix B has already configured profiles.yml for DuckDB and is debugging a SQL syntax issue. This represents a material difference in the unresolved local decision (environment discovery vs. SQL debugging) and task state (pre-code vs. post-failure)."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-74fdde17c20cbb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode from B creates a daily_order_summary model in daily_analytics schema with ORDERS.ORDERS reference, but A requires geographic_analytics schema, retail_dw_master profile name, and different model logic (state-level customer analysis with LEFT JOIN). The episode's SQL logic, schema configuration, and profile settings are incompatible with A's requirements. A also requires checking $DB_TYPE before any code, which B has already bypassed by configuring DuckDB directly."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-74fdde17c20cbb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence from B includes model creation, dbt run, Python verification, and project structure checks all tied to daily_analytics schema and daily_order_summary model. A requires geographic_analytics schema, retail_dw_master profile, multiple models (stg_customer_addresses, stg_orders, fct_state_customers), and different source tables (CUSTOMER.CUSTOMER_ADDRESSES). The entire execution trajectory is task-specific and cannot be transferred without fundamental rewriting of SQL logic, schema names, and profile configuration."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "23"
+      ]
+    },
+    {
+      "probe_id": "train-4456b8d125cbfb",
+      "left_id": "dbt-customer-geographic__PbThYLY/h023",
+      "right_id": "dbt-fix-cac-payback-waterfall__ZeXpKcZ/h012",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4456b8d125cbfb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's immediate local decision is to resolve a dbt compilation error caused by a missing source definition for a snapshot (snapshots/scd_customers.sql depends on customer.CUSTOMERS). Prefix B's immediate local decision is to find an alternative method to access the DuckDB database because the duckdb CLI is unavailable (bash: duckdb: command not found). These are materially different decisions: one is a configuration fix for a specific model dependency, the other is an environment access problem for data exploration. The artifacts and operations differ (sources.yml vs CLI access, customer.CUSTOMERS vs FACT_MARKETING_SPEND). Therefore, they do not face the same unresolved local choice."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4456b8d125cbfb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's first episode (Step 14) executes a Python query to list database tables for data exploration. A's immediate conflict is a dbt compilation error caused by a missing source definition for a snapshot (`customer.CUSTOMERS`). The logical operation of schema exploration does not resolve the configuration error (missing `sources.yml` entry). The intended effect (data discovery) differs from A's required effect (configuration fix). Additionally, B's query targets `FACT_MARKETING_SPEND` (Marketing domain), whereas A requires `CUSTOMERS` (Customer domain). The command cannot be used to achieve A's goal without significant modification to the operation's intent."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-4456b8d125cbfb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's complete segment (Steps 14-18) includes creating a new dbt project at `/app/dbt_project` and exploring Marketing data (`FACT_MARKETING_SPEND`). A already has an existing project at `/app/dbt_models_duckdb` and requires Customer/Order models (`stg_customer_addresses`, `fct_state_customers`). The project creation command conflicts with A's existing state, and the data exploration targets a different schema/domain. Prerequisites for B (new project structure) are not coherent with A's state (existing project needing fixes). The sequence cannot be transferred to achieve A's goal."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "14"
+      ]
+    },
+    {
+      "probe_id": "train-813d77279ee6da",
+      "left_id": "dbt-customer-geographic__PbThYLY/h017",
+      "right_id": "dbt-fix-cac-payback-waterfall__ZeXpKcZ/h000",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-813d77279ee6da.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A has already executed dbt compile and is waiting for the result, with DB_TYPE known as duckdb. Prefix B has not started the project, needs to check DB_TYPE (unknown), and is working on a different model (rpt_cac_payback_waterfall_fixed vs fct_state_customers). The immediate decision (wait for compile vs check env var) and knowledge state (known vs unknown DB_TYPE) differ materially."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-813d77279ee6da.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's first episode assumes unknown DB_TYPE (discovery operation), but A already knows DB_TYPE=duckdb. The logical operation of environment discovery is redundant at A, creating a knowledge state mismatch that invalidates the transfer under prefix-only constraints."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-813d77279ee6da.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's complete segment explores marketing models (models/marts/marketing/) to find marketing data sources. A's task focuses on geographic analytics (models/marts/geographic/). The prerequisites (existence of marketing models) are not guaranteed at A, and the intended effect (marketing data discovery) is incoherent with A's geographic analytics goal."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-0e129423bfb577",
+      "left_id": "dbt-customer-geographic__9DRtpzm/h029",
+      "right_id": "dbt-daily-order-summary__aeoscED/h000",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-0e129423bfb577.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different immediate local decisions and information needs. Prefix A is in a post-build validation phase for the 'Customer Geographic Analysis' task, needing to verify the `fct_state_customers` table in the `geographic_analytics` schema. Prefix B is in a pre-build initialization phase for the 'Daily Order Summary' task, needing to determine the `$DB_TYPE` environment variable before creating the `daily_order_summary` model in the `daily_analytics` schema. The tasks, artifacts, schemas, and project states are incompatible."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-0e129423bfb577.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed episode consists of generic environment discovery commands (echo $DB_TYPE, ls /app/). These commands verify backend and directory structure, which is compatible with prefix A's state (DuckDB backend, existing project). The logical operation (environment check) and observed effect (confirming readiness) are preserved without conflict, as A already knows the backend and project location but can still benefit from verification. Different task goals do not invalidate backend discovery episodes per instructions."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-0e129423bfb577.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete segment includes creating a new project at /app/dbt_project and a new model (daily_order_summary). Prefix A requires validating an existing project at /app/dbt_models_duckdb with a specific model (fct_state_customers). Creating a new project and model contradicts A's task requirements and does not produce the intended effect (validation of fct_state_customers). The artifacts and project paths are incompatible with A's immediate decision and remaining goal."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "train-830ef35fcbd296",
+      "left_id": "dbt-daily-order-summary__629Mq8D/h026",
+      "right_id": "dbt-customer-geographic__PbThYLY/h023",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-830ef35fcbd296.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different local decisions due to different tasks, project states, and immediate goals. Prefix A is at the submission stage for a 'Daily Order Summary' task at `/app/dbt_project` with a successful model run, requiring confirmation to submit. Prefix B is at a debugging stage for a 'Customer Geographic Analysis' task at `/app/dbt_models_duckdb` with a compilation error caused by a missing source definition for a snapshot, requiring code fixes before any submission. The immediate operations (submit vs. debug) and artifacts (daily_order_summary vs. fct_state_customers/scd_customers) are incompatible."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-830ef35fcbd296.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's project is at `/app/dbt_project` with a `daily_analytics` schema and is in a completed state. Prefix B's first episode executes destructive cleanup commands (`rm -rf`, `find ... -delete`) targeting `/app/dbt_models_duckdb`'s `staging`, `marts`, and `snapshots` directories. A's project structure does not match B's (A lacks `staging/marts` hierarchy). Executing B's episode at A would delete necessary files or fail due to path mismatches, contradicting A's goal of submission and preserving logical operation."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-830ef35fcbd296.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix B's full segment is a debugging sequence driven by compilation errors (missing sources/nodes) leading to file deletions until `dbt compile` succeeds. Prefix A's project already compiles and runs successfully (`PASS=1`, 1084 rows). The prerequisites for B's segment (compilation errors, specific missing dependencies) do not exist in A. Transferring the segment would involve unnecessary destructive operations on a working project, failing to preserve the intended effect (fixing errors) as none exist."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "25"
+      ]
+    },
+    {
+      "probe_id": "train-e95d445914b2f5",
+      "left_id": "dbt-customer-geographic__PbThYLY/h012",
+      "right_id": "dbt-daily-order-summary__629Mq8D/h021",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-e95d445914b2f5.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A faces a dbt compilation error due to missing package dependencies (packages.yml vs dbt_packages), requiring a decision to remove packages.yml or fix network connectivity. Prefix B faces a dbt runtime error due to an incorrect table reference (ORDERS.ORDERS vs ORDERS), requiring a decision to update the SQL model. These are materially different local decisions involving different artifacts (packages.yml vs daily_order_summary.sql) and error types (compilation vs runtime)."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-e95d445914b2f5.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A has a blocking compilation error due to 'packages.yml' specifying 1 package but 'dbt_packages' being empty (source_evidence message_index 24). Prefix B's episode does not address package dependencies; it writes a SQL model and runs 'dbt run'. Transferring B's episode to A will result in the same 'packages.yml' compilation failure at A, preventing the 'dbt run' operation from proceeding to model execution as it did at B. The logical operation 'dbt run' cannot preserve its intended effect (successful model build) at A due to this prerequisite conflict."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/train-e95d445914b2f5.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence at B relies on 'dbt run' succeeding to create the model and subsequent verification steps (Python queries, file checks). Since 'dbt run' fails at A due to the 'packages.yml' error (known fact), the subsequent verification steps cannot be performed coherently. The prerequisites for the full segment (successful compilation) are not met at A, making the transfer impossible."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "23"
+      ]
+    },
+    {
+      "probe_id": "validation-416ec7ca61f85f",
+      "left_id": "dbt-fix-daily-cohorts__fkn5cqi/h000",
+      "right_id": "dbt-retail-task-01-channel-reven__WyXmjUB/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-416ec7ca61f85f.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the identical immediate local decision: determining the active database backend by executing `echo $DB_TYPE`. Both have the same unresolved question regarding the value of `$DB_TYPE` and the same prerequisite to select the correct project directory before model creation. The difference in final model schemas and file paths does not affect the immediate local decision to check the environment variable."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-416ec7ca61f85f.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode consists of environment discovery commands (echo $DB_TYPE, ls commands) that are identical prerequisites for both prefixes. Both A and B require determining the active database backend before model creation. The commands and their effects (identifying duckdb backend, verifying directory structure) are directly transferable under grounded artifact substitutions (same paths, same environment variables). All commands in this episode serve the same logical operation: backend identification and project structure verification."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-416ec7ca61f85f.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment includes model-specific exploration commands that are tied to B's task requirements (channel revenue model) rather than A's task (cohort retention model). Evidence: Step 7 commands inspect dim_dim_channel.sql, fct_sales_USE_THIS_ONE.sql, and stg_fact_sales.sql which are specific to B's channel revenue task. A's task requires different source models (orders data for cohort analysis) and different output schema (cohort_date, retention metrics). The segment's later observations about channel attributes and sales metrics are not prerequisites for A's cohort analysis task. Task requirements explicitly differ: A needs 'rpt_daily_cohorts.sql' with retention metrics, B needs 'ts_sales__channel_revenue_margin_monthly.sql' with revenue/profit metrics. The segment's model inspection commands would be irrelevant or misleading at A."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "validation-742d72d95b3c68",
+      "left_id": "dbt-fix-daily-cohorts__fkn5cqi/h000",
+      "right_id": "dbt-retail-task-01-channel-reven__buKdMAr/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-742d72d95b3c68.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the identical immediate local decision: determining the active database backend by checking the $DB_TYPE environment variable before writing code. Both explicitly state the requirement to run 'echo $DB_TYPE' in the task requirements and list the value of $DB_TYPE as an unresolved question. While their final SQL model tasks differ (rpt_daily_cohorts vs ts_sales__channel_revenue_margin_monthly), the immediate prerequisite of selecting the correct project directory based on DB_TYPE is the same for both, satisfying the SUPPORTED criteria."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-742d72d95b3c68.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode (echo $DB_TYPE, ls -la, ls -la dbt_models_duckdb/) is generic environment discovery that transfers between A and B. Both prefixes explicitly require checking $DB_TYPE before writing code, and both have identical project directory structures (/app/dbt_models_duckdb/ and /app/dbt_models_snowflake/). The commands' logical operation (determining backend, exploring directory structure) and observed effects (identifying duckdb as backend, confirming project structure) are preserved under grounded artifact substitutions (project directory selection based on $DB_TYPE). All three commands in the episode serve the same prerequisite purpose at both prefixes: backend identification and initial structure exploration before model creation."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-742d72d95b3c68.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment (steps 2-7) includes task-specific model exploration that cannot transfer to prefix A. Evidence: (1) Step 4 attempts to cat dim_dim_channel.sql and dim_fact_sales.sql which fail at prefix_A's context because prefix_A requires exploring orders data staging models, not channel-specific models; (2) Step 6's find command searches for '*channel*', '*fact_sales*', '*dim_date*' which are specific to prefix_B's channel revenue task, not prefix_A's cohort retention task; (3) Step 7's cat commands examine dim_dim_channel.sql, dim_fact_sales.sql, stg_fact_sales.sql, stg_analytics__dim_date.sql - these are the exact source models prefix_B requires, but prefix_A needs to explore different staging models for orders data schema; (4) The complete segment's observations reveal model schemas and structures specific to channel revenue analysis, not cohort retention analysis. While the first episode transfers, the full segment's task-specific exploration contradicts prefix_A's different model requirements."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "validation-6a9beb072482fb",
+      "left_id": "dbt-fix-daily-cohorts__zXAjF6V/h000",
+      "right_id": "dbt-retail-task-01-channel-reven__WyXmjUB/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-6a9beb072482fb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the identical immediate local decision: determining the active database backend by checking the $DB_TYPE environment variable before writing code. Both explicitly state the requirement to run 'echo $DB_TYPE' in the task requirements and list the value of $DB_TYPE as an unresolved question. While their final SQL model tasks differ (rpt_daily_cohorts vs ts_sales__channel_revenue_margin_monthly), the immediate prerequisite of selecting the correct project directory based on DB_TYPE is the same for both, satisfying the SUPPORTED criteria."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-6a9beb072482fb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode from B consists of generic environment exploration commands (echo $DB_TYPE, ls -la /app/, ls -la /app/dbt_models_duckdb/, ls -la /app/dbt_models_snowflake/) that are task-agnostic. These commands serve to identify the active backend and explore project structure, which are prerequisites for both A and B. The commands preserve logical operation (environment discovery) and intended effect (determining project location and backend type). All four commands in the first episode are transferable under grounded artifact substitutions (same directory paths, same environment variable checks). Evidence: Both prefixes explicitly require 'Run echo $DB_TYPE in a shell BEFORE you write any code' and list the same directory paths as known facts."
+      },
+      "full_segment": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-6a9beb072482fb.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment includes task-specific model examination commands (cat specific .sql files like stg_fact_sales.sql, dim_dim_channel.sql) that are tailored to B's channel revenue task. A's cohort task requires different source models (orders staging models for cohort analysis vs. channel models for revenue analysis). While the directory exploration commands transfer, the specific model file examinations may not be directly applicable to A's different output schema requirements. Command failures (e.g., 'No such file or directory' for expected model paths) reveal project structure information that could be meaningful at A, but the complete sequence's coherence depends on whether A's task can benefit from B's specific model examination findings. Evidence: A requires 'explore existing staging models to identify orders data source and schema' while B examines 'stg_fact_sales.sql' and 'dim_dim_channel.sql' which are channel-specific. The task requirements differ in output columns (cohort_date, retention metrics vs. revenue, profit, margin_rate by channel)."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "validation-1d77ffda5df853",
+      "left_id": "dbt-fix-daily-cohorts__zXAjF6V/h000",
+      "right_id": "dbt-retail-task-01-channel-reven__buKdMAr/h000",
+      "decision": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-1d77ffda5df853.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Both prefixes face the identical immediate local decision: determining the active database backend by checking the $DB_TYPE environment variable before writing code. Both explicitly state the requirement to run 'echo $DB_TYPE' in the task requirements and list the value of $DB_TYPE as an unresolved question. While their final SQL model tasks differ (rpt_daily_cohorts vs ts_sales__channel_revenue_margin_monthly), the immediate prerequisite of selecting the correct project directory based on DB_TYPE is the same for both, satisfying the SUPPORTED criteria."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-1d77ffda5df853.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed execution episode (echo $DB_TYPE, ls -la, ls -la dbt_models_duckdb/) performs generic environment discovery that is identical in both prefixes. Both A and B require checking $DB_TYPE before writing code, and both have the same directory structure (/app/dbt_models_duckdb/ and /app/dbt_models_snowflake/). The commands and their logical effects (determining backend, exploring project structure) are grounded in prefix-only knowledge and transfer without modification."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-1d77ffda5df853.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment (steps 2-7) includes exploration of specific model files (ts_sales__revenue_monthly.sql, dim_dim_channel.sql, dim_fact_sales.sql, stg_fact_sales.sql, stg_analytics__dim_date.sql) that are tied to prefix_B's channel revenue task. Prefix_A requires creating rpt_daily_cohorts.sql with different output columns (cohort_date, cohort_size, day_N_customers, retention metrics) and different data sources (orders data for customer retention). The specific model schemas, source references, and metric definitions explored in the segment do not match prefix_A's requirements. The segment's observations about existing models are task-specific and cannot be reused for the different model in prefix_A."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "validation-f2970f8d91acc8",
+      "left_id": "dbt-fix-daily-cohorts__zXAjF6V/h006",
+      "right_id": "dbt-retail-task-01-channel-reven__WyXmjUB/h000",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-f2970f8d91acc8.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A has already resolved the DB_TYPE environment variable (known fact: DB_TYPE=duckdb), whereas Prefix B has not (unresolved question: What is the value of the $DB_TYPE environment variable?). This establishes a material difference in the immediate local decision state regarding environment configuration. Additionally, the immediate information need differs: A needs to examine stg_orders__orders.sql schema, while B needs to identify the backend first."
+      },
+      "splice": {
+        "label": "supported",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-f2970f8d91acc8.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first episode commands (echo $DB_TYPE, ls -la /app/, ls -la /app/dbt_models_duckdb/, ls -la /app/dbt_models_snowflake/) are generic environment and directory verification commands. At prefix A, these commands would execute successfully and produce identical observations (DB_TYPE=duckdb, directory structures). The logical operation (verify backend and project structure) is preserved, and the intended effect (confirm DB_TYPE and directory existence) is achieved. No task-specific assumptions are made in this episode that would prevent transfer to A's context."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-f2970f8d91acc8.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed segment (Steps 2-7) includes commands specifically tailored to B's task requirements (channel revenue/margin model). Key contradictions: (1) Step 4 attempts to cat files (stg_fact_sales.sql, dim_dim_channel.sql, etc.) that don't exist at B - these same files don't exist at A either, but A needs different source files (stg_orders__orders.sql); (2) Step 5-7 explore marts/time_series/sales directory structure and channel-related models that are irrelevant to A's cohort retention task; (3) A requires marts/analytics directory (which doesn't exist at A) while B's segment assumes marts/time_series/sales exists; (4) The effects at B (discovering channel models, fact_sales files) are not coherent for A's task which requires orders data and cohort logic. The segment's prerequisites and effects are task-specific to B, not transferable to A's different task requirements."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "validation-f397b0581dd93a",
+      "left_id": "dbt-fix-daily-cohorts__zXAjF6V/h006",
+      "right_id": "dbt-retail-task-01-channel-reven__buKdMAr/h000",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-f397b0581dd93a.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A has already resolved the DB_TYPE environment variable (known fact: DB_TYPE=duckdb), whereas Prefix B has not (unresolved question: What is the value of the $DB_TYPE environment variable?). This establishes a material difference in the immediate local decision state regarding environment configuration. Additionally, the immediate information need differs: A needs to examine stg_orders__orders.sql schema, while B needs to identify the backend first."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-f397b0581dd93a.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first episode's primary operation (echo $DB_TYPE) is already resolved at prefix A (known fact: DB_TYPE=duckdb). Running this command at A would be redundant, not useful. The directory listings could transfer, but the episode's logical operation (backend verification) is already satisfied at A, making the episode's purpose contradicted by A's knowledge state."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-f397b0581dd93a.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete segment includes operations that fail at A: Step 4 attempts to cat dim_dim_channel.sql and dim_fact_sales.sql which don't exist at A's target location (A needs marts/analytics, B uses marts/time_series/sales). The segment is built around B's specific task (channel revenue/margin) with different source models (dim_dim_channel, dim_fact_sales) than A's task (customer retention cohorts using stg_orders__orders.sql). Prerequisites and effects are not coherent at A."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "2"
+      ]
+    },
+    {
+      "probe_id": "validation-52b4f9f5dd02ba",
+      "left_id": "dbt-retail-task-01-channel-reven__buKdMAr/h029",
+      "right_id": "dbt-fix-daily-cohorts__fkn5cqi/h015",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-52b4f9f5dd02ba.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A faces a debugging decision regarding an empty result from a compiled model (ts_sales__channel_revenue_margin_monthly), while Prefix B faces an execution decision to run a newly compiled model (rpt_daily_cohorts) that has not yet been executed. The immediate local decisions differ materially: one is troubleshooting a failure (empty output), the other is proceeding to verification (run model). Additionally, the artifacts and tasks are distinct (channel revenue vs cohort retention). Evidence: A shows 'Querying main.ts_sales__channel_revenue_margin_monthly returns empty DataFrame' (Message 52); B states 'The next decision is whether to run the model' after successful compile."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-52b4f9f5dd02ba.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A already executed `dbt run` for `ts_sales__channel_revenue_margin_monthly` (Message 58) and observed success, making the B episode's discovery redundant. Additionally, the model logic and data content differ (A returns empty data despite source rows, B returns populated cohort data), violating the preservation of intended observed effect."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-52b4f9f5dd02ba.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete segment includes schema-specific validation queries (checking `day_0_customers`, `day_7_customers`, etc.) that are inapplicable to A's model schema (`revenue`, `profit`, etc.). Transferring requires rewriting the SQL logic to match A's columns, which violates the constraint against rewriting the algorithm to make it fit."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "17"
+      ]
+    },
+    {
+      "probe_id": "validation-a0a2212b54f270",
+      "left_id": "dbt-fix-daily-cohorts__fkn5cqi/h015",
+      "right_id": "dbt-retail-task-01-channel-reven__WyXmjUB/h012",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-a0a2212b54f270.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's immediate local decision is to run a successfully compiled model (`rpt_daily_cohorts`) to verify execution. Prefix B's immediate local decision is to fix a runtime Binder Error in a different model (`ts_sales__channel_revenue_margin_monthly`) due to a column name mismatch (`sale_key` vs `sales_key`). The state of the artifacts differs materially: A is ready for execution, while B requires code correction before execution is possible. This constitutes a material difference in the local decision (Run vs Fix) and prerequisites (Compiled OK vs Runtime Error). Evidence: A's `known_facts` confirm successful compile [message 30]; B's `known_facts` confirm Binder Error [message 24].\n\nbindings: [\"rpt_daily_cohorts (Prefix A model)\", \"ts_sales__channel_revenue_margin_monthly (Prefix B model)\", \"dbt run (Prefix A operation)\", \"Binder Error (Prefix B failure)\"]"
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-a0a2212b54f270.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's first episode includes a file creation command (`cat > ...`) that overwrites the model file. Prefix A already has the target model `rpt_daily_cohorts` created and compiled. Overwriting A's file with B's SQL (channel revenue logic) would destroy A's working state. Additionally, the SQL logic in B is specific to B's schema (`dim_fact_sales`), which differs from A's schema (`stg_orders__orders`), so the logical operation is not preserved under substitution."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-a0a2212b54f270.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "B's complete segment is a debugging sequence (Fix -> Run -> Verify) driven by a specific runtime error (`Binder Error`). Prefix A has no such error (model compiled successfully). The prerequisites for the 'Fix' step in B do not exist in A, making the sequence incoherent for A's state. Transferring the segment would imply A needs to fix an error it does not have."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "14"
+      ]
+    },
+    {
+      "probe_id": "validation-95bd62ff6e610c",
+      "left_id": "dbt-fix-daily-cohorts__zXAjF6V/h017",
+      "right_id": "dbt-retail-task-01-channel-reven__WyXmjUB/h012",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-95bd62ff6e610c.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A faces the decision to execute `dbt run` to materialize a model that compiled successfully. Prefix B faces the decision to fix a specific runtime error (column name mismatch) in a model that failed to run. The observed failure in B removes the option to simply run the model, creating a material difference in the immediate local decision compared to A."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-95bd62ff6e610c.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The first witnessed episode from B involves writing a specific SQL file (`ts_sales__channel_revenue_margin_monthly.sql`) with channel revenue logic and running it. Prefix A already has a different model (`rpt_daily_cohorts.sql`) with cohort logic that compiled successfully. Transferring B's episode to A would require overwriting A's correct file with B's incompatible SQL content (forbidden by 'Do not rewrite the algorithm'). This violates A's task requirements (cohort analysis vs channel revenue) and state (file exists vs file creation). The observed failure in B (Binder Error) is not present in A, making the error-handling logic inapplicable. The intended effect of materializing the correct model for A's goal cannot be preserved using B's content."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-95bd62ff6e610c.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete witnessed sequence from B includes debugging a specific column mismatch error (`channel_id` vs `channel_key`) in the `ts_sales` model, fixing it, and verifying. Prefix A's model compiled successfully without errors, so the prerequisite for B's sequence (existence of a specific runtime error) is missing. Transferring the file overwrite commands (Step 14, 15) would destroy A's correct model file. The verification steps (Step 16-18) are generic but the preceding error-fixing steps are incoherent with A's state. The sequence relies on B's specific error context which does not exist at A."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "14"
+      ]
+    },
+    {
+      "probe_id": "validation-a6d622f2128644",
+      "left_id": "dbt-fix-daily-cohorts__fkn5cqi/h025",
+      "right_id": "dbt-retail-task-01-channel-reven__WyXmjUB/h012",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-a6d622f2128644.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A's immediate local decision is to verify the existence and content of created model files (`rpt_daily_cohorts.sql`). Prefix B's immediate local decision is to fix a runtime Binder Error regarding a column name mismatch (`sale_key` vs `sales_key`) in a different model (`ts_sales__channel_revenue_margin_monthly.sql`). These represent different local operations (verification vs debugging) on different artifacts."
+      },
+      "splice": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-a6d622f2128644.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "full_segment": {
+        "label": "unknown",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-a6d622f2128644.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Technical unknown: the judge exhausted its bounded structured-output attempts; no semantic compatibility judgment was obtained. See saved raw attempts."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "14"
+      ]
+    },
+    {
+      "probe_id": "validation-1ffab153ed32c0",
+      "left_id": "dbt-retail-task-01-channel-reven__buKdMAr/h029",
+      "right_id": "dbt-fix-daily-cohorts__fkn5cqi/h020",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-1ffab153ed32c0.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The two prefixes face materially different immediate local decisions and information needs. Prefix A is debugging a dbt model (`ts_sales__channel_revenue_margin_monthly`) that compiles successfully but returns empty data, requiring diagnosis of SQL logic, filters, or compilation artifacts. Prefix B is debugging a Python verification script for a different dbt model (`rpt_daily_cohorts`) that runs successfully but fails due to incorrect column indexing in the verification code. The tasks, models, and specific problems (empty data vs. script indexing error) are distinct, constituting a material difference in the local decision."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-1ffab153ed32c0.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The B episode verifies cumulative retention semantics (day_0 <= day_7...) on the rpt_daily_cohorts model. A's model (ts_sales__channel_revenue_margin_monthly) has different columns (revenue, profit) and no retention logic. Substituting artifacts does not preserve the logical operation (retention check) or the intended effect (validating retention)."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-1ffab153ed32c0.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The segment creates rpt_daily_cohorts.sql files. A's goal is to fix ts_sales__channel_revenue_margin_monthly. Creating the cohort model file does not address A's empty result issue. The operations are specific to a different artifact and do not transfer coherently to A's unresolved decision."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "22"
+      ]
+    },
+    {
+      "probe_id": "validation-dd3a8b726a3781",
+      "left_id": "dbt-fix-daily-cohorts__zXAjF6V/h012",
+      "right_id": "dbt-retail-task-01-channel-reven__WyXmjUB/h017",
+      "decision": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-dd3a8b726a3781.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A faces an implementation decision regarding column selection (`ordered_at` vs `original_order_date`) for the `rpt_daily_cohorts` model. Prefix B faces a verification decision regarding task completion for the `ts_sales__channel_revenue_margin_monthly` model. These are different models at different stages (implementation vs verification), constituting a material difference in the local decision."
+      },
+      "splice": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-dd3a8b726a3781.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "Prefix A requires creating rpt_daily_cohorts (model does not exist), while Episode B executes dbt run on an existing model (ts_sales__channel_revenue_margin_monthly). Substituting the model name does not resolve the missing prerequisite at A, causing execution failure. The intended effect of successful creation cannot be observed at A because the artifact is not yet present to be run against."
+      },
+      "full_segment": {
+        "label": "contradicted",
+        "method": "llm",
+        "source_ref": "results/analysis_v1/frozen_judgments/validation-dd3a8b726a3781.json",
+        "independent": true,
+        "audited": false,
+        "rationale": "The complete segment includes verification queries (dbt show, python3) that require the model to exist and be populated. Prefix A is in a pre-creation state where the model file and data do not exist, making verification impossible. Prerequisites for the segment (model existence, compilation) are not met at A."
+      },
+      "operation_scope": "first_witnessed_execution_episode",
+      "judged_operation_step_ids": [
+        "19"
+      ]
+    }
+  ],
+  "tier": "frozen LLM proxy, not executed validation"
+}

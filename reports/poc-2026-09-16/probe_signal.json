@@ -1,0 +1,35 @@
+{
+  "before_expansion": {
+    "train": {
+      "supported": 4,
+      "contradicted": 26,
+      "unknown": 2,
+      "total": 32
+    },
+    "validation": {
+      "supported": 4,
+      "contradicted": 8,
+      "unknown": 0,
+      "total": 12
+    }
+  },
+  "expansion": [],
+  "judge_prompt_sha256": "af96994a189c18efbb988c8b8020a697d63148ac6c00c41eb3ad73319decc82c",
+  "after_expansion": {
+    "train": {
+      "supported": 4,
+      "contradicted": 26,
+      "unknown": 2,
+      "total": 32
+    },
+    "validation": {
+      "supported": 4,
+      "contradicted": 8,
+      "unknown": 0,
+      "total": 12
+    }
+  },
+  "positive_training_signal": true,
+  "positive_validation_signal": true,
+  "interpretation": "Positive proxy examples available."
+}

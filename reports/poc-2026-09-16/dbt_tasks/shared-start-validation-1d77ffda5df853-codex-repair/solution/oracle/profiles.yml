@@ -1,0 +1,8 @@
+sg_profile_991dec701d:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /app/database/retail.duckdb
+      schema: sg_991dec701d
+      threads: 2

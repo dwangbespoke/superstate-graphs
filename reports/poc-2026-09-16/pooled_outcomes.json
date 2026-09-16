@@ -1,0 +1,191 @@
+[
+  {
+    "superstate_id": "S01",
+    "distinct_rollouts": 10,
+    "binary_reward_rollouts": 9,
+    "distinct_tasks": 5,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-customer-geographic__9DRtpzm/result.json",
+      "results/rollouts/pilot-v2/dbt-customer-geographic__PbThYLY/result.json",
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__629Mq8D/result.json",
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__aeoscED/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__RzYkUu5/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__ZeXpKcZ/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__fkn5cqi/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__zXAjF6V/result.json",
+      "results/rollouts/pilot-v2/dbt-retail-task-01-channel-reven__WyXmjUB/result.json",
+      "results/rollouts/pilot-v2/dbt-retail-task-01-channel-reven__buKdMAr/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S03",
+    "distinct_rollouts": 6,
+    "binary_reward_rollouts": 6,
+    "distinct_tasks": 3,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__629Mq8D/result.json",
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__aeoscED/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__RzYkUu5/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__ZeXpKcZ/result.json",
+      "results/rollouts/pilot-v2/dbt-retail-task-01-channel-reven__WyXmjUB/result.json",
+      "results/rollouts/pilot-v2/dbt-retail-task-01-channel-reven__buKdMAr/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S02",
+    "distinct_rollouts": 5,
+    "binary_reward_rollouts": 5,
+    "distinct_tasks": 3,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-customer-geographic__9DRtpzm/result.json",
+      "results/rollouts/pilot-v2/dbt-customer-geographic__PbThYLY/result.json",
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__629Mq8D/result.json",
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__aeoscED/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__RzYkUu5/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S06",
+    "distinct_rollouts": 5,
+    "binary_reward_rollouts": 4,
+    "distinct_tasks": 3,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__629Mq8D/result.json",
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__aeoscED/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__fkn5cqi/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__zXAjF6V/result.json",
+      "results/rollouts/pilot-v2/dbt-retail-task-01-channel-reven__WyXmjUB/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S11",
+    "distinct_rollouts": 4,
+    "binary_reward_rollouts": 3,
+    "distinct_tasks": 3,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-customer-geographic__9DRtpzm/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__fkn5cqi/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__zXAjF6V/result.json",
+      "results/rollouts/pilot-v2/dbt-retail-task-01-channel-reven__WyXmjUB/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S09",
+    "distinct_rollouts": 3,
+    "binary_reward_rollouts": 3,
+    "distinct_tasks": 3,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__629Mq8D/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__RzYkUu5/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__zXAjF6V/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S07",
+    "distinct_rollouts": 3,
+    "binary_reward_rollouts": 2,
+    "distinct_tasks": 3,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-daily-order-summary__aeoscED/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__fkn5cqi/result.json",
+      "results/rollouts/pilot-v2/dbt-retail-task-01-channel-reven__buKdMAr/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S12",
+    "distinct_rollouts": 2,
+    "binary_reward_rollouts": 2,
+    "distinct_tasks": 1,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-customer-geographic__9DRtpzm/result.json",
+      "results/rollouts/pilot-v2/dbt-customer-geographic__PbThYLY/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S04",
+    "distinct_rollouts": 2,
+    "binary_reward_rollouts": 2,
+    "distinct_tasks": 2,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-customer-geographic__PbThYLY/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__ZeXpKcZ/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S08",
+    "distinct_rollouts": 2,
+    "binary_reward_rollouts": 1,
+    "distinct_tasks": 2,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-customer-geographic__PbThYLY/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-daily-cohorts__fkn5cqi/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S05",
+    "distinct_rollouts": 2,
+    "binary_reward_rollouts": 2,
+    "distinct_tasks": 1,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__RzYkUu5/result.json",
+      "results/rollouts/pilot-v2/dbt-fix-cac-payback-waterfall__ZeXpKcZ/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S16",
+    "distinct_rollouts": 1,
+    "binary_reward_rollouts": 1,
+    "distinct_tasks": 1,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-customer-geographic__9DRtpzm/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  },
+  {
+    "superstate_id": "S10",
+    "distinct_rollouts": 1,
+    "binary_reward_rollouts": 1,
+    "distinct_tasks": 1,
+    "pooled_success_rate": 0.0,
+    "pooled_binary_variance": 0.0,
+    "reward_sources": [
+      "results/rollouts/pilot-v2/dbt-retail-task-01-channel-reven__buKdMAr/result.json"
+    ],
+    "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."
+  }
+]

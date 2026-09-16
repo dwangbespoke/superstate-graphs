@@ -1,0 +1,305 @@
+[
+  {
+    "run": "before_metadata_wording_fix/summary.json",
+    "attempted": [
+      {
+        "path_id": "shared-start-train-b73e52431d2c62",
+        "status": "construction_failed",
+        "task_id": null,
+        "output_dir": "results/generated_dbt_tasks/shared-start-train-b73e52431d2c62",
+        "report": {
+          "status": "construction_failed",
+          "attempts": [
+            {
+              "attempt": 0,
+              "status": "rejected",
+              "error": "Every claimed unknown fact needs its intended discovery action"
+            },
+            {
+              "attempt": 1,
+              "status": "rejected",
+              "error": "Every claimed unknown fact needs its intended discovery action"
+            },
+            {
+              "attempt": 2,
+              "status": "rejected",
+              "error": "Every claimed unknown fact needs its intended discovery action"
+            },
+            {
+              "attempt": 3,
+              "status": "rejected",
+              "error": "Binder Error: Referenced column \"customer_id\" not found in FROM clause!\nCandidate bindings: \"order_date\"\n\nLINE 18:     COUNT(DISTINCT customer_id) AS customer_count,\n                            ^"
+            }
+          ],
+          "limitations": [
+            "Generated bindings and decision-preservation explanations are proposals, not independent semantic proof.",
+            "The oracle and reference SQL share a generator; runtime agreement is an internal correctness check.",
+            "Literal replay judgments remain unchanged; this package proposes a new terminal goal and explicit bindings.",
+            "No learner difficulty, high within-history variance, or training improvement has been demonstrated."
+          ]
+        }
+      }
+    ],
+    "client": {
+      "model": "Qwen/Qwen3.5-35B-A3B-FP8",
+      "role": "mutable_dbt_constructor",
+      "calls": 3,
+      "cache_hits": 1,
+      "input_tokens": 59472,
+      "output_tokens": 14071
+    }
+  },
+  {
+    "run": "before_scaffold_fix/summary.json",
+    "attempted": [
+      {
+        "path_id": "cross-task-09b4de7532c5",
+        "status": "unsupported_target",
+        "reason": "Original local decision evidence is contradicted"
+      },
+      {
+        "path_id": "shared-start-train-b73e52431d2c62",
+        "status": "error",
+        "error": "ValueError: Learned target definition, decision prefixes, and path identities cannot fit the prompt budget without losing decision meaning; select a shorter path"
+      },
+      {
+        "path_id": "shared-start-validation-1d77ffda5df853",
+        "status": "error",
+        "error": "ValueError: Learned target definition, decision prefixes, and path identities cannot fit the prompt budget without losing decision meaning; select a shorter path"
+      },
+      {
+        "path_id": "shared-start-train-9c58a1910ac7c4",
+        "status": "error",
+        "error": "ValueError: Learned target definition, decision prefixes, and path identities cannot fit the prompt budget without losing decision meaning; select a shorter path"
+      },
+      {
+        "path_id": "shared-start-train-b73e52431d2c62",
+        "status": "construction_failed",
+        "task_id": null,
+        "output_dir": "results/generated_dbt_tasks/shared-start-train-b73e52431d2c62",
+        "report": {
+          "status": "construction_failed",
+          "attempts": [
+            {
+              "attempt": 0,
+              "status": "rejected",
+              "error": "Both file maps must contain ['dbt_project.yml', 'models/sg_result_6a8ba1bfe2.sql', 'profiles.yml']"
+            },
+            {
+              "attempt": 1,
+              "status": "rejected",
+              "error": "Starter SQL must contain comments/TODOs only, never solved SQL"
+            },
+            {
+              "attempt": 2,
+              "status": "rejected",
+              "error": "Known-information delivery must point to actual learner-visible text"
+            }
+          ],
+          "limitations": [
+            "Generated bindings and decision-preservation explanations are proposals, not independent semantic proof.",
+            "The oracle and reference SQL share a generator; runtime agreement is an internal correctness check.",
+            "Literal replay judgments remain unchanged; this package proposes a new terminal goal and explicit bindings.",
+            "No learner difficulty, high within-history variance, or training improvement has been demonstrated."
+          ]
+        }
+      },
+      {
+        "path_id": "shared-start-validation-1d77ffda5df853",
+        "status": "construction_failed",
+        "task_id": null,
+        "output_dir": "results/generated_dbt_tasks/shared-start-validation-1d77ffda5df853",
+        "report": {
+          "status": "construction_failed",
+          "attempts": [
+            {
+              "attempt": 0,
+              "status": "rejected",
+              "error": "Composition binding must identify its actual witnessed source transition"
+            },
+            {
+              "attempt": 1,
+              "status": "rejected",
+              "error": "Starter profile must leave the backend configuration unresolved"
+            },
+            {
+              "attempt": 2,
+              "status": "rejected",
+              "error": "Mutable table tasks use ordered=false; table storage order is not a contract"
+            }
+          ],
+          "limitations": [
+            "Generated bindings and decision-preservation explanations are proposals, not independent semantic proof.",
+            "The oracle and reference SQL share a generator; runtime agreement is an internal correctness check.",
+            "Literal replay judgments remain unchanged; this package proposes a new terminal goal and explicit bindings.",
+            "No learner difficulty, high within-history variance, or training improvement has been demonstrated."
+          ]
+        }
+      },
+      {
+        "path_id": "shared-start-train-9c58a1910ac7c4",
+        "status": "construction_failed",
+        "task_id": null,
+        "output_dir": "results/generated_dbt_tasks/shared-start-train-9c58a1910ac7c4",
+        "report": {
+          "status": "construction_failed",
+          "attempts": [
+            {
+              "attempt": 0,
+              "status": "rejected",
+              "error": "target_relation must equal fresh contract value sg_result_e97a398a2d"
+            },
+            {
+              "attempt": 1,
+              "status": "rejected",
+              "error": "Starter SQL must contain comments/TODOs only, never solved SQL"
+            },
+            {
+              "attempt": 2,
+              "status": "rejected",
+              "error": "Starter SQL must contain comments/TODOs only, never solved SQL"
+            }
+          ],
+          "limitations": [
+            "Generated bindings and decision-preservation explanations are proposals, not independent semantic proof.",
+            "The oracle and reference SQL share a generator; runtime agreement is an internal correctness check.",
+            "Literal replay judgments remain unchanged; this package proposes a new terminal goal and explicit bindings.",
+            "No learner difficulty, high within-history variance, or training improvement has been demonstrated."
+          ]
+        }
+      }
+    ],
+    "client": {
+      "model": "Qwen/Qwen3.5-35B-A3B-FP8",
+      "role": "mutable_dbt_constructor",
+      "calls": 9,
+      "cache_hits": 0,
+      "input_tokens": 172583,
+      "output_tokens": 48260
+    }
+  },
+  {
+    "run": "summary.json",
+    "attempted": [
+      {
+        "path_id": "shared-start-train-b73e52431d2c62",
+        "status": "construction_failed",
+        "task_id": null,
+        "output_dir": "results/generated_dbt_tasks/shared-start-train-b73e52431d2c62",
+        "report": {
+          "status": "construction_failed",
+          "attempts": [
+            {
+              "attempt": 0,
+              "status": "rejected",
+              "error": "Catalog Error: Scalar Function with name date does not exist!\nDid you mean \"datesub\"?\n\nLINE 11: GROUP BY DATE(o.ORDERED_AT), ca.STATE_PROVINCE\n                  ^"
+            },
+            {
+              "attempt": 1,
+              "status": "rejected",
+              "error": "Unsafe or unsupported oracle_files file: reference_sql"
+            },
+            {
+              "attempt": 2,
+              "status": "rejected",
+              "error": "Unsafe or unsupported oracle_files file: reference_sql"
+            },
+            {
+              "attempt": 3,
+              "status": "rejected",
+              "error": "Query returned more than 1000 rows; aggregate the final output"
+            }
+          ],
+          "limitations": [
+            "Generated bindings and decision-preservation explanations are proposals, not independent semantic proof.",
+            "The oracle and reference SQL share a generator; runtime agreement is an internal correctness check.",
+            "Literal replay judgments remain unchanged; this package proposes a new terminal goal and explicit bindings.",
+            "No learner difficulty, high within-history variance, or training improvement has been demonstrated."
+          ]
+        }
+      },
+      {
+        "path_id": "shared-start-validation-1d77ffda5df853",
+        "status": "construction_failed",
+        "task_id": null,
+        "output_dir": "results/generated_dbt_tasks/shared-start-validation-1d77ffda5df853",
+        "report": {
+          "status": "construction_failed",
+          "attempts": [
+            {
+              "attempt": 0,
+              "status": "rejected",
+              "error": "Binder Error: Referenced column \"customer_id\" not found in FROM clause!\nCandidate bindings: \"TIME_KEY\"\n\nLINE 6:   GROUP BY customer_id\n                   ^"
+            },
+            {
+              "attempt": 1,
+              "status": "rejected",
+              "error": "Binder Error: Ambiguous reference to column name \"customer_key\" (use: \"cc.customer_key\" or \"fs.customer_key\")"
+            },
+            {
+              "attempt": 2,
+              "status": "rejected",
+              "error": "Binder Error: Values list \"c\" does not have a column named \"first_order_date_key\"\n\nLINE 24:   JOIN cohort_customers cc ON c.first_order_date_key = cc.first_order_date_key\n                                       ^"
+            },
+            {
+              "attempt": 3,
+              "status": "rejected",
+              "error": "Binder Error: Table \"fs\" does not have a column named \"FULL_DATE\"\n\nCandidate bindings: : \"DATE_KEY\"\n\nLINE 45:   GROUP BY DATE_TRUNC('month', fs.FULL_DATE), fs.CHANNEL_KEY\n                                        ^"
+            }
+          ],
+          "limitations": [
+            "Generated bindings and decision-preservation explanations are proposals, not independent semantic proof.",
+            "The oracle and reference SQL share a generator; runtime agreement is an internal correctness check.",
+            "Literal replay judgments remain unchanged; this package proposes a new terminal goal and explicit bindings.",
+            "No learner difficulty, high within-history variance, or training improvement has been demonstrated."
+          ]
+        }
+      },
+      {
+        "path_id": "shared-start-train-9c58a1910ac7c4",
+        "status": "construction_failed",
+        "task_id": null,
+        "output_dir": "results/generated_dbt_tasks/shared-start-train-9c58a1910ac7c4",
+        "report": {
+          "status": "construction_failed",
+          "attempts": [
+            {
+              "attempt": 0,
+              "status": "rejected",
+              "error": "Query returned more than 1000 rows; aggregate the final output"
+            },
+            {
+              "attempt": 1,
+              "status": "rejected",
+              "error": "Unsafe or unsupported oracle_files file: reference_sql"
+            },
+            {
+              "attempt": 2,
+              "status": "rejected",
+              "error": "Catalog Error: Scalar Function with name date does not exist!\nDid you mean \"datesub\"?\n\nLINE 9: LEFT JOIN MARKETING.CAMPAIGN_PERFORMANCE m ON DATE(o.ORDERED_AT) = m.METRIC_DATE\n                                                      ^"
+            },
+            {
+              "attempt": 3,
+              "status": "rejected",
+              "error": "Query returned more than 1000 rows; aggregate the final output"
+            }
+          ],
+          "limitations": [
+            "Generated bindings and decision-preservation explanations are proposals, not independent semantic proof.",
+            "The oracle and reference SQL share a generator; runtime agreement is an internal correctness check.",
+            "Literal replay judgments remain unchanged; this package proposes a new terminal goal and explicit bindings.",
+            "No learner difficulty, high within-history variance, or training improvement has been demonstrated."
+          ]
+        }
+      }
+    ],
+    "client": {
+      "model": "Qwen/Qwen3.5-35B-A3B-FP8",
+      "role": "mutable_dbt_constructor",
+      "calls": 11,
+      "cache_hits": 1,
+      "input_tokens": 211912,
+      "output_tokens": 60648
+    }
+  }
+]

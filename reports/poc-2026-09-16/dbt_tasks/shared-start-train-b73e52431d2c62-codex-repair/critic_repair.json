@@ -1,0 +1,216 @@
+{
+  "generation_assistance": "Codex critic repair of a Qwen proposal",
+  "interpretation": "Assisted executable example, not an unassisted task-generation success.",
+  "proposal_sha256": "acd1ff8c40aa8660c5786f7d88e8e13781ae5b205185cd5dfa48da8aa1da3274",
+  "proposal_source": "results/codex_task_repairs/geo_daily.json",
+  "repair_notes": {
+    "status": "proposal_only_not_runtime_validated",
+    "repair_author": "Codex critic",
+    "source_candidate": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/generated_dbt_tasks/shared-start-train-b73e52431d2c62/constructor_attempts/attempt_03/rejection.json",
+    "source_original_proposal": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/generated_dbt_tasks/shared-start-train-b73e52431d2c62/constructor_attempts/attempt_03/original_proposal.json",
+    "source_candidate_sha256": "bc0e92d068ddb354ca9538c0efe2a3e4103cb60b626dfd6322cac9dbe109a65f",
+    "source_path": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/analysis_v1/shared_start_paths_reviewed.json",
+    "path_sha256": "83620aeaec47932b2c3edec947132a153f253d8c48242cd973a00cd7bca6988b",
+    "path_id": "shared-start-train-b73e52431d2c62",
+    "target_definition": {
+      "id": "S01",
+      "description": "Initial environment discovery to determine database backend type and connection parameters before project initialization.",
+      "roles": [
+        "project_root",
+        "db_type_var",
+        "db_path_var"
+      ],
+      "requirements": [
+        "Access to environment variables ($DB_TYPE, $DUCKDB_PATH, etc.)",
+        "Ability to list available database files",
+        "Conditional logic to branch project structure based on backend type"
+      ]
+    },
+    "reasons": [
+      "Original unbounded query exceeded 1000 rows. Added an explicit data-anchored 365-day window to both instruction and SQL.",
+      "Unused sources.yml declared the same source name twice. Removed it because SQL uses direct schema-qualified tables.",
+      "Defined exact observed groups and denominator/rounding rules; explicitly acknowledged changes from original all-state and status obligations.",
+      "Original graph/source evidence and replay labels remain unchanged."
+    ],
+    "changed_fields": [
+      {
+        "field": "/changed_terminal_obligations",
+        "before": [
+          {
+            "new_obligation": "Create sg_result_6a8ba1bfe2.sql with combined state AND date aggregation",
+            "original_obligation": "Create fct_state_customers.sql with state-level aggregation only (no temporal dimension)",
+            "source_task_id": "dbt-customer-geographic",
+            "why_change_preserves_target_decision": "The $DB_TYPE discovery decision is preserved; only the analytical scope is expanded to combine both branches' dimensions while maintaining the same filtering logic"
+          },
+          {
+            "new_obligation": "Create sg_result_6a8ba1bfe2.sql with combined date AND state aggregation",
+            "original_obligation": "Create daily_order_summary.sql with date-level aggregation only (no geographic dimension)",
+            "source_task_id": "dbt-daily-order-summary",
+            "why_change_preserves_target_decision": "The $DB_TYPE discovery decision is preserved; only the analytical scope is expanded to combine both branches' dimensions while maintaining the same filtering logic"
+          }
+        ],
+        "after": [
+          {
+            "new_obligation": "Create the contracted state/date model for observed groups in a trailing 365-day window; include only customers with qualifying orders in each group, with no zero-order grid.",
+            "original_obligation": "Create fct_state_customers with a LEFT JOIN, all default-shipping states including zero-order states, and state-level customer/revenue metrics.",
+            "source_task_id": "dbt-customer-geographic",
+            "why_change_preserves_target_decision": "This explicitly changes terminal coverage and metric denominators while retaining the initial unresolved DB_TYPE/backend and connection-discovery decision; it is new-task compilation, not literal replay."
+          },
+          {
+            "new_obligation": "Create the contracted state/date model using the stricter COMPLETED/DELIVERED/SHIPPED status set and trailing 365-day window, with fractional customer metrics.",
+            "original_obligation": "Create a date-level daily_order_summary excluding CANCELLED/RETURNED/FAILED orders.",
+            "source_task_id": "dbt-daily-order-summary",
+            "why_change_preserves_target_decision": "The analytical obligations change explicitly, but backend discovery still precedes configuring the fresh project."
+          }
+        ]
+      },
+      {
+        "field": "/composition_bindings",
+        "before": [
+          {
+            "evidence": "Task instruction requires checking $DB_TYPE before code, creates fct_state_customers.sql with state_province, filters IS_DEFAULT_SHIPPING = true [message 0]",
+            "new_role": "geographic_dimension_provider",
+            "preserved_effect": "state_province dimension from CUSTOMER.CUSTOMER_ADDRESSES with IS_DEFAULT_SHIPPING filter",
+            "source_operation": "environment_inspection_and_geographic_analysis",
+            "source_task_id": "dbt-customer-geographic",
+            "source_transition_id": "branch_A"
+          },
+          {
+            "evidence": "Task instruction requires checking $DB_TYPE before code, creates daily_order_summary.sql with order_date aggregation, excludes CANCELLED/RETURNED/FAILED [message 0]",
+            "new_role": "temporal_dimension_provider",
+            "preserved_effect": "order_date dimension from ORDERS.ORDERS with STATUS exclusion filter",
+            "source_operation": "environment_inspection_and_daily_aggregation",
+            "source_task_id": "dbt-daily-order-summary",
+            "source_transition_id": "branch_B"
+          }
+        ],
+        "after": [
+          {
+            "evidence": "Task instruction requires checking $DB_TYPE before code, creates fct_state_customers.sql with state_province, filters IS_DEFAULT_SHIPPING = true [message 0]",
+            "new_role": "geographic_dimension_provider",
+            "preserved_effect": "Reuse the default-shipping geographic join/filter as an authored analytical component; do not claim the branch executed the new aggregate successfully.",
+            "source_operation": "Backend/directory inspection in branch_A; geographic aggregation requirements supplied by source task message 0.",
+            "source_task_id": "dbt-customer-geographic",
+            "source_transition_id": "branch_A"
+          },
+          {
+            "evidence": "Task instruction requires checking $DB_TYPE before code, creates daily_order_summary.sql with order_date aggregation, excludes CANCELLED/RETURNED/FAILED [message 0]",
+            "new_role": "temporal_dimension_provider",
+            "preserved_effect": "Reuse the daily date extraction and order aggregation pattern under new explicit status, time-window and geographic obligations; do not claim literal full-segment replay.",
+            "source_operation": "Backend/directory inspection and project setup in branch_B; date aggregation requirement supplied by source task message 0.",
+            "source_task_id": "dbt-daily-order-summary",
+            "source_transition_id": "branch_B"
+          }
+        ]
+      },
+      {
+        "field": "/information_state_contract/mismatches",
+        "before": [
+          "Original Branch A required geographic_analytics schema; new task uses sg_6a8ba1bfe2 (CONTRACT requirement)",
+          "Original Branch A required retail_dw_master profile; new task uses sg_profile_6a8ba1bfe2 (CONTRACT requirement)",
+          "Original Branch A required fct_state_customers model; new task uses sg_result_6a8ba1bfe2 (CONTRACT requirement)",
+          "Original Branch B required daily_analytics schema; new task uses sg_6a8ba1bfe2 (CONTRACT requirement)",
+          "Original Branch B required daily_order_summary model; new task uses sg_result_6a8ba1bfe2 (CONTRACT requirement)",
+          "Original Branch A used DATE() function; new task uses CAST(... AS DATE) to avoid DuckDB scalar function error",
+          "Original Branch A required ~51 states; new task requires 1-1000 rows (combined state+date grid may exceed)",
+          "Core decision ($DB_TYPE discovery) survives all changes as it is a prerequisite operation, not a task-specific outcome"
+        ],
+        "after": [
+          "The target is the shared initial backend-discovery decision; the two recorded branches are alternatives from that state, not sequentially observed graph edges.",
+          "Fresh contracted project/profile/schema/model names replace both source tasks' required artifacts, explicitly resolving their original naming conflicts.",
+          "Geographic source task included all default-shipping states by LEFT JOIN. This new task explicitly emits only observed state/date groups with qualifying orders; customer denominators therefore count customers active within each group.",
+          "Daily source task excluded three statuses. The combined task explicitly uses the geographic source's stricter three-status inclusion set and a new data-anchored 365-day window.",
+          "The constructor supplies incomplete project files rather than requiring creation of every project file from an empty directory; backend profile and model SQL remain unresolved.",
+          "The supplied warehouse's one-default-address-per-customer property is additional verified task context. It removes join-multiplicity ambiguity and is not claimed to have been known in either source prefix.",
+          "Only the local pinned backend is executed in this POC. No claim is made that both potential backends, original difficulty, or learning benefit have been validated."
+        ]
+      },
+      {
+        "field": "/instruction",
+        "before": "Create a dbt project at /app/sg_project that materializes model sg_result_6a8ba1bfe2 in schema sg_6a8ba1bfe2.\n\n## Prerequisites\n1. Run `echo $DB_TYPE` in a shell BEFORE writing any code to determine the database backend (DuckDB or Snowflake)\n2. Verify the database path exists at /app/database/retail.duckdb if DB_TYPE=duckdb\n3. Reference dbt projects exist at /app/dbt_models_duckdb/ and /app/dbt_models_snowflake/ for inspection only\n\n## Requirements\n- Create dbt_project.yml with project_name sg_project_6a8ba1bfe2\n- Create profiles.yml with profile_name sg_profile_6a8ba1bfe2 (backend configuration unresolved until $DB_TYPE is checked)\n- Configure target schema sg_6a8ba1bfe2 in profiles.yml, not in dbt_project.yml\n- Create model sg_result_6a8ba1bfe2.sql in models/ directory\n- Source tables: CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS\n- Join addresses to orders on CUSTOMER_ID where IS_DEFAULT_SHIPPING = true\n- Filter orders: STATUS IN ('COMPLETED', 'DELIVERED', 'SHIPPED') AND STATUS NOT IN ('CANCELLED', 'RETURNED', 'FAILED')\n- Group by state_province and CAST(ORDERED_AT AS DATE) as order_date\n- Calculate: order_count, total_revenue (GRAND_TOTAL), avg_order_value, revenue_per_customer, orders_per_customer\n- Round monetary values to 2 decimal places\n- Materialize as a table\n- Output must contain 1-1000 rows (state \u00d7 date combinations)\n- No NULL values allowed in any output column\n- All values must be non-negative\n\n## Output Columns\n- state_province\n- order_date\n- order_count\n- total_revenue\n- avg_order_value\n- revenue_per_customer\n- orders_per_customer\n\n## Success Criteria\n- dbt run completes successfully\n- sg_result_6a8ba1bfe2 relation exists in sg_6a8ba1bfe2 schema\n- Output contains 1-1000 rows with all required columns\n\nBefore editing the project, read /app/sg_project/CONTEXT.md for the supplied starting context.\n",
+        "after": "Create a dbt project at /app/sg_project that materializes model sg_result_6a8ba1bfe2 as table sg_6a8ba1bfe2.sg_result_6a8ba1bfe2.\n\nBefore writing configuration or SQL, run `echo $DB_TYPE` to discover the active database backend. Inspect the corresponding connection environment variables; if the backend is DuckDB, inspect `DUCKDB_PATH` (documented fallback: /app/database/retail.duckdb). Do not change DB_TYPE. Reference projects at /app/dbt_models_duckdb/ and /app/dbt_models_snowflake/ may be inspected but must not be modified.\n\nUse project name sg_project_6a8ba1bfe2 and profile name sg_profile_6a8ba1bfe2. Set the target schema sg_6a8ba1bfe2 in profiles.yml. Implement models/sg_result_6a8ba1bfe2.sql and run `dbt run --project-dir /app/sg_project --profiles-dir /app/sg_project` successfully. Materialize a table; row order is not graded.\n\nUse ORDERS.ORDERS and CUSTOMER.CUSTOMER_ADDRESSES. A qualifying order has STATUS in ('COMPLETED', 'DELIVERED', 'SHIPPED'). Define the reporting end date as the maximum CAST(ORDERED_AT AS DATE) across all qualifying orders, before any address join. Include the 365 calendar dates from end_date minus 364 days through end_date, inclusive. This window is determined from the data, not the current clock.\n\nKeep addresses with IS_DEFAULT_SHIPPING = true and non-NULL STATE_PROVINCE, and join qualifying orders to those addresses on CUSTOMER_ID. Emit exactly the observed (state_province, order_date) groups with at least one joined qualifying order in the reporting window. Do not construct a full state/date grid or emit zero-order groups. The supplied warehouse has at most one default shipping address per customer; inspect the source schema as needed.\n\nReturn these columns in exactly this order:\n- state_province: the default shipping address's STATE_PROVINCE.\n- order_date: CAST(ORDERED_AT AS DATE).\n- order_count: count of distinct ORDER_ID in the group.\n- total_revenue: sum of GRAND_TOTAL, rounded to 2 decimal places.\n- avg_order_value: arithmetic mean of GRAND_TOTAL over joined orders, rounded to 2 decimal places.\n- revenue_per_customer: the unrounded group revenue sum divided by the number of distinct CUSTOMER_ID with a qualifying order in this same group, then rounded to 2 decimal places.\n- orders_per_customer: distinct order count divided by that same distinct customer count using fractional division, rounded to 2 decimal places.\n\nNo output column may be NULL. The supplied data yields nonnegative metrics and a nonempty result under 1000 rows. Do not use an arbitrary LIMIT, hardcoded result rows, or a hardcoded reporting end date. Read /app/sg_project/CONTEXT.md for the supplied starting context. Do not modify source warehouse tables.\n"
+      },
+      {
+        "field": "/limitations",
+        "before": [
+          "Oracle files not included in starting environment - learner must construct from instruction",
+          "DB_TYPE value withheld until observation - backend configuration must be conditional",
+          "Combined state-date grid may produce more than 51 rows (original Branch A constraint) but bounded to 1000 rows maximum",
+          "Reference SQL uses schema-qualified tables; learner must verify table existence via warehouse inspection",
+          "No dbt packages or hooks allowed - pure SQL implementation required"
+        ],
+        "after": [
+          "Codex critic repaired Qwen proposal attempt 03; this is an assisted construction fallback, not unassisted Qwen output.",
+          "The task is shared-start branch composition informed partly by original task requirements, not a successful splice of complete observed skills or a demonstrated terminal traversal.",
+          "The reference SQL and oracle SQL intentionally implement the same specification and are not independent correctness evidence.",
+          "Backend discovery is preserved as an unresolved initial observation; variance, learner difficulty, and training lift remain unmeasured.",
+          "Only readonly reference-query execution has been checked here; this proposal has not undergone dbt or Modal runtime validation."
+        ]
+      },
+      {
+        "field": "/new_goal",
+        "before": "Build a dbt project that materializes a model aggregating orders by both state_province and order_date, combining geographic and temporal dimensions while preserving the $DB_TYPE discovery prerequisite",
+        "after": "Build a fresh dbt project that combines default-shipping geography with daily qualifying-order metrics over a precisely defined trailing 365-day reporting window, after discovering the active database backend."
+      },
+      {
+        "field": "/oracle_files/models/sg_result_6a8ba1bfe2.sql",
+        "before": "WITH default_addresses AS (\n  SELECT \n    customer_id,\n    state_province\n  FROM CUSTOMER.CUSTOMER_ADDRESSES\n  WHERE IS_DEFAULT_SHIPPING = true\n),\nfiltered_orders AS (\n  SELECT \n    o.ORDER_ID,\n    o.CUSTOMER_ID,\n    o.GRAND_TOTAL,\n    o.STATUS,\n    CAST(o.ORDERED_AT AS DATE) AS order_date\n  FROM ORDERS.ORDERS o\n  WHERE o.STATUS IN ('COMPLETED', 'DELIVERED', 'SHIPPED')\n    AND o.STATUS NOT IN ('CANCELLED', 'RETURNED', 'FAILED')\n),\nstate_date_aggregation AS (\n  SELECT \n    da.state_province,\n    fo.order_date,\n    COUNT(DISTINCT fo.ORDER_ID) AS order_count,\n    ROUND(SUM(fo.GRAND_TOTAL), 2) AS total_revenue,\n    ROUND(AVG(fo.GRAND_TOTAL), 2) AS avg_order_value,\n    ROUND(SUM(fo.GRAND_TOTAL) / NULLIF(COUNT(DISTINCT da.customer_id), 0), 2) AS revenue_per_customer,\n    ROUND(COUNT(DISTINCT fo.ORDER_ID) * 1.0 / NULLIF(COUNT(DISTINCT da.customer_id), 0), 2) AS orders_per_customer\n  FROM default_addresses da\n  INNER JOIN filtered_orders fo ON da.customer_id = fo.customer_id\n  GROUP BY da.state_province, fo.order_date\n)\nSELECT \n  state_province,\n  order_date,\n  order_count,\n  total_revenue,\n  avg_order_value,\n  revenue_per_customer,\n  orders_per_customer\nFROM state_date_aggregation\nORDER BY order_date, state_province",
+        "after": "WITH eligible_orders AS (\n  SELECT ORDER_ID, CUSTOMER_ID, GRAND_TOTAL,\n         CAST(ORDERED_AT AS DATE) AS order_date\n  FROM ORDERS.ORDERS\n  WHERE STATUS IN ('COMPLETED', 'DELIVERED', 'SHIPPED')\n), report_window AS (\n  SELECT MAX(order_date) AS last_date FROM eligible_orders\n), default_addresses AS (\n  SELECT CUSTOMER_ID, STATE_PROVINCE\n  FROM CUSTOMER.CUSTOMER_ADDRESSES\n  WHERE IS_DEFAULT_SHIPPING = true AND STATE_PROVINCE IS NOT NULL\n)\nSELECT\n  da.STATE_PROVINCE AS state_province,\n  eo.order_date,\n  COUNT(DISTINCT eo.ORDER_ID) AS order_count,\n  ROUND(SUM(eo.GRAND_TOTAL), 2) AS total_revenue,\n  ROUND(AVG(eo.GRAND_TOTAL), 2) AS avg_order_value,\n  ROUND(SUM(eo.GRAND_TOTAL) / COUNT(DISTINCT eo.CUSTOMER_ID), 2) AS revenue_per_customer,\n  ROUND(COUNT(DISTINCT eo.ORDER_ID) * 1.0 / COUNT(DISTINCT eo.CUSTOMER_ID), 2) AS orders_per_customer\nFROM eligible_orders eo\nJOIN default_addresses da ON da.CUSTOMER_ID = eo.CUSTOMER_ID\nCROSS JOIN report_window w\nWHERE eo.order_date BETWEEN w.last_date - 364 AND w.last_date\nGROUP BY da.STATE_PROVINCE, eo.order_date\n"
+      },
+      {
+        "field": "/oracle_files/models/sources.yml",
+        "before": "version: 2\n\nsources:\n  - name: retail_warehouse\n    schema: CUSTOMER\n    tables:\n      - name: CUSTOMER_ADDRESSES\n        columns:\n          - name: ADDRESS_ID\n          - name: CUSTOMER_ID\n          - name: STATE_PROVINCE\n          - name: IS_DEFAULT_SHIPPING\n      - name: CUSTOMER_CONSENT_LOG\n      - name: CUSTOMER_CONTACTS\n      - name: CUSTOMER_LIFECYCLE_EVENTS\n      - name: CUSTOMER_SEGMENT_MEMBERS\n\n  - name: retail_warehouse\n    schema: ORDERS\n    tables:\n      - name: ORDERS\n        columns:\n          - name: ORDER_ID\n          - name: CUSTOMER_ID\n          - name: ORDERED_AT\n          - name: GRAND_TOTAL\n          - name: STATUS\n      - name: ORDER_FRAUD_SCORES",
+        "after": null
+      },
+      {
+        "field": "/reference_sql",
+        "before": "SELECT \n  da.state_province,\n  CAST(fo.ORDERED_AT AS DATE) AS order_date,\n  COUNT(DISTINCT fo.ORDER_ID) AS order_count,\n  ROUND(SUM(fo.GRAND_TOTAL), 2) AS total_revenue,\n  ROUND(AVG(fo.GRAND_TOTAL), 2) AS avg_order_value,\n  ROUND(SUM(fo.GRAND_TOTAL) / NULLIF(COUNT(DISTINCT da.customer_id), 0), 2) AS revenue_per_customer,\n  ROUND(COUNT(DISTINCT fo.ORDER_ID) * 1.0 / NULLIF(COUNT(DISTINCT da.customer_id), 0), 2) AS orders_per_customer\nFROM CUSTOMER.CUSTOMER_ADDRESSES da\nINNER JOIN ORDERS.ORDERS fo ON da.customer_id = fo.customer_id\nWHERE da.IS_DEFAULT_SHIPPING = true\n  AND fo.STATUS IN ('COMPLETED', 'DELIVERED', 'SHIPPED')\n  AND fo.STATUS NOT IN ('CANCELLED', 'RETURNED', 'FAILED')\nGROUP BY da.state_province, CAST(fo.ORDERED_AT AS DATE)\nORDER BY order_date, state_province",
+        "after": "WITH eligible_orders AS (\n  SELECT ORDER_ID, CUSTOMER_ID, GRAND_TOTAL,\n         CAST(ORDERED_AT AS DATE) AS order_date\n  FROM ORDERS.ORDERS\n  WHERE STATUS IN ('COMPLETED', 'DELIVERED', 'SHIPPED')\n), report_window AS (\n  SELECT MAX(order_date) AS last_date FROM eligible_orders\n), default_addresses AS (\n  SELECT CUSTOMER_ID, STATE_PROVINCE\n  FROM CUSTOMER.CUSTOMER_ADDRESSES\n  WHERE IS_DEFAULT_SHIPPING = true AND STATE_PROVINCE IS NOT NULL\n)\nSELECT\n  da.STATE_PROVINCE AS state_province,\n  eo.order_date,\n  COUNT(DISTINCT eo.ORDER_ID) AS order_count,\n  ROUND(SUM(eo.GRAND_TOTAL), 2) AS total_revenue,\n  ROUND(AVG(eo.GRAND_TOTAL), 2) AS avg_order_value,\n  ROUND(SUM(eo.GRAND_TOTAL) / COUNT(DISTINCT eo.CUSTOMER_ID), 2) AS revenue_per_customer,\n  ROUND(COUNT(DISTINCT eo.ORDER_ID) * 1.0 / COUNT(DISTINCT eo.CUSTOMER_ID), 2) AS orders_per_customer\nFROM eligible_orders eo\nJOIN default_addresses da ON da.CUSTOMER_ID = eo.CUSTOMER_ID\nCROSS JOIN report_window w\nWHERE eo.order_date BETWEEN w.last_date - 364 AND w.last_date\nGROUP BY da.STATE_PROVINCE, eo.order_date"
+      },
+      {
+        "field": "/repair_attribution",
+        "before": null,
+        "after": {
+          "kind": "codex_critic_assisted_repair",
+          "source_candidate": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/generated_dbt_tasks/shared-start-train-b73e52431d2c62/constructor_attempts/attempt_03/rejection.json",
+          "source_candidate_sha256": "bc0e92d068ddb354ca9538c0efe2a3e4103cb60b626dfd6322cac9dbe109a65f",
+          "source_path": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/analysis_v1/shared_start_paths_reviewed.json",
+          "path_id": "shared-start-train-b73e52431d2c62"
+        }
+      },
+      {
+        "field": "/title",
+        "before": "Combined State-Date Order Analytics",
+        "after": "State and Date Order Analytics for the Latest Reporting Year"
+      }
+    ],
+    "readonly_query_check": {
+      "warehouse": "data/runtime/retail.duckdb",
+      "rows": 34,
+      "columns": [
+        "state_province",
+        "order_date",
+        "order_count",
+        "total_revenue",
+        "avg_order_value",
+        "revenue_per_customer",
+        "orders_per_customer"
+      ],
+      "null_count": 0,
+      "negative_metrics": 0,
+      "reference_date_range": {
+        "first": "2025-01-13",
+        "last": "2026-01-07"
+      },
+      "note": "Local read-only SELECT only; no dbt run, sandbox, paid model call, or source mutation."
+    },
+    "limitations": [
+      "Codex critic repaired Qwen proposal attempt 03; this is an assisted construction fallback, not unassisted Qwen output.",
+      "The task is shared-start branch composition informed partly by original task requirements, not a successful splice of complete observed skills or a demonstrated terminal traversal.",
+      "The reference SQL and oracle SQL intentionally implement the same specification and are not independent correctness evidence.",
+      "Backend discovery is preserved as an unresolved initial observation; variance, learner difficulty, and training lift remain unmeasured.",
+      "Only readonly reference-query execution has been checked here; this proposal has not undergone dbt or Modal runtime validation."
+    ]
+  },
+  "result_status": "validated"
+}

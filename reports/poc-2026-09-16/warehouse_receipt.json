@@ -1,0 +1,6 @@
+{
+  "image": "ghcr.io/snowflake-labs/data-eng-bench-base@sha256:ef92b6ef197a89ff1d8b371aaf5de19343003abc462991ddeedb1b1005e2e04b",
+  "sha256": "cddd207c9bdf2c0e2a85440038a95c8262bb8327f8849bcfee29be4fb24da5ba",
+  "bytes": 491008000,
+  "source": "Pristine base image after upstream fix_data.py and dbt run; before any task overlay or learner actions."
+}

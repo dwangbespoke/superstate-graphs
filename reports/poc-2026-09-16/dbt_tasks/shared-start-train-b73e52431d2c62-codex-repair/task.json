@@ -1,0 +1,220 @@
+{
+  "base_image": "ghcr.io/snowflake-labs/data-eng-bench-base@sha256:ef92b6ef197a89ff1d8b371aaf5de19343003abc462991ddeedb1b1005e2e04b",
+  "changed_terminal_obligations": [
+    {
+      "new_obligation": "Create the contracted state/date model for observed groups in a trailing 365-day window; include only customers with qualifying orders in each group, with no zero-order grid.",
+      "original_obligation": "Create fct_state_customers with a LEFT JOIN, all default-shipping states including zero-order states, and state-level customer/revenue metrics.",
+      "source_task_id": "dbt-customer-geographic",
+      "why_change_preserves_target_decision": "This explicitly changes terminal coverage and metric denominators while retaining the initial unresolved DB_TYPE/backend and connection-discovery decision; it is new-task compilation, not literal replay."
+    },
+    {
+      "new_obligation": "Create the contracted state/date model using the stricter COMPLETED/DELIVERED/SHIPPED status set and trailing 365-day window, with fractional customer metrics.",
+      "original_obligation": "Create a date-level daily_order_summary excluding CANCELLED/RETURNED/FAILED orders.",
+      "source_task_id": "dbt-daily-order-summary",
+      "why_change_preserves_target_decision": "The analytical obligations change explicitly, but backend discovery still precedes configuring the fresh project."
+    }
+  ],
+  "composition_bindings": [
+    {
+      "evidence": "Task instruction requires checking $DB_TYPE before code, creates fct_state_customers.sql with state_province, filters IS_DEFAULT_SHIPPING = true [message 0]",
+      "new_role": "geographic_dimension_provider",
+      "preserved_effect": "Reuse the default-shipping geographic join/filter as an authored analytical component; do not claim the branch executed the new aggregate successfully.",
+      "source_operation": "Backend/directory inspection in branch_A; geographic aggregation requirements supplied by source task message 0.",
+      "source_task_id": "dbt-customer-geographic",
+      "source_transition_id": "branch_A"
+    },
+    {
+      "evidence": "Task instruction requires checking $DB_TYPE before code, creates daily_order_summary.sql with order_date aggregation, excludes CANCELLED/RETURNED/FAILED [message 0]",
+      "new_role": "temporal_dimension_provider",
+      "preserved_effect": "Reuse the daily date extraction and order aggregation pattern under new explicit status, time-window and geographic obligations; do not claim literal full-segment replay.",
+      "source_operation": "Backend/directory inspection and project setup in branch_B; date aggregation requirement supplied by source task message 0.",
+      "source_task_id": "dbt-daily-order-summary",
+      "source_transition_id": "branch_B"
+    }
+  ],
+  "environment_variables": {
+    "DB_TYPE": "duckdb",
+    "DUCKDB_PATH": "/app/database/retail.duckdb"
+  },
+  "format_version": "superstate-mutable-dbt-v1",
+  "information_state_contract": {
+    "assembled_known_information_deliveries": [
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Terminal is at /app directory",
+        "given_to_learner": "Terminal is at /app directory",
+        "grounding": "model_assertion_only"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Task requires checking $DB_TYPE before proceeding",
+        "given_to_learner": "Task requires checking $DB_TYPE before proceeding",
+        "grounding": "model_assertion_only"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Database path for DuckDB defaults to /app/database/retail.duckdb",
+        "given_to_learner": "Database path for DuckDB defaults to /app/database/retail.duckdb",
+        "grounding": "model_assertion_only"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Source tables are CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS",
+        "given_to_learner": "Source tables are CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS",
+        "grounding": "model_assertion_only"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "dbt_models_duckdb and dbt_models_snowflake directories exist on disk",
+        "given_to_learner": "dbt_models_duckdb and dbt_models_snowflake directories exist on disk",
+        "grounding": "model_assertion_only"
+      }
+    ],
+    "mismatches": [
+      "The target is the shared initial backend-discovery decision; the two recorded branches are alternatives from that state, not sequentially observed graph edges.",
+      "Fresh contracted project/profile/schema/model names replace both source tasks' required artifacts, explicitly resolving their original naming conflicts.",
+      "Geographic source task included all default-shipping states by LEFT JOIN. This new task explicitly emits only observed state/date groups with qualifying orders; customer denominators therefore count customers active within each group.",
+      "Daily source task excluded three statuses. The combined task explicitly uses the geographic source's stricter three-status inclusion set and a new data-anchored 365-day window.",
+      "The constructor supplies incomplete project files rather than requiring creation of every project file from an empty directory; backend profile and model SQL remain unresolved.",
+      "The supplied warehouse's one-default-address-per-customer property is additional verified task context. It removes join-multiplicity ambiguity and is not claimed to have been known in either source prefix.",
+      "Only the local pinned backend is executed in this POC. No claim is made that both potential backends, original difficulty, or learning benefit have been validated."
+    ],
+    "provided_context": [
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Terminal is at /app directory",
+        "given_to_learner": "Current working directory is /app",
+        "source_evidence": "junction_prefix_A known_facts[0], junction_prefix_B known_facts[0]"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Task requires checking $DB_TYPE before proceeding",
+        "given_to_learner": "Run `echo $DB_TYPE` in a shell BEFORE writing any code to determine the database backend",
+        "source_evidence": "junction_prefix_A task_requirements[2], junction_prefix_B task_requirements[2]"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Database path for DuckDB defaults to /app/database/retail.duckdb",
+        "given_to_learner": "Database path for DuckDB defaults to /app/database/retail.duckdb",
+        "source_evidence": "junction_prefix_A known_facts[2]"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Source tables are CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS",
+        "given_to_learner": "Source tables are CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS",
+        "source_evidence": "warehouse.tables[0].qualified_name, warehouse.tables[1].qualified_name"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "dbt_models_duckdb and dbt_models_snowflake directories exist on disk",
+        "given_to_learner": "Reference dbt projects exist at /app/dbt_models_duckdb/ and /app/dbt_models_snowflake/ for inspection only",
+        "source_evidence": "junction_prefix_A known_facts[5]"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Profile name must be sg_profile_6a8ba1bfe2",
+        "given_to_learner": "Create profiles.yml with profile name sg_profile_6a8ba1bfe2",
+        "source_evidence": "contract.profile_name"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Target schema must be sg_6a8ba1bfe2",
+        "given_to_learner": "Configure target schema sg_6a8ba1bfe2 in profiles.yml",
+        "source_evidence": "contract.target_schema"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Project name must be sg_project_6a8ba1bfe2",
+        "given_to_learner": "Create dbt_project.yml with project_name sg_project_6a8ba1bfe2",
+        "source_evidence": "contract.project_name"
+      }
+    ],
+    "withheld_until_observation": [
+      {
+        "discovery_action": "Run 'echo $DB_TYPE' in shell",
+        "fact": "The value of $DB_TYPE environment variable",
+        "source_evidence": "junction_prefix_A unresolved_questions[0], junction_prefix_B unresolved_questions[0]"
+      },
+      {
+        "discovery_action": "Run 'echo $DUCKDB_PATH' in shell",
+        "fact": "The value of $DUCKDB_PATH if DB_TYPE is duckdb",
+        "source_evidence": "junction_prefix_A unresolved_questions[1], junction_prefix_B unresolved_questions[1]"
+      }
+    ]
+  },
+  "instruction": "Create a dbt project at /app/sg_project that materializes model sg_result_6a8ba1bfe2 as table sg_6a8ba1bfe2.sg_result_6a8ba1bfe2.\n\nBefore writing configuration or SQL, run `echo $DB_TYPE` to discover the active database backend. Inspect the corresponding connection environment variables; if the backend is DuckDB, inspect `DUCKDB_PATH` (documented fallback: /app/database/retail.duckdb). Do not change DB_TYPE. Reference projects at /app/dbt_models_duckdb/ and /app/dbt_models_snowflake/ may be inspected but must not be modified.\n\nUse project name sg_project_6a8ba1bfe2 and profile name sg_profile_6a8ba1bfe2. Set the target schema sg_6a8ba1bfe2 in profiles.yml. Implement models/sg_result_6a8ba1bfe2.sql and run `dbt run --project-dir /app/sg_project --profiles-dir /app/sg_project` successfully. Materialize a table; row order is not graded.\n\nUse ORDERS.ORDERS and CUSTOMER.CUSTOMER_ADDRESSES. A qualifying order has STATUS in ('COMPLETED', 'DELIVERED', 'SHIPPED'). Define the reporting end date as the maximum CAST(ORDERED_AT AS DATE) across all qualifying orders, before any address join. Include the 365 calendar dates from end_date minus 364 days through end_date, inclusive. This window is determined from the data, not the current clock.\n\nKeep addresses with IS_DEFAULT_SHIPPING = true and non-NULL STATE_PROVINCE, and join qualifying orders to those addresses on CUSTOMER_ID. Emit exactly the observed (state_province, order_date) groups with at least one joined qualifying order in the reporting window. Do not construct a full state/date grid or emit zero-order groups. The supplied warehouse has at most one default shipping address per customer; inspect the source schema as needed.\n\nReturn these columns in exactly this order:\n- state_province: the default shipping address's STATE_PROVINCE.\n- order_date: CAST(ORDERED_AT AS DATE).\n- order_count: count of distinct ORDER_ID in the group.\n- total_revenue: sum of GRAND_TOTAL, rounded to 2 decimal places.\n- avg_order_value: arithmetic mean of GRAND_TOTAL over joined orders, rounded to 2 decimal places.\n- revenue_per_customer: the unrounded group revenue sum divided by the number of distinct CUSTOMER_ID with a qualifying order in this same group, then rounded to 2 decimal places.\n- orders_per_customer: distinct order count divided by that same distinct customer count using fractional division, rounded to 2 decimal places.\n\nNo output column may be NULL. The supplied data yields nonnegative metrics and a nonempty result under 1000 rows. Do not use an arbitrary LIMIT, hardcoded result rows, or a hardcoded reporting end date. Read /app/sg_project/CONTEXT.md for the supplied starting context. Do not modify source warehouse tables.\n\nBefore editing the project, read /app/sg_project/CONTEXT.md for the supplied starting context.\n",
+  "limitations": [
+    "Codex critic repaired Qwen proposal attempt 03; this is an assisted construction fallback, not unassisted Qwen output.",
+    "The task is shared-start branch composition informed partly by original task requirements, not a successful splice of complete observed skills or a demonstrated terminal traversal.",
+    "The reference SQL and oracle SQL intentionally implement the same specification and are not independent correctness evidence.",
+    "Backend discovery is preserved as an unresolved initial observation; variance, learner difficulty, and training lift remain unmeasured.",
+    "Only readonly reference-query execution has been checked here; this proposal has not undergone dbt or Modal runtime validation."
+  ],
+  "model_name": "sg_result_6a8ba1bfe2",
+  "new_goal": "Build a fresh dbt project that combines default-shipping geography with daily qualifying-order metrics over a precisely defined trailing 365-day reporting window, after discovering the active database backend.",
+  "oracle_files": {
+    "dbt_project.yml": "name: sg_project_6a8ba1bfe2\nversion: '1.0'\nconfig-version: 2\nprofile: sg_profile_6a8ba1bfe2\nmodel-paths:\n- models\nanalysis-paths:\n- analyses\ntest-paths:\n- tests\nseed-paths:\n- seeds\nmacro-paths:\n- macros\nsnapshot-paths:\n- snapshots\ntarget-path: target\nclean-targets:\n- target\n- dbt_packages\nmodels:\n  sg_project_6a8ba1bfe2:\n    +materialized: table\n",
+    "models/sg_result_6a8ba1bfe2.sql": "WITH eligible_orders AS (\n  SELECT ORDER_ID, CUSTOMER_ID, GRAND_TOTAL,\n         CAST(ORDERED_AT AS DATE) AS order_date\n  FROM ORDERS.ORDERS\n  WHERE STATUS IN ('COMPLETED', 'DELIVERED', 'SHIPPED')\n), report_window AS (\n  SELECT MAX(order_date) AS last_date FROM eligible_orders\n), default_addresses AS (\n  SELECT CUSTOMER_ID, STATE_PROVINCE\n  FROM CUSTOMER.CUSTOMER_ADDRESSES\n  WHERE IS_DEFAULT_SHIPPING = true AND STATE_PROVINCE IS NOT NULL\n)\nSELECT\n  da.STATE_PROVINCE AS state_province,\n  eo.order_date,\n  COUNT(DISTINCT eo.ORDER_ID) AS order_count,\n  ROUND(SUM(eo.GRAND_TOTAL), 2) AS total_revenue,\n  ROUND(AVG(eo.GRAND_TOTAL), 2) AS avg_order_value,\n  ROUND(SUM(eo.GRAND_TOTAL) / COUNT(DISTINCT eo.CUSTOMER_ID), 2) AS revenue_per_customer,\n  ROUND(COUNT(DISTINCT eo.ORDER_ID) * 1.0 / COUNT(DISTINCT eo.CUSTOMER_ID), 2) AS orders_per_customer\nFROM eligible_orders eo\nJOIN default_addresses da ON da.CUSTOMER_ID = eo.CUSTOMER_ID\nCROSS JOIN report_window w\nWHERE eo.order_date BETWEEN w.last_date - 364 AND w.last_date\nGROUP BY da.STATE_PROVINCE, eo.order_date\n",
+    "profiles.yml": "sg_profile_6a8ba1bfe2:\n  target: dev\n  outputs:\n    dev:\n      type: duckdb\n      path: /app/database/retail.duckdb\n      schema: sg_6a8ba1bfe2\n      threads: 2\n"
+  },
+  "ordered": false,
+  "output_columns": [
+    "state_province",
+    "order_date",
+    "order_count",
+    "total_revenue",
+    "avg_order_value",
+    "revenue_per_customer",
+    "orders_per_customer"
+  ],
+  "preserved_decision": {
+    "alternatives": [
+      "DB_TYPE=duckdb (local file-based)",
+      "DB_TYPE=snowflake (cloud-based)"
+    ],
+    "decision": "Determine the active database backend by checking the $DB_TYPE environment variable before writing any dbt code or configuration",
+    "known_information": [
+      "Terminal is at /app directory",
+      "Task requires checking $DB_TYPE before proceeding",
+      "Database path for DuckDB defaults to /app/database/retail.duckdb",
+      "Source tables are CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS",
+      "dbt_models_duckdb and dbt_models_snowflake directories exist on disk"
+    ],
+    "required_observation": "Run 'echo $DB_TYPE' in shell to discover backend type",
+    "unknown_information": [
+      "The value of $DB_TYPE environment variable",
+      "The value of $DUCKDB_PATH if DB_TYPE is duckdb"
+    ],
+    "why_task_requires_decision": "Backend type determines profile configuration, connection parameters, and SQL dialect compatibility"
+  },
+  "profile_name": "sg_profile_6a8ba1bfe2",
+  "project_dir": "/app/sg_project",
+  "project_name": "sg_project_6a8ba1bfe2",
+  "reference_sql": "WITH eligible_orders AS (\n  SELECT ORDER_ID, CUSTOMER_ID, GRAND_TOTAL,\n         CAST(ORDERED_AT AS DATE) AS order_date\n  FROM ORDERS.ORDERS\n  WHERE STATUS IN ('COMPLETED', 'DELIVERED', 'SHIPPED')\n), report_window AS (\n  SELECT MAX(order_date) AS last_date FROM eligible_orders\n), default_addresses AS (\n  SELECT CUSTOMER_ID, STATE_PROVINCE\n  FROM CUSTOMER.CUSTOMER_ADDRESSES\n  WHERE IS_DEFAULT_SHIPPING = true AND STATE_PROVINCE IS NOT NULL\n)\nSELECT\n  da.STATE_PROVINCE AS state_province,\n  eo.order_date,\n  COUNT(DISTINCT eo.ORDER_ID) AS order_count,\n  ROUND(SUM(eo.GRAND_TOTAL), 2) AS total_revenue,\n  ROUND(AVG(eo.GRAND_TOTAL), 2) AS avg_order_value,\n  ROUND(SUM(eo.GRAND_TOTAL) / COUNT(DISTINCT eo.CUSTOMER_ID), 2) AS revenue_per_customer,\n  ROUND(COUNT(DISTINCT eo.ORDER_ID) * 1.0 / COUNT(DISTINCT eo.CUSTOMER_ID), 2) AS orders_per_customer\nFROM eligible_orders eo\nJOIN default_addresses da ON da.CUSTOMER_ID = eo.CUSTOMER_ID\nCROSS JOIN report_window w\nWHERE eo.order_date BETWEEN w.last_date - 364 AND w.last_date\nGROUP BY da.STATE_PROVINCE, eo.order_date",
+  "repair_attribution": {
+    "kind": "codex_critic_assisted_repair",
+    "path_id": "shared-start-train-b73e52431d2c62",
+    "source_candidate": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/generated_dbt_tasks/shared-start-train-b73e52431d2c62/constructor_attempts/attempt_03/rejection.json",
+    "source_candidate_sha256": "bc0e92d068ddb354ca9538c0efe2a3e4103cb60b626dfd6322cac9dbe109a65f",
+    "source_path": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/analysis_v1/shared_start_paths_reviewed.json"
+  },
+  "replay_conflict_resolutions": [
+    {
+      "conflict_id": "replay_0_full_segment_transfer",
+      "evidence": "Both branches start at shared $DB_TYPE decision but diverge in final artifacts; full_segment_transfer was contradicted due to structural conflicts",
+      "remaining_limitation": "Cannot claim literal replay passed; must construct new combined objective with explicit bindings",
+      "resolution": "Do not claim full segment transfer from either branch; instead, compose a new terminal goal that combines the geographic dimension from Branch A with the temporal dimension from Branch B while using CONTRACT's schema/profile/model names"
+    }
+  ],
+  "starting_files": {
+    "CONTEXT.md": "# Supplied starting context\n\nTerminal is at /app directory\n\nTask requires checking $DB_TYPE before proceeding\n\nDatabase path for DuckDB defaults to /app/database/retail.duckdb\n\nSource tables are CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS\n\ndbt_models_duckdb and dbt_models_snowflake directories exist on disk\n\nCurrent working directory is /app\n\nRun `echo $DB_TYPE` in a shell BEFORE writing any code to determine the database backend\n\nReference dbt projects exist at /app/dbt_models_duckdb/ and /app/dbt_models_snowflake/ for inspection only\n\nCreate profiles.yml with profile name sg_profile_6a8ba1bfe2\n\nConfigure target schema sg_6a8ba1bfe2 in profiles.yml\n\nCreate dbt_project.yml with project_name sg_project_6a8ba1bfe2\n\n\n# Supplied starting context\n\nTerminal is at /app directory\n\nTask requires checking $DB_TYPE before proceeding\n\nDatabase path for DuckDB defaults to /app/database/retail.duckdb\n\nSource tables are CUSTOMER.CUSTOMER_ADDRESSES and ORDERS.ORDERS\n\ndbt_models_duckdb and dbt_models_snowflake directories exist on disk\n\nCurrent working directory is /app\n\nRun `echo $DB_TYPE` in a shell BEFORE writing any code to determine the database backend\n\nReference dbt projects exist at /app/dbt_models_duckdb/ and /app/dbt_models_snowflake/ for inspection only\n\nCreate profiles.yml with profile name sg_profile_6a8ba1bfe2\n\nConfigure target schema sg_6a8ba1bfe2 in profiles.yml\n\nCreate dbt_project.yml with project_name sg_project_6a8ba1bfe2\n",
+    "dbt_project.yml": "name: sg_project_6a8ba1bfe2\nversion: '1.0'\nconfig-version: 2\nprofile: sg_profile_6a8ba1bfe2\nmodel-paths:\n- models\nanalysis-paths:\n- analyses\ntest-paths:\n- tests\nseed-paths:\n- seeds\nmacro-paths:\n- macros\nsnapshot-paths:\n- snapshots\ntarget-path: target\nclean-targets:\n- target\n- dbt_packages\nmodels:\n  sg_project_6a8ba1bfe2:\n    +materialized: table\n",
+    "models/sg_result_6a8ba1bfe2.sql": "-- TODO implement this model according to the task requirements.\n",
+    "profiles.yml": "# TODO inspect DB_TYPE and configure the active backend.\n# Profile: sg_profile_6a8ba1bfe2; target schema: sg_6a8ba1bfe2\n# Complete a valid profile with a selected target and outputs.\n"
+  },
+  "status": "candidate",
+  "target_relation": "sg_result_6a8ba1bfe2",
+  "target_schema": "sg_6a8ba1bfe2",
+  "task_id": "sg_dbt_6a8ba1bfe2",
+  "title": "State and Date Order Analytics for the Latest Reporting Year"
+}

@@ -1,0 +1,69 @@
+{
+  "status": "validated",
+  "errors": [],
+  "base_image": "ghcr.io/snowflake-labs/data-eng-bench-base@sha256:ef92b6ef197a89ff1d8b371aaf5de19343003abc462991ddeedb1b1005e2e04b",
+  "spec_sha256": "c5eaf800c7e36a2e2a5750412aaa288fc3788f2b59bb96fc2a037d94b737e589",
+  "limitations": [
+    "Execution agreement does not establish semantic preservation of the targeted decision.",
+    "The reference query and oracle share a generator; this is not independent correctness evidence.",
+    "Results are checked on one pinned warehouse, not adversarial or perturbed data.",
+    "No learner difficulty, pooled variance, or training benefit is established by these checks."
+  ],
+  "sandbox_id": "sb-ODv4Jx11u5B26aRDhIyobz",
+  "phases": {
+    "before_starting_files": {
+      "matches": false,
+      "error": "ValueError: Target must be a materialized BASE TABLE; found []"
+    },
+    "starting_dbt": {
+      "returncode": 2,
+      "stdout": "09:30:59  Running with dbt=1.10.22\n09:30:59  Encountered an error:\nRuntime Error\n  \n  dbt encountered an error while trying to read your profiles.yml file.\n  \n  The profiles.yml file at /app/sg_project/profiles.yml is empty\n  \n",
+      "stderr": ""
+    },
+    "starting_result": {
+      "matches": false,
+      "error": "ValueError: Target must be a materialized BASE TABLE; found []"
+    },
+    "oracle_dbt": {
+      "returncode": 0,
+      "stdout": "09:31:02  Running with dbt=1.10.22\n09:31:02  Registered adapter: duckdb=1.10.0\n09:31:02  Unable to do partial parsing because saved manifest not found. Starting full parse.\n09:31:03  [WARNING]: Configuration paths exist in your dbt_project.yml file which do not apply to any resources.\nThere are 1 unused configuration paths:\n- models.sg_project_991dec701d.sg_991dec701d\n09:31:03  Found 1 model, 484 macros\n09:31:03  \n09:31:03  Concurrency: 2 threads (target='dev')\n09:31:03  \n09:31:04  1 of 1 START sql table model sg_991dec701d.sg_result_991dec701d ................ [RUN]\n09:31:04  1 of 1 OK created sql table model sg_991dec701d.sg_result_991dec701d ........... [OK in 0.17s]\n09:31:04  \n09:31:04  Finished running 1 table model in 0 hours 0 minutes and 0.79 seconds (0.79s).\n09:31:04  \n09:31:04  Completed successfully\n09:31:04  \n09:31:04  Done. PASS=1 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=1\n",
+      "stderr": ""
+    },
+    "oracle_result": {
+      "matches": true,
+      "reason": "equal",
+      "actual_rows": 725,
+      "expected_rows": 725,
+      "relation_type": "BASE TABLE"
+    }
+  },
+  "started_at_epoch": 1789551056.110051,
+  "pristine_database_sha256": "cddd207c9bdf2c0e2a85440038a95c8262bb8327f8849bcfee29be4fb24da5ba",
+  "reference": {
+    "columns": [
+      "cohort_date",
+      "month_start",
+      "channel_key",
+      "channel_code",
+      "cohort_size",
+      "order_count",
+      "day_0_customers",
+      "day_7_customers",
+      "day_30_customers",
+      "day_90_customers",
+      "revenue",
+      "profit",
+      "discount_amount",
+      "margin_rate",
+      "avg_order_value",
+      "discount_rate",
+      "day_0_retention",
+      "day_7_retention",
+      "day_30_retention",
+      "day_90_retention"
+    ],
+    "row_count": 725
+  },
+  "finished_at_epoch": 1789551066.3874822,
+  "sandbox_terminated": true
+}

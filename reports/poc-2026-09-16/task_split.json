@@ -1,0 +1,14 @@
+{
+  "train": [
+    "dbt-customer-geographic",
+    "dbt-daily-order-summary",
+    "dbt-fix-cac-payback-waterfall"
+  ],
+  "validation": [
+    "dbt-fix-daily-cohorts",
+    "dbt-retail-task-01-channel-revenue"
+  ],
+  "seed": 71,
+  "unit": "task_id",
+  "note": "POC validation, not an untouched benchmark test set."
+}

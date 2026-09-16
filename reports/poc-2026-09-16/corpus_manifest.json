@@ -1,0 +1,36 @@
+{
+  "histories": 60,
+  "rollouts": 10,
+  "tasks": [
+    "dbt-customer-geographic",
+    "dbt-daily-order-summary",
+    "dbt-fix-cac-payback-waterfall",
+    "dbt-fix-daily-cohorts",
+    "dbt-retail-task-01-channel-revenue"
+  ],
+  "skipped": [],
+  "excluded_task_ids": [
+    "dbt-consolidate"
+  ],
+  "excluded_trials": [
+    {
+      "trial_id": "dbt-consolidate__26z2r9e",
+      "task_id": "dbt-consolidate",
+      "source": "results/rollouts/pilot-v2/dbt-consolidate__26z2r9e/agent/policy_calls.jsonl",
+      "reason": "Uses three advertising CSVs and a separate /app/consolidate.duckdb; does not share the core retail warehouse. Its required package install is network-blocked.",
+      "raw_rollout_retained": true,
+      "selection_uses_terminal_reward": false
+    },
+    {
+      "trial_id": "dbt-consolidate__g6xMAw5",
+      "task_id": "dbt-consolidate",
+      "source": "results/rollouts/pilot-v2/dbt-consolidate__g6xMAw5/agent/policy_calls.jsonl",
+      "reason": "Uses three advertising CSVs and a separate /app/consolidate.duckdb; does not share the core retail warehouse. Its required package install is network-blocked.",
+      "raw_rollout_retained": true,
+      "selection_uses_terminal_reward": false
+    }
+  ],
+  "excluded_rollout_count": 2,
+  "exclusion_policy": "Explicit world-compatibility exclusions; raw rollouts retained; terminal outcomes do not select tasks.",
+  "sampling": "Fixed quantiles of recorded policy calls, before examining outcomes."
+}

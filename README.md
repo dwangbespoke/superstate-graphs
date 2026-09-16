@@ -12,6 +12,11 @@ superstate outcome statistics, not used to assign histories or optimize a value
 function. Pooled variance is an encounter-level statistic; it does not prove
 each individual history has the same continuation difficulty.
 
+The September 16 pilot is documented in [the results note](docs/OVERNIGHT_RESULTS.md)
+and [interactive report](reports/overnight-poc.html). It includes two executable
+critic-assisted examples, with no observed high-variance groups or GEPA validation
+gain. Failed automatic generation attempts remain recorded.
+
 ## Initial experiment
 
 - Environment: Snowflake-Labs/data-eng-bench, DuckDB shared retail warehouse.
@@ -53,6 +58,10 @@ uv run python -m superstate_graphs.analyze \
   --exclude-task dbt-consolidate --max-metric-calls 144
 uv run python scripts/generate_dbt_examples.py --analysis results/analysis_v1 \
   --count 3 --max-paths 6 --judge-uncached
+# Supported initial-decision fallback, explicitly not sequential graph traversal:
+uv run python scripts/export_shared_start_paths.py --analysis results/analysis_v1
+uv run python scripts/generate_dbt_examples.py --analysis results/analysis_v1 \
+  --paths results/analysis_v1/shared_start_paths.json --count 3 --max-paths 3 --resume
 uv run python scripts/build_report.py --analysis results/analysis_v1
 uv run python scripts/export_review_bundle.py --analysis results/analysis_v1
 ```

@@ -1,0 +1,132 @@
+{
+  "status": "completed_proxy_gepa_pilot",
+  "actual_evolution_completed": true,
+  "probe_signal": {
+    "before_expansion": {
+      "train": {
+        "supported": 4,
+        "contradicted": 26,
+        "unknown": 2,
+        "total": 32
+      },
+      "validation": {
+        "supported": 4,
+        "contradicted": 8,
+        "unknown": 0,
+        "total": 12
+      }
+    },
+    "expansion": [],
+    "judge_prompt_sha256": "af96994a189c18efbb988c8b8020a697d63148ac6c00c41eb3ad73319decc82c",
+    "after_expansion": {
+      "train": {
+        "supported": 4,
+        "contradicted": 26,
+        "unknown": 2,
+        "total": 32
+      },
+      "validation": {
+        "supported": 4,
+        "contradicted": 8,
+        "unknown": 0,
+        "total": 12
+      }
+    },
+    "positive_training_signal": true,
+    "positive_validation_signal": true,
+    "interpretation": "Positive proxy examples available."
+  },
+  "histories": 60,
+  "annotation_schema": "history_annotation_v3",
+  "trajectories": 10,
+  "source_tasks": 5,
+  "candidate_count": 5,
+  "evaluated_revision_count": 5,
+  "metric_calls": 146,
+  "best_candidate_index": 0,
+  "validation_scores": [
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333,
+    0.3333333333333333
+  ],
+  "initial_proxy_metrics": {
+    "valid": 8,
+    "invalid": 2,
+    "unknown": 2,
+    "not_connected": 32,
+    "denominator": 44,
+    "score": 0.0
+  },
+  "selected_proxy_metrics": {
+    "valid": 8,
+    "invalid": 2,
+    "unknown": 2,
+    "not_connected": 32,
+    "denominator": 44,
+    "score": 0.0
+  },
+  "selected_grounded_metrics": {
+    "valid": 0,
+    "invalid": 0,
+    "unknown": 12,
+    "not_connected": 32,
+    "denominator": 44,
+    "score": 0.0
+  },
+  "cross_task_paths": 12,
+  "any_positive_pooled_variance": false,
+  "learner_client": {
+    "model": "Qwen/Qwen3.5-9B",
+    "role": "learner_analysis",
+    "calls": 253,
+    "cache_hits": 112,
+    "input_tokens": 1880623,
+    "output_tokens": 57723
+  },
+  "reflector_client": {
+    "model": "Qwen/Qwen3.5-35B-A3B-FP8",
+    "role": "reflector",
+    "calls": 115,
+    "cache_hits": 10,
+    "input_tokens": 1481118,
+    "output_tokens": 711806
+  },
+  "limitations": [
+    "Formation score does not establish reward homogeneity.",
+    "Proxy judgments are not execution validation.",
+    "Observed edges do not guarantee full path realizability.",
+    "Task split is development validation, not a held-out benchmark result.",
+    "All nine graded core outcomes are zero; one outcome is unknown. No high-variance group was discovered.",
+    "No selected development-validation improvement from GEPA in this run.",
+    "Task construction is a separate feasibility stage; no downstream learner training or lift has been measured.",
+    "All three bounded Qwen shared-start constructions failed; executable examples require explicitly attributed Codex critic repair.",
+    "Analysis token counters cover only the final analysis invocation, not total overnight usage or task construction.",
+    "Verifier success does not prove that the learner inspected DB_TYPE or encountered the intended decision."
+  ],
+  "path_export_protocol": "new_task_compilation_v1",
+  "compilation_scope": "New goal and artifact bindings require construction evidence; original replay verdicts remain unchanged.",
+  "optimization_result": {
+    "evaluated_versions_including_seed": 5,
+    "selected_seed": true,
+    "development_validation_improved": false,
+    "infrastructure_note": "Later reflector mutations failed with HTTP 503; failed proposals are not prompt revisions. Successful cached versions retained."
+  },
+  "construction_result": {
+    "automatic_shared_start_attempts": 3,
+    "automatic_shared_start_successes": 0,
+    "critic_assisted_examples": 2,
+    "scope": "Shared backend-discovery decision, constructor-authored combined goals; not validated sequential graph traversal.",
+    "status": "completed_assisted_feasibility_examples",
+    "expected_rows": [
+      34,
+      725
+    ]
+  },
+  "resources": {
+    "learner_server": "stopped",
+    "reflector_server": "stopped",
+    "validated_task_sandboxes": "terminated"
+  }
+}

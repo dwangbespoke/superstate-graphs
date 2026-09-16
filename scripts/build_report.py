@@ -43,6 +43,8 @@ def build(analysis:Path,output:Path):
         data['tasks'].append({'name':p.parent.name,'instruction':p.read_text(),
                               'format':'Mutable dbt project',
                               'validation':validation,'path':str(p.parent),
+                              'assistance':json.loads((p.parent/'critic_repair.json').read_text())
+                                  if (p.parent/'critic_repair.json').exists() else None,
                               'provenance':json.loads((p.parent/'provenance.json').read_text())})
     template=(ROOT/'reports/template.html').read_text()
     payload=json.dumps(data,ensure_ascii=False).replace('<','\\u003c')

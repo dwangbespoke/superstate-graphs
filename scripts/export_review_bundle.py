@@ -44,13 +44,29 @@ def main():
         out.mkdir(parents=True,exist_ok=True)
         for name in ('README.md','instruction.md','task.json','task.toml','provenance.json',
                      'runtime_validation.json','construction_validation.json',
-                     'scaffold_changes.json','original_proposal.json','construction_attempts.json'):
+                     'scaffold_changes.json','original_proposal.json','construction_attempts.json','critic_repair.json'):
             source=task.parent/name
             if source.exists():
-                (out/name).write_text(source.read_text().replace(str(ROOT)+'/',''))
+                # Preserve exact bytes: runtime and critic receipts hash these artifacts.
+                shutil.copy2(source,out/name)
         for name in ('environment','solution','tests'):
             source=task.parent/name
             if source.exists():shutil.copytree(source,out/name,dirs_exist_ok=True)
+        repair=task.parent/'critic_repair.json'
+        if repair.exists():
+            notes=json.loads(repair.read_text()).get('repair_notes',{})
+            original=notes.get('source_candidate',notes.get('source_proposal'))
+            if original:
+                source=Path(original)
+                if not source.is_absolute():source=ROOT/source
+                if source.exists():shutil.copy2(source,out/'failed_qwen_proposal.json')
+    construction_runs=[]
+    for source in sorted((ROOT/'results/generated_dbt_tasks').glob('**/summary.json')):
+        if 'cache' in source.parts:continue
+        value=json.loads(source.read_text())
+        construction_runs.append({'run':str(source.relative_to(ROOT/'results/generated_dbt_tasks')),
+                                  'attempted':value.get('attempted',[]),'client':value.get('client',{})})
+    (args.output/'construction_runs.json').write_text(json.dumps(construction_runs,indent=2).replace(str(ROOT)+'/',''))
     (args.output/'README.md').write_text('''# Overnight POC review artifacts
 
 These are compact outputs from real learner rollouts and prompt optimization.

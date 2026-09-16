@@ -1,0 +1,197 @@
+{
+  "base_image": "ghcr.io/snowflake-labs/data-eng-bench-base@sha256:ef92b6ef197a89ff1d8b371aaf5de19343003abc462991ddeedb1b1005e2e04b",
+  "changed_terminal_obligations": [
+    {
+      "new_obligation": "Build one materialized dbt relation combining exact-day customer retention and first-90-day revenue/margin, attributed to the customer acquisition channel.",
+      "original_obligation": "Create rpt_daily_cohorts.sql with retention metrics only (cohort_date, cohort_size, day_0_customers, day_7_customers, day_30_customers, day_90_customers, retention rates)",
+      "source_task_id": "dbt-fix-daily-cohorts",
+      "why_change_preserves_target_decision": "The selected reusable target is initial backend discovery, before source-specific analytical work. The new report retains both cohort-retention and channel-economics operation families, with new explicit grain and time windows; neither later source trajectory is claimed replayable."
+    },
+    {
+      "new_obligation": "Build one materialized dbt relation combining exact-day customer retention and first-90-day revenue/margin, attributed to the customer acquisition channel.",
+      "original_obligation": "Create ts_sales__channel_revenue_margin_monthly.sql with channel revenue metrics only (month_start, channel_key, revenue, profit, margin_rate)",
+      "source_task_id": "dbt-retail-task-01-channel-revenue",
+      "why_change_preserves_target_decision": "The selected reusable target is initial backend discovery, before source-specific analytical work. The new report retains both cohort-retention and channel-economics operation families, with new explicit grain and time windows; neither later source trajectory is claimed replayable."
+    }
+  ],
+  "composition_bindings": [
+    {
+      "evidence": "Task description states: Run echo $DB_TYPE in a shell BEFORE you write any code [message 0]",
+      "new_role": "backend_discovery_prerequisite",
+      "preserved_effect": "Read DB_TYPE before selecting backend-dependent profile settings. The project is explicitly rebound to /app/sg_project.",
+      "source_operation": "environment_variable_discovery_and_project_structure_exploration",
+      "source_task_id": "dbt-fix-daily-cohorts",
+      "source_transition_id": "branch_A"
+    },
+    {
+      "evidence": "Task requirement states: Run echo $DB_TYPE in a shell BEFORE you write any code [message 0]",
+      "new_role": "backend_discovery_prerequisite",
+      "preserved_effect": "Read DB_TYPE before selecting backend-dependent profile settings. The project is explicitly rebound to /app/sg_project.",
+      "source_operation": "environment_variable_discovery_and_project_structure_exploration",
+      "source_task_id": "dbt-retail-task-01-channel-revenue",
+      "source_transition_id": "branch_B"
+    }
+  ],
+  "environment_variables": {
+    "DB_TYPE": "duckdb",
+    "DUCKDB_PATH": "/app/database/retail.duckdb"
+  },
+  "format_version": "superstate-mutable-dbt-v1",
+  "information_state_contract": {
+    "assembled_known_information_deliveries": [
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "The initial terminal working directory is /app.",
+        "given_to_learner": "The initial terminal working directory is /app.",
+        "grounding": "model_assertion_only"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Both /app/dbt_models_duckdb and /app/dbt_models_snowflake exist as reference projects.",
+        "given_to_learner": "Both /app/dbt_models_duckdb and /app/dbt_models_snowflake exist as reference projects.",
+        "grounding": "model_assertion_only"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "The new task-owned project is /app/sg_project; its backend profile and analytical model are incomplete.",
+        "given_to_learner": "The new task-owned project is /app/sg_project; its backend profile and analytical model are incomplete.",
+        "grounding": "model_assertion_only"
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "The reference projects are not the submission location; the verifier builds and checks /app/sg_project.",
+        "given_to_learner": "The reference projects are not the submission location; the verifier builds and checks /app/sg_project.",
+        "grounding": "model_assertion_only"
+      }
+    ],
+    "mismatches": [
+      "The backend profile is now task-owned at /app/sg_project; reference project directories remain available but are not submission locations.",
+      "The generator falsely claimed the fresh project already had staging models and that the verifier selects a reference project. These claims are removed; the starter contains a TODO model.",
+      "The original daily-retention and monthly-channel-revenue obligations are replaced with an explicitly specified acquisition-channel cohort report. This tests reuse of the initial backend-discovery decision, not literal replay of the later source trajectories.",
+      "The POC runtime supports only one pinned backend. The alternative branch explains the source decision; no cross-backend execution or difficulty preservation is established."
+    ],
+    "provided_context": [
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "The initial terminal working directory is /app.",
+        "given_to_learner": "The initial terminal working directory is /app.",
+        "source_evidence": "Shared initial-prefix /app/reference-project evidence; new project/submission obligations are explicitly rebound by this task compiler, not asserted as observed source facts."
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "Both /app/dbt_models_duckdb and /app/dbt_models_snowflake exist as reference projects.",
+        "given_to_learner": "Both /app/dbt_models_duckdb and /app/dbt_models_snowflake exist as reference projects.",
+        "source_evidence": "Shared initial-prefix /app/reference-project evidence; new project/submission obligations are explicitly rebound by this task compiler, not asserted as observed source facts."
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "The new task-owned project is /app/sg_project; its backend profile and analytical model are incomplete.",
+        "given_to_learner": "The new task-owned project is /app/sg_project; its backend profile and analytical model are incomplete.",
+        "source_evidence": "Shared initial-prefix /app/reference-project evidence; new project/submission obligations are explicitly rebound by this task compiler, not asserted as observed source facts."
+      },
+      {
+        "delivery_location": "CONTEXT.md",
+        "fact": "The reference projects are not the submission location; the verifier builds and checks /app/sg_project.",
+        "given_to_learner": "The reference projects are not the submission location; the verifier builds and checks /app/sg_project.",
+        "source_evidence": "Shared initial-prefix /app/reference-project evidence; new project/submission obligations are explicitly rebound by this task compiler, not asserted as observed source facts."
+      }
+    ],
+    "withheld_until_observation": [
+      {
+        "discovery_action": "Run echo $DB_TYPE.",
+        "fact": "The active value of DB_TYPE.",
+        "source_evidence": "Both selected initial histories have not yet observed DB_TYPE."
+      },
+      {
+        "discovery_action": "After reading DB_TYPE, inspect the appropriate connection variables, e.g. DUCKDB_PATH for duckdb or SNOWFLAKE_* for snowflake.",
+        "fact": "The connection settings for the active backend.",
+        "source_evidence": "Initial prefixes leave backend-dependent connection settings unresolved; the exact variable choice follows the observed backend."
+      }
+    ]
+  },
+  "instruction": "You start in /app. Read /app/sg_project/CONTEXT.md. Before writing backend-dependent configuration, run `echo $DB_TYPE` and inspect the connection environment for that backend. Do not infer the active backend from the mere existence of either reference project. Work only in /app/sg_project and keep the source warehouse unchanged.\n\nConfigure profile sg_profile_991dec701d for the active backend. Implement model sg_result_991dec701d.sql and materialize its output as a TABLE in schema sg_991dec701d. The verifier runs dbt against /app/sg_project with profiles from that same directory; changing the reference projects is not a submission.\n\nBuild an acquisition-channel cohort report with the following precise definitions:\n\n1. Use ANALYTICS.FACT_SALES joined to ANALYTICS.DIM_DATE by DATE_KEY. Retain only rows with a matching date and non-null CUSTOMER_KEY. These are the eligible dated sales; do not infer a calendar date from an unmatched DATE_KEY. Treat each FACT_SALES row as a sale-line record and use CUSTOMER_KEY as the customer identity without filtering through DIM_CUSTOMER.\n2. Each customer's cohort_date is their earliest eligible sale date. Their acquisition channel is CHANNEL_KEY from the first sale, ordered by sale date, then TIME_KEY ascending NULLS LAST, ORDER_ID ascending NULLS LAST, then SALE_KEY ascending. Assign each customer exactly once. Keep only customers whose cohort_date is at least 90 calendar days before the maximum eligible sale date across the entire warehouse; this removes right-censored cohorts.\n3. Emit exactly one row for each nonempty (cohort_date, acquisition channel) group. month_start is the first calendar day of cohort_date's month. channel_key is the acquisition channel; obtain channel_code from ANALYTICS.DIM_CHANNEL, using 'UNKNOWN' if the channel is unmatched or its code is null.\n4. cohort_size counts distinct assigned customers. day_0_customers, day_7_customers, day_30_customers and day_90_customers count assigned customers with at least one eligible sale on exactly that many calendar days after their own cohort_date. These are exact-day retention counts, not cumulative windows or month buckets. Each corresponding retention is its count divided by cohort_size.\n5. For the same assigned customers, include every eligible sale from cohort_date through cohort_date + 90 days, inclusive, regardless of the sale's later channel. Attribute those sales to the customer's acquisition channel. order_count counts distinct ORDER_ID values in the group. revenue sums TOTAL_AMOUNT as recorded (do not subtract discounts or taxes again); profit sums PROFIT_AMOUNT; discount_amount sums DISCOUNT_AMOUNT.\n6. margin_rate = profit / revenue; avg_order_value = revenue / order_count; discount_rate = discount_amount / revenue. Preserve legitimate zero values. A zero denominator yields NULL. Round revenue, profit, discount_amount and avg_order_value to two decimal places and rates to six. Compute ratios from unrounded sums.\n\nOutput exactly these columns in this order:\ncohort_date, month_start, channel_key, channel_code, cohort_size, order_count, day_0_customers, day_7_customers, day_30_customers, day_90_customers, revenue, profit, discount_amount, margin_rate, avg_order_value, discount_rate, day_0_retention, day_7_retention, day_30_retention, day_90_retention.\nDates must be DATE values. Monetary outputs must be DECIMAL(18,2), and rates DECIMAL(18,6); counts are integers. Row ordering does not matter. Run `dbt run --project-dir /app/sg_project --profiles-dir /app/sg_project` successfully. No network or package installation is needed.\n\nBefore editing the project, read /app/sg_project/CONTEXT.md for the supplied starting context.\n",
+  "limitations": [
+    "Codex-assisted repair of a failed Qwen-generated proposal; not an unassisted Qwen synthesis success.",
+    "Both source witnesses start before backend discovery. Later source segments are not replayed, and the new analytical goal/ground truth was materially specified during repair.",
+    "The runtime is pinned to one backend, and the grader does not enforce the chronological act of reading DB_TYPE; an agent might infer or guess the configuration.",
+    "No learned difficulty, continuation variance, or training lift is measured.",
+    "The oracle and reference use identical SQL, so their runtime agreement is not independent semantic evidence."
+  ],
+  "model_name": "sg_result_991dec701d",
+  "new_goal": "Build one materialized dbt relation combining exact-day customer retention and first-90-day revenue/margin, attributed to the customer acquisition channel.",
+  "oracle_files": {
+    "dbt_project.yml": "name: sg_project_991dec701d\nversion: '1.0'\nprofile: sg_profile_991dec701d\nmodel-paths:\n- models\nanalysis-paths:\n- analyses\ntest-paths:\n- tests\nseed-paths:\n- seeds\nmacro-paths:\n- macros\nsnapshot-paths:\n- snapshots\ntarget-path: target\nclean-targets:\n- target\n- dbt_packages\nmodels:\n  sg_project_991dec701d:\n    sg_991dec701d:\n      +materialized: table\n    +materialized: table\nconfig-version: 2\n",
+    "models/sg_result_991dec701d.sql": "WITH dated_sales AS (\n    SELECT f.*, d.FULL_DATE AS sale_date\n    FROM ANALYTICS.FACT_SALES f\n    JOIN ANALYTICS.DIM_DATE d ON d.DATE_KEY = f.DATE_KEY\n    WHERE f.CUSTOMER_KEY IS NOT NULL\n), ranked_first_sales AS (\n    SELECT CUSTOMER_KEY, CHANNEL_KEY, sale_date,\n           ROW_NUMBER() OVER (\n               PARTITION BY CUSTOMER_KEY\n               ORDER BY sale_date, TIME_KEY NULLS LAST, ORDER_ID NULLS LAST, SALE_KEY\n           ) AS first_sale_rank\n    FROM dated_sales\n), customer_cohorts AS (\n    SELECT CUSTOMER_KEY, CHANNEL_KEY AS acquisition_channel_key, sale_date AS cohort_date\n    FROM ranked_first_sales\n    WHERE first_sale_rank = 1\n      AND sale_date <= (SELECT MAX(sale_date) FROM dated_sales) - INTERVAL '90 days'\n), cohort_activity AS (\n    SELECT c.CUSTOMER_KEY, c.acquisition_channel_key, c.cohort_date,\n           s.sale_date, s.ORDER_ID, s.TOTAL_AMOUNT, s.PROFIT_AMOUNT, s.DISCOUNT_AMOUNT\n    FROM customer_cohorts c\n    JOIN dated_sales s ON s.CUSTOMER_KEY = c.CUSTOMER_KEY\n                     AND s.sale_date BETWEEN c.cohort_date AND c.cohort_date + INTERVAL '90 days'\n), cohort_metrics AS (\n    SELECT cohort_date, acquisition_channel_key,\n           COUNT(DISTINCT CUSTOMER_KEY) AS cohort_size,\n           COUNT(DISTINCT ORDER_ID) AS order_count,\n           COUNT(DISTINCT CASE WHEN sale_date = cohort_date THEN CUSTOMER_KEY END) AS day_0_customers,\n           COUNT(DISTINCT CASE WHEN sale_date = cohort_date + INTERVAL '7 days' THEN CUSTOMER_KEY END) AS day_7_customers,\n           COUNT(DISTINCT CASE WHEN sale_date = cohort_date + INTERVAL '30 days' THEN CUSTOMER_KEY END) AS day_30_customers,\n           COUNT(DISTINCT CASE WHEN sale_date = cohort_date + INTERVAL '90 days' THEN CUSTOMER_KEY END) AS day_90_customers,\n           SUM(TOTAL_AMOUNT) AS revenue,\n           SUM(PROFIT_AMOUNT) AS profit,\n           SUM(DISCOUNT_AMOUNT) AS discount_amount\n    FROM cohort_activity\n    GROUP BY cohort_date, acquisition_channel_key\n)\nSELECT m.cohort_date,\n       CAST(DATE_TRUNC('month', m.cohort_date) AS DATE) AS month_start,\n       m.acquisition_channel_key AS channel_key,\n       COALESCE(c.CHANNEL_CODE, 'UNKNOWN') AS channel_code,\n       m.cohort_size, m.order_count,\n       m.day_0_customers, m.day_7_customers, m.day_30_customers, m.day_90_customers,\n       CAST(ROUND(m.revenue, 2) AS DECIMAL(18,2)) AS revenue,\n       CAST(ROUND(m.profit, 2) AS DECIMAL(18,2)) AS profit,\n       CAST(ROUND(m.discount_amount, 2) AS DECIMAL(18,2)) AS discount_amount,\n       CAST(ROUND(m.profit / NULLIF(m.revenue, 0), 6) AS DECIMAL(18,6)) AS margin_rate,\n       CAST(ROUND(m.revenue / NULLIF(m.order_count, 0), 2) AS DECIMAL(18,2)) AS avg_order_value,\n       CAST(ROUND(m.discount_amount / NULLIF(m.revenue, 0), 6) AS DECIMAL(18,6)) AS discount_rate,\n       CAST(ROUND(m.day_0_customers * 1.0 / NULLIF(m.cohort_size, 0), 6) AS DECIMAL(18,6)) AS day_0_retention,\n       CAST(ROUND(m.day_7_customers * 1.0 / NULLIF(m.cohort_size, 0), 6) AS DECIMAL(18,6)) AS day_7_retention,\n       CAST(ROUND(m.day_30_customers * 1.0 / NULLIF(m.cohort_size, 0), 6) AS DECIMAL(18,6)) AS day_30_retention,\n       CAST(ROUND(m.day_90_customers * 1.0 / NULLIF(m.cohort_size, 0), 6) AS DECIMAL(18,6)) AS day_90_retention\nFROM cohort_metrics m\nLEFT JOIN ANALYTICS.DIM_CHANNEL c ON c.CHANNEL_KEY = m.acquisition_channel_key\n",
+    "profiles.yml": "sg_profile_991dec701d:\n  target: dev\n  outputs:\n    dev:\n      type: duckdb\n      path: /app/database/retail.duckdb\n      schema: sg_991dec701d\n      threads: 2\n"
+  },
+  "ordered": false,
+  "output_columns": [
+    "cohort_date",
+    "month_start",
+    "channel_key",
+    "channel_code",
+    "cohort_size",
+    "order_count",
+    "day_0_customers",
+    "day_7_customers",
+    "day_30_customers",
+    "day_90_customers",
+    "revenue",
+    "profit",
+    "discount_amount",
+    "margin_rate",
+    "avg_order_value",
+    "discount_rate",
+    "day_0_retention",
+    "day_7_retention",
+    "day_30_retention",
+    "day_90_retention"
+  ],
+  "preserved_decision": {
+    "alternatives": [
+      "Configure the task project with a DuckDB profile if DB_TYPE reports duckdb.",
+      "Configure it using Snowflake connection settings if DB_TYPE reports snowflake."
+    ],
+    "decision": "Observe the active backend before choosing the connection/profile configuration for the task-owned dbt project.",
+    "known_information": [
+      "The initial terminal working directory is /app.",
+      "Both /app/dbt_models_duckdb and /app/dbt_models_snowflake exist as reference projects.",
+      "The new task-owned project is /app/sg_project; its backend profile and analytical model are incomplete.",
+      "The reference projects are not the submission location; the verifier builds and checks /app/sg_project."
+    ],
+    "required_observation": "Read DB_TYPE, then inspect the connection variables for the observed backend.",
+    "unknown_information": [
+      "The active value of DB_TYPE.",
+      "The connection settings for the active backend."
+    ],
+    "why_task_requires_decision": "Both reference projects exist, but the new starter profile is incomplete. A working profile for the live warehouse is required for dbt run; existence of a reference directory does not select the active backend."
+  },
+  "profile_name": "sg_profile_991dec701d",
+  "project_dir": "/app/sg_project",
+  "project_name": "sg_project_991dec701d",
+  "reference_sql": "WITH dated_sales AS (\n    SELECT f.*, d.FULL_DATE AS sale_date\n    FROM ANALYTICS.FACT_SALES f\n    JOIN ANALYTICS.DIM_DATE d ON d.DATE_KEY = f.DATE_KEY\n    WHERE f.CUSTOMER_KEY IS NOT NULL\n), ranked_first_sales AS (\n    SELECT CUSTOMER_KEY, CHANNEL_KEY, sale_date,\n           ROW_NUMBER() OVER (\n               PARTITION BY CUSTOMER_KEY\n               ORDER BY sale_date, TIME_KEY NULLS LAST, ORDER_ID NULLS LAST, SALE_KEY\n           ) AS first_sale_rank\n    FROM dated_sales\n), customer_cohorts AS (\n    SELECT CUSTOMER_KEY, CHANNEL_KEY AS acquisition_channel_key, sale_date AS cohort_date\n    FROM ranked_first_sales\n    WHERE first_sale_rank = 1\n      AND sale_date <= (SELECT MAX(sale_date) FROM dated_sales) - INTERVAL '90 days'\n), cohort_activity AS (\n    SELECT c.CUSTOMER_KEY, c.acquisition_channel_key, c.cohort_date,\n           s.sale_date, s.ORDER_ID, s.TOTAL_AMOUNT, s.PROFIT_AMOUNT, s.DISCOUNT_AMOUNT\n    FROM customer_cohorts c\n    JOIN dated_sales s ON s.CUSTOMER_KEY = c.CUSTOMER_KEY\n                     AND s.sale_date BETWEEN c.cohort_date AND c.cohort_date + INTERVAL '90 days'\n), cohort_metrics AS (\n    SELECT cohort_date, acquisition_channel_key,\n           COUNT(DISTINCT CUSTOMER_KEY) AS cohort_size,\n           COUNT(DISTINCT ORDER_ID) AS order_count,\n           COUNT(DISTINCT CASE WHEN sale_date = cohort_date THEN CUSTOMER_KEY END) AS day_0_customers,\n           COUNT(DISTINCT CASE WHEN sale_date = cohort_date + INTERVAL '7 days' THEN CUSTOMER_KEY END) AS day_7_customers,\n           COUNT(DISTINCT CASE WHEN sale_date = cohort_date + INTERVAL '30 days' THEN CUSTOMER_KEY END) AS day_30_customers,\n           COUNT(DISTINCT CASE WHEN sale_date = cohort_date + INTERVAL '90 days' THEN CUSTOMER_KEY END) AS day_90_customers,\n           SUM(TOTAL_AMOUNT) AS revenue,\n           SUM(PROFIT_AMOUNT) AS profit,\n           SUM(DISCOUNT_AMOUNT) AS discount_amount\n    FROM cohort_activity\n    GROUP BY cohort_date, acquisition_channel_key\n)\nSELECT m.cohort_date,\n       CAST(DATE_TRUNC('month', m.cohort_date) AS DATE) AS month_start,\n       m.acquisition_channel_key AS channel_key,\n       COALESCE(c.CHANNEL_CODE, 'UNKNOWN') AS channel_code,\n       m.cohort_size, m.order_count,\n       m.day_0_customers, m.day_7_customers, m.day_30_customers, m.day_90_customers,\n       CAST(ROUND(m.revenue, 2) AS DECIMAL(18,2)) AS revenue,\n       CAST(ROUND(m.profit, 2) AS DECIMAL(18,2)) AS profit,\n       CAST(ROUND(m.discount_amount, 2) AS DECIMAL(18,2)) AS discount_amount,\n       CAST(ROUND(m.profit / NULLIF(m.revenue, 0), 6) AS DECIMAL(18,6)) AS margin_rate,\n       CAST(ROUND(m.revenue / NULLIF(m.order_count, 0), 2) AS DECIMAL(18,2)) AS avg_order_value,\n       CAST(ROUND(m.discount_amount / NULLIF(m.revenue, 0), 6) AS DECIMAL(18,6)) AS discount_rate,\n       CAST(ROUND(m.day_0_customers * 1.0 / NULLIF(m.cohort_size, 0), 6) AS DECIMAL(18,6)) AS day_0_retention,\n       CAST(ROUND(m.day_7_customers * 1.0 / NULLIF(m.cohort_size, 0), 6) AS DECIMAL(18,6)) AS day_7_retention,\n       CAST(ROUND(m.day_30_customers * 1.0 / NULLIF(m.cohort_size, 0), 6) AS DECIMAL(18,6)) AS day_30_retention,\n       CAST(ROUND(m.day_90_customers * 1.0 / NULLIF(m.cohort_size, 0), 6) AS DECIMAL(18,6)) AS day_90_retention\nFROM cohort_metrics m\nLEFT JOIN ANALYTICS.DIM_CHANNEL c ON c.CHANNEL_KEY = m.acquisition_channel_key",
+  "repair_provenance": {
+    "method": "Codex-assisted specification and SQL repair",
+    "source_proposal": "results/generated_dbt_tasks/shared-start-validation-1d77ffda5df853/constructor_attempts/attempt_03/rejection.json",
+    "source_sha256": "8bc1f6ba990055e3dcc1e74d3cab156def738504dc62569c0235f5bfebc8e0bb"
+  },
+  "replay_conflict_resolutions": [
+    {
+      "conflict_id": "replay_0_full_segment_transfer",
+      "evidence": "Both initial prefixes require observing DB_TYPE; ANALYTICS.FACT_SALES.DATE_KEY joins ANALYTICS.DIM_DATE.DATE_KEY for dates, and acquisition channels resolve through DIM_CHANNEL.",
+      "remaining_limitation": "Analytical semantics were Codex-assisted repairs of the Qwen proposal; correctness of source-decision preservation and learner difficulty remains unvalidated.",
+      "resolution": "The original full-segment replay remains contradicted. This package compiles a new terminal task combining acquisition-channel economics with exact-day retention; it binds the same initial backend-discovery decision to a fresh project and does not claim later source commands transfer."
+    }
+  ],
+  "starting_files": {
+    "CONTEXT.md": "# Supplied starting context\n\nThe initial terminal working directory is /app.\n\nBoth /app/dbt_models_duckdb and /app/dbt_models_snowflake exist as reference projects.\n\nThe new task-owned project is /app/sg_project; its backend profile and analytical model are incomplete.\n\nThe reference projects are not the submission location; the verifier builds and checks /app/sg_project.\n\nInspect DB_TYPE before writing backend-dependent configuration. Configure the task-owned project using the connection environment for the observed backend.\n\n\n# Supplied starting context\n\nThe initial terminal working directory is /app.\n\nBoth /app/dbt_models_duckdb and /app/dbt_models_snowflake exist as reference projects.\n\nThe new task-owned project is /app/sg_project; its backend profile and analytical model are incomplete.\n\nThe reference projects are not the submission location; the verifier builds and checks /app/sg_project.\n",
+    "dbt_project.yml": "name: sg_project_991dec701d\nversion: '1.0'\nprofile: sg_profile_991dec701d\nmodel-paths:\n- models\nanalysis-paths:\n- analyses\ntest-paths:\n- tests\nseed-paths:\n- seeds\nmacro-paths:\n- macros\nsnapshot-paths:\n- snapshots\ntarget-path: target\nclean-targets:\n- target\n- dbt_packages\nmodels:\n  sg_project_991dec701d:\n    sg_991dec701d:\n      +materialized: table\n    +materialized: table\nconfig-version: 2\n",
+    "models/sg_result_991dec701d.sql": "-- TODO implement this model according to the task requirements.\n",
+    "profiles.yml": "# TODO inspect DB_TYPE and configure the active backend.\n# Profile: sg_profile_991dec701d; target schema: sg_991dec701d\n# Complete a valid profile with a selected target and outputs.\n"
+  },
+  "status": "candidate",
+  "target_relation": "sg_result_991dec701d",
+  "target_schema": "sg_991dec701d",
+  "task_id": "sg_dbt_991dec701d",
+  "title": "Acquisition-channel retention and first-90-day unit economics"
+}
