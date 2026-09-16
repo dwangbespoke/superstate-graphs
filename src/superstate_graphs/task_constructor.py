@@ -294,6 +294,39 @@ def _excerpt(value: Any, max_chars: int) -> Any:
             "note": "Excerpt only; full original is retained in provenance.json"}
 
 
+def _source_evidence(value: Any, supplemental_budget: int) -> Any:
+    """Keep literal aliases and provenance; visibly bound only surrounding raw text."""
+    if not isinstance(value, dict):
+        return value
+
+    def record(item: Any, text_budget: int) -> Any:
+        if not isinstance(item, dict):
+            return item
+        result = dict(item)
+        text = result.get("text")
+        if isinstance(text, str) and len(text) > text_budget:
+            result["text"] = text[:text_budget]
+            result["constructor_text_clipped"] = True
+            result["original_text_sha256"] = hashlib.sha256(text.encode()).hexdigest()
+        # matched_text, source_kind, message_index, and original clipped flag
+        # remain exact, including aliases occurring beyond the shortened context.
+        return result
+
+    projected = dict(value)
+    if "task_requirement_excerpt" in value:
+        projected["task_requirement_excerpt"] = record(
+            value["task_requirement_excerpt"], min(1800, supplemental_budget))
+    if "recent_observations" in value:
+        projected["recent_observations"] = [
+            record(item, min(900, max(250, supplemental_budget // 2)))
+            for item in value["recent_observations"]]
+    if "explicit_mapping_and_schema_lines" in value:
+        projected["explicit_mapping_and_schema_lines"] = [
+            record(item, min(300, max(120, supplemental_budget // 3)))
+            for item in value["explicit_mapping_and_schema_lines"]]
+    return projected
+
+
 def _decision_prefix(value: Any, supplemental_budget: int) -> Any:
     """Never trim the extracted fields that define the learner's decision situation."""
     if isinstance(value, str):
@@ -304,10 +337,12 @@ def _decision_prefix(value: Any, supplemental_budget: int) -> Any:
         return _decision_prefix(parsed, supplemental_budget)
     if not isinstance(value, dict):
         return value
-    core = {"decision", "remaining_goal", "known_facts", "unresolved_questions",
+    core = {"decision", "remaining_goal", "task_requirements", "known_facts",
+            "learner_beliefs", "unresolved_conflicts", "unresolved_questions",
             "prior_attempts", "prerequisites", "possible_operations", "objects",
             "history_id", "task_id", "rollout_id", "step", "cutoff_step"}
     return {key: (_decision_prefix(item, supplemental_budget) if key == "prefix"
+                  else _source_evidence(item, supplemental_budget) if key == "source_evidence"
                   else item if key in core else _excerpt(item, supplemental_budget))
             for key, item in value.items()}
 

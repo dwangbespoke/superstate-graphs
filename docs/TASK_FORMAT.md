@@ -53,6 +53,12 @@ cannot fit the 18,000-character path budget, construction fails rather than sile
 truncating it. The full original path is retained in provenance. A caller-provided
 schema must fit the total prompt cap too. No extra LLM call is used for retrieval.
 
+Reader v3's `task_requirements`, tool-observed `known_facts`, `learner_beliefs`, and
+`unresolved_conflicts` remain separate and untruncated. The structured `source_evidence`
+ledger retains its source kinds, message indices, selection policy, and exact
+`matched_text` aliases/schema names. Only surrounding raw excerpt text is shortened,
+with an explicit clipping flag and original-text hash; full text remains in provenance.
+
 The model returns the schema shown in `construction_prompt`. Intermediate stages
 are dependent, named SELECT queries assembled into one CTE chain. Stage definitions
 cite actual transition IDs. The final query must consume the last stage. Execution

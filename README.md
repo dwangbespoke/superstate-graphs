@@ -44,10 +44,16 @@ See `docs/EXPERIMENT.md` for the execution plan and interpretation boundaries.
 uv run python -m superstate_graphs.prepare
 SG_MODEL_ROLE=learner uv run modal run scripts/modal_models.py --duration-seconds 10800
 # In a second terminal after the runtime endpoint file appears:
-uv run python scripts/run_rollouts.py --name pilot-v1
+uv run python scripts/run_rollouts.py --name pilot-v2
 # Bring up the reflector when rollouts are available:
 SG_MODEL_ROLE=reflector uv run modal run scripts/modal_models.py --duration-seconds 7200
-uv run python -m superstate_graphs.analyze --max-metric-calls 144
+uv run python scripts/fetch_runtime_database.py
+uv run python -m superstate_graphs.analyze \
+  --rollouts results/rollouts/pilot-v2 --output results/analysis_v1 \
+  --exclude-task dbt-consolidate --max-metric-calls 144
+uv run python scripts/generate_examples.py --analysis results/analysis_v1 --count 3
+uv run python scripts/build_report.py --analysis results/analysis_v1
+uv run python scripts/export_review_bundle.py --analysis results/analysis_v1
 ```
 
 Endpoint files in `results/runtime/` contain temporary credentials and are ignored
@@ -57,3 +63,10 @@ by Git. Stop a server by creating `results/runtime/learner.stop` or
 `python scripts/fetch_runtime_database.py` exports the pristine materialized
 benchmark database for local task construction. The generated SQL workflow task
 format and its limitations are documented in `docs/TASK_FORMAT.md`.
+
+The recorded pilot contains six tasks and twelve rollouts. The core analysis
+excludes `dbt-consolidate`, which uses separate CSV inputs and a separate database,
+leaving five tasks and ten rollouts. This world-scope correction and the observed
+failures are documented in `docs/PILOT_AUDIT.md`. All nine graded core outcomes
+are failures; one is ungraded. Task construction therefore uses supported groups
+as a fallback in this pilot, with no claim of observed high-variance discovery.

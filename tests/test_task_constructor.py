@@ -235,12 +235,39 @@ def test_learned_decision_evidence_precedes_generic_metadata(path_spec):
     path_spec["junction_prefix_A"]["evidence"] = "Long raw observation " * 10_000
     path_spec["junction_prefix_B"]["evidence"] = "Another observation " * 10_000
     path_spec["transitions"][0]["witness"]["long_observation"] = "Transition observation " * 10_000
+    for side in ("junction_prefix_A", "junction_prefix_B"):
+        path_spec[side].update({
+            "task_requirements": ["[message 0] Output column must be sales_id"],
+            "learner_beliefs": ["[message 3] Learner believes sale_key is missing"],
+            "unresolved_conflicts": ["[messages 0, 2, 3] Required alias differs from learner belief"],
+            "source_evidence": {
+                "task_requirement_excerpt": {"message_index": 0, "source_kind": "task_requirement",
+                                             "text": "Required sales_id column. " * 100, "clipped": True},
+                "recent_observations": [{"message_index": 2, "source_kind": "terminal_transcript",
+                                         "text": "Observed schema output. " * 100, "clipped": True}],
+                "explicit_mapping_and_schema_lines": [{
+                    "message_index": 2, "source_kind": "terminal_transcript",
+                    "pattern": "explicit_sql_alias", "matched_text": "sale_key AS sales_id",
+                    "text": "Long context " * 100 + "sale_key AS sales_id", "clipped": True,
+                }],
+                "selection_policy": "Literal prefix-only snippets",
+                "interpretation": "Snippets do not themselves assert semantic facts",
+            },
+        })
     projected = _prompt_path(path_spec)
     assert projected["target_definition"] == path_spec["target_definition"]
     for side in ("junction_prefix_A", "junction_prefix_B"):
-        for field in ("decision", "remaining_goal", "known_facts", "unresolved_questions", "possible_operations"):
+        for field in ("decision", "remaining_goal", "task_requirements", "known_facts",
+                      "learner_beliefs", "unresolved_conflicts", "unresolved_questions", "possible_operations"):
             assert projected[side][field] == path_spec[side][field]
         assert projected[side]["evidence"]["note"].startswith("Excerpt only")
+        source = projected[side]["source_evidence"]
+        assert source["task_requirement_excerpt"]["source_kind"] == "task_requirement"
+        assert source["recent_observations"][0]["source_kind"] == "terminal_transcript"
+        mapping = source["explicit_mapping_and_schema_lines"][0]
+        assert mapping["matched_text"] == "sale_key AS sales_id"
+        assert mapping["message_index"] == 2
+        assert mapping["constructor_text_clipped"] is True
     assert len(json.dumps(projected, indent=2, sort_keys=True)) <= 18_000
     too_large = copy.deepcopy(path_spec)
     too_large["target_definition"]["requirements"] = ["Core decision requirement " * 1000]
