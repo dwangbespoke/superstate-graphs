@@ -1,0 +1,88 @@
+{
+  "job_name": "source-rollouts",
+  "jobs_dir": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/rollouts",
+  "n_attempts": 3,
+  "orchestrator": {
+    "type": "local",
+    "n_concurrent_trials": 2
+  },
+  "environment": {
+    "type": "modal",
+    "delete": true,
+    "env": {
+      "DB_TYPE": "duckdb",
+      "DUCKDB_PATH": "/app/database/retail.duckdb"
+    },
+    "kwargs": {
+      "app_name": "superstate-graphs-environments",
+      "sandbox_timeout_secs": 2400,
+      "sandbox_idle_timeout_secs": 300
+    }
+  },
+  "verifier": {
+    "override_timeout_sec": 600
+  },
+  "agents": [
+    {
+      "import_path": "superstate_graphs.recorder:RecordingTerminus2",
+      "model_name": "hosted_vllm/Qwen/Qwen3.5-9B",
+      "override_timeout_sec": 1200,
+      "kwargs": {
+        "max_turns": 30,
+        "temperature": 0.6,
+        "api_base": "https://pending.invalid/v1",
+        "enable_summarize": false,
+        "collect_rollout_details": true,
+        "store_all_messages": true,
+        "trajectory_config": {
+          "raw_content": true,
+          "linear_history": true
+        },
+        "model_info": {
+          "max_input_tokens": 45056,
+          "max_output_tokens": 4096,
+          "max_tokens": 49152,
+          "input_cost_per_token": 0.0,
+          "output_cost_per_token": 0.0,
+          "litellm_provider": "hosted_vllm",
+          "mode": "chat"
+        },
+        "llm_call_kwargs": {
+          "max_tokens": 4096,
+          "top_p": 0.95,
+          "extra_body": {
+            "chat_template_kwargs": {
+              "enable_thinking": true
+            },
+            "top_k": 20
+          }
+        }
+      }
+    }
+  ],
+  "datasets": [
+    {
+      "path": "/Users/daniel/Desktop/High Variance States/superstate-graphs/data/tasks",
+      "task_names": [
+        "cohort-retention-matrix",
+        "dbt-cart-abandonment-recovery",
+        "dbt-customer-churn-cohorts",
+        "dbt-customer-cltv-forecasting",
+        "dbt-customer-cross-sell-insights",
+        "dbt-daily-order-summary",
+        "dbt-fix-cac-payback-waterfall",
+        "dbt-fix-customer-snapshot-and-build-dimension",
+        "dbt-fix-daily-cohorts",
+        "dbt-fix-division-by-zero",
+        "dbt-fix-marketing-attribution",
+        "dbt-fraud-detection-model",
+        "dbt-inventory-turnover-analysis",
+        "dbt-multi-warehouse-stock-rebalance",
+        "dbt-price-elasticity",
+        "dbt-product-affinity",
+        "dbt-receivables-aging-buckets",
+        "dbt-rfm-customer-segmentation"
+      ]
+    }
+  ]
+}

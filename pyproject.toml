@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "superstate-graphs"
+version = "0.1.0"
+description = "Experience-grounded superstate graphs for reusable task generation"
+requires-python = ">=3.12"
+dependencies = [
+    "harbor[modal]==0.23.0",
+    "gepa==0.1.4",
+    "modal==1.5.4",
+    "openai==2.54.0",
+    "PyYAML==6.0.3",
+    "duckdb==1.2.2",
+    "dockerfile-parse>=2.0.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.3.5", "ruff==0.9.10"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/superstate_graphs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+

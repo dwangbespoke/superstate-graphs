@@ -1,0 +1,39 @@
+{
+  "job_name": "oracle-smoke",
+  "jobs_dir": "/Users/daniel/Desktop/High Variance States/superstate-graphs/results/rollouts",
+  "n_attempts": 1,
+  "orchestrator": {
+    "type": "local",
+    "n_concurrent_trials": 2
+  },
+  "environment": {
+    "type": "modal",
+    "delete": true,
+    "env": {
+      "DB_TYPE": "duckdb",
+      "DUCKDB_PATH": "/app/database/retail.duckdb"
+    },
+    "kwargs": {
+      "app_name": "superstate-graphs-environments",
+      "sandbox_timeout_secs": 2400,
+      "sandbox_idle_timeout_secs": 300
+    }
+  },
+  "verifier": {
+    "override_timeout_sec": 600
+  },
+  "agents": [
+    {
+      "name": "oracle",
+      "override_timeout_sec": 900
+    }
+  ],
+  "datasets": [
+    {
+      "path": "/Users/daniel/Desktop/High Variance States/superstate-graphs/data/tasks",
+      "task_names": [
+        "dbt-customer-geographic"
+      ]
+    }
+  ]
+}
