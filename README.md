@@ -3,7 +3,7 @@
 An end-to-end research prototype for turning recurring decisions in an agent's
 experience into reusable task-construction targets.
 
-Pipeline: natural rollouts → prefix-only history records → GEPA-refined
+Pipeline: natural rollouts → prefix-only history records → GEPA-evaluated
 superstates → observed transition graph → cross-task paths → executable tasks.
 
 The formation objective is coherent decision sharing and useful cross-task
@@ -51,7 +51,8 @@ uv run python scripts/fetch_runtime_database.py
 uv run python -m superstate_graphs.analyze \
   --rollouts results/rollouts/pilot-v2 --output results/analysis_v1 \
   --exclude-task dbt-consolidate --max-metric-calls 144
-uv run python scripts/generate_examples.py --analysis results/analysis_v1 --count 3
+uv run python scripts/generate_dbt_examples.py --analysis results/analysis_v1 \
+  --count 3 --max-paths 6 --judge-uncached
 uv run python scripts/build_report.py --analysis results/analysis_v1
 uv run python scripts/export_review_bundle.py --analysis results/analysis_v1
 ```
@@ -61,8 +62,9 @@ by Git. Stop a server by creating `results/runtime/learner.stop` or
 `results/runtime/reflector.stop`; remove that marker explicitly before restarting.
 
 `python scripts/fetch_runtime_database.py` exports the pristine materialized
-benchmark database for local task construction. The generated SQL workflow task
-format and its limitations are documented in `docs/TASK_FORMAT.md`.
+benchmark database for local task construction. Mutable dbt tasks preserve project
+configuration decisions; the optional `generate_examples.py` backend supports
+read-only SQL targets. Formats and limitations are documented in `docs/TASK_FORMAT.md`.
 
 The recorded pilot contains six tasks and twelve rollouts. The core analysis
 excludes `dbt-consolidate`, which uses separate CSV inputs and a separate database,

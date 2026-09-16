@@ -136,3 +136,68 @@ The alternate SQL and constraints share their generator with the oracle. Source
 citations and CTE dependencies are auditable evidence, not a semantic proof that
 an operation has been reused faithfully. The tiny unit-test database measures
 software correctness only; it is not research evidence.
+
+## Mutable dbt fallback
+
+`superstate_graphs.dbt_constructor.construct_dbt_task` handles environment and
+configuration decisions which a SELECT-only task cannot represent. It accepts the
+same learned path and decision prefixes, plus `original_replay_judgments`: saved
+judgments with `decision`, `local_transfer`, and `full_segment_transfer` labels and
+rationales. A contradicted local decision cannot be claimed preserved. A rejected
+literal replay remains rejected; the constructor proposes explicit new terminal
+obligations, artifact bindings, and a resolution for every replay conflict.
+
+The generator returns concrete starter and oracle file maps for `/app/sg_project`,
+a new task instruction, a source-table reference SQL query, and fresh deterministic
+`sg_*` project/profile/schema/model identifiers. The pinned base image provides the
+warehouse and sets `DB_TYPE=duckdb`. Instructions must leave the backend value to be
+observed. Starter SQL contains comments/TODOs only, and the starter profile leaves
+backend configuration unresolved. Oracle files are kept outside the learner image.
+
+Every claimed decision-relevant known fact must have a `provided_context` entry
+pointing to exact text actually present in the instruction or a starter file.
+Every unknown fact has a corresponding intended discovery action. Information-state
+mismatches are explicitly listed. These structural checks expose the construction
+claim for review; they do not independently certify that all source information or
+meaningful alternatives were preserved.
+
+`task.json` contains `starting_files`, `oracle_files`, `target_schema`,
+`target_relation` (equal to `model_name`), `reference_sql`, `output_columns`, and
+`ordered: false`, plus bindings, changed obligations, preserved-decision details,
+information-state contract, and replay-conflict resolutions. The existing runtime
+materializer writes a Harbor-style `environment/`, `solution/`, and `tests/` package.
+Only `starting_files` are copied into its Docker image. The generator never imports
+or launches Modal merely by being imported.
+
+```python
+from superstate_graphs.dbt_constructor import construct_dbt_task
+from superstate_graphs.dbt_runtime import validate_dbt_task
+
+result = construct_dbt_task(
+    selected_path_with_saved_judgments,
+    llm=lambda messages: cached_client.call(messages, response_format={"type": "json_object"}),
+    db_path="data/runtime/retail.duckdb",
+    output_dir="results/generated_dbt_tasks/example",
+    runtime_validator=validate_dbt_task,
+    max_repairs=2,
+)
+```
+
+Without `runtime_validator`, the result is `awaiting_runtime_validation` and the
+hidden expected output has not been frozen by execution. With it, one isolated
+runtime checks that the starter does not already solve the task, restores pristine
+data, installs the oracle replacement files, runs dbt, and compares the produced
+relation with the pristine reference query. Only a successful runtime receipt leads
+to `validated`. Failures feed bounded constructor repairs, retaining each raw
+candidate, package, and validation receipt. `unsupported_target` emits no task.
+
+The bounded runner reuses exact saved directional judgments before considering
+additional judge calls:
+
+```bash
+uv run python scripts/generate_dbt_examples.py --count 3 --max-paths 6
+```
+
+`--package-only` disables runtime execution. `--judge-uncached` explicitly permits
+the shared two-stage judge when an exact saved judgment is unavailable. These are
+executable feasibility artifacts, not evidence of high task variance or training lift.

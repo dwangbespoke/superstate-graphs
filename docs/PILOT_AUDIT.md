@@ -17,11 +17,28 @@ The bounded learner protocol is unchanged. These observations are not enough to
 conclude that superstates have useful outcome variance or that generated tasks
 will improve training.
 
-A construction limitation deserves explicit review: the current generated-task
-format is read-only SQL, so it can reproduce relational decisions but cannot
+A construction limitation deserves explicit review: the initial generated-task
+format was read-only SQL, so it could reproduce relational decisions but could not
 faithfully reproduce every dbt project/configuration failure. Review actual
 selected targets against generated examples rather than assuming SQL execution
-proves preservation of the targeted decision.
+proves preservation of the targeted decision. The mutable dbt constructor was added
+to support configuration and project decisions; its execution checks still do not
+prove that the source decision's difficulty survives construction.
+
+## Completed GEPA run
+
+The final run evaluated five distinct prompt versions (including the seed) against
+a frozen bank of 44 judgments. Every version scored 4/12 on the development
+validation probes. The selected version was the seed: this run demonstrates actual
+prompt proposals and evaluations, but no selected validation improvement. A better
+full-bank score for an intermediate version is not a held-out gain.
+
+The reflector temporarily returned HTTP 503 during later mutation attempts. GEPA
+continued evaluating minibatches without producing additional versions, exhausting
+146 metric calls against a nominal 144-call budget. Those failed mutations are not
+counted as prompt revisions. Cached successful versions and their judgments were
+retained; the optimization was not rerun to seek a better result. Model health later
+recovered, and task construction resumed separately.
 
 ## Shared-world scope correction
 
