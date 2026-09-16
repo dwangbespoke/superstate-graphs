@@ -23,8 +23,17 @@ def build(analysis:Path,output:Path):
     data['tasks']=[]
     for p in sorted((ROOT/'results/generated_tasks').glob('*/instruction.md')):
         data['tasks'].append({'name':p.parent.name,'instruction':p.read_text(),
+                              'format':'Read-only SQL workflow',
                               'validation':json.loads((p.parent/'validation.json').read_text()) if (p.parent/'validation.json').exists() else {},
                               'path':str(p.parent)})
+    for p in sorted((ROOT/'results/generated_dbt_tasks').glob('*/instruction.md')):
+        receipt=p.parent/'runtime_validation.json'
+        if not receipt.exists():continue
+        validation=json.loads(receipt.read_text())
+        if validation.get('status')!='validated':continue
+        data['tasks'].append({'name':p.parent.name,'instruction':p.read_text(),
+                              'format':'Mutable dbt project',
+                              'validation':validation,'path':str(p.parent)})
     template=(ROOT/'reports/template.html').read_text()
     payload=json.dumps(data,ensure_ascii=False).replace('<','\\u003c')
     output.parent.mkdir(parents=True,exist_ok=True)
