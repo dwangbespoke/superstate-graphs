@@ -20,6 +20,7 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--job',type=Path,default=ROOT/'results/rollouts/pilot-v2')
     parser.add_argument('--analysis',type=Path,default=ROOT/'results/analysis_v1')
+    parser.add_argument('--wait-extraction',action='store_true',help='Wait for a separately running corrected extraction before resuming')
     parser.add_argument('--resume',action='store_true',help='Use existing model servers and cached extraction; do not launch duplicate servers')
     parser.add_argument('--exclude-task',action='append',default=['dbt-consolidate'])
     a=parser.parse_args()
@@ -32,6 +33,17 @@ def main():
         time.sleep(20)
     else:
         raise TimeoutError('Collection has not completed after two hours')
+    if a.wait_extraction:
+        extraction_deadline=time.time()+5400
+        while time.time()<extraction_deadline:
+            summary_path=a.analysis/'summary.json'
+            try:
+                extracted=json.loads(summary_path.read_text()).get('status')=='extracted'
+            except (FileNotFoundError,json.JSONDecodeError):
+                extracted=False
+            if extracted:break
+            time.sleep(20)
+        else:raise TimeoutError('Corrected extraction did not finish')
     if not a.resume:
         stop=ROOT/'results/runtime/reflector.stop'
         if stop.exists():stop.unlink()
