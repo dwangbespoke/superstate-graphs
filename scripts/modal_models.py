@@ -33,7 +33,7 @@ image = (
 @app.server(
     image=image, gpu=GPU, cpu=4, memory=16384, port=8000,
     startup_timeout=900, scaledown_window=60, target_concurrency=2,
-    max_containers=1, unauthenticated=True,
+    min_containers=1, max_containers=1, unauthenticated=True,
     volumes={
         "/root/.cache/huggingface": modal.Volume.from_name("hvs-huggingface-cache"),
         "/root/.cache/vllm": modal.Volume.from_name("hvs-vllm-cache"),

@@ -25,12 +25,12 @@
   "agents": [
     {
       "import_path": "superstate_graphs.recorder:RecordingTerminus2",
-      "model_name": "hosted_vllm/Qwen/Qwen3.5-9B",
+      "model_name": "openai/Qwen/Qwen3.5-9B",
       "override_timeout_sec": 1200,
       "kwargs": {
         "max_turns": 30,
         "temperature": 0.6,
-        "api_base": "https://pending.invalid/v1",
+        "api_base": "https://bespokelabs--superstate-graphs-learner-modelserver-dev.us-east.modal.direct/v1",
         "enable_summarize": false,
         "collect_rollout_details": true,
         "store_all_messages": true,
@@ -44,7 +44,7 @@
           "max_tokens": 49152,
           "input_cost_per_token": 0.0,
           "output_cost_per_token": 0.0,
-          "litellm_provider": "hosted_vllm",
+          "litellm_provider": "openai",
           "mode": "chat"
         },
         "llm_call_kwargs": {

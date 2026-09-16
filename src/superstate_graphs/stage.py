@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -20,9 +21,8 @@ def stage_tasks(ids: list[str]) -> Path:
     receipts = []
     for task_id in ids:
         target = dest / task_id
-        if target.exists():
-            continue
-        shutil.copytree(source / task_id, target)
+        if not target.exists():
+            shutil.copytree(source / task_id, target)
         compose = target / "environment/docker-compose.yaml"
         if compose.exists():
             parsed = yaml.safe_load(compose.read_text())
@@ -34,7 +34,8 @@ def stage_tasks(ids: list[str]) -> Path:
         # All task-specific COPY/RUN instructions, task instructions, oracles,
         # and verifiers are unchanged. Modal runs the single main container.
         toml = target / "task.toml"
-        text = toml.read_text().replace("[environment]\n", '[environment]\nallow_internet = false\n')
+        text = re.sub(r"(?m)^allow_internet\s*=.*\n", "", toml.read_text())
+        text = text.replace("[environment]\n", '[environment]\nallow_internet = false\n')
         toml.write_text(text)
         receipts.append({"task_id": task_id, "adaptations": ["single-container Modal instead of redundant main-only compose", "pin public base image by digest", "disable sandbox internet"],
                          "instruction_sha256": hashlib.sha256((target / "instruction.md").read_bytes()).hexdigest()})
@@ -46,13 +47,13 @@ def config(ids: list[str], name: str, attempts: int, oracle: bool, endpoint: dic
     endpoint = endpoint or {"api_base": "https://pending.invalid/v1", "model": "Qwen/Qwen3.5-9B"}
     agent = {"name": "oracle", "override_timeout_sec": 900} if oracle else {
         "import_path": "superstate_graphs.recorder:RecordingTerminus2",
-        "model_name": "hosted_vllm/" + endpoint["model"],
+        "model_name": "openai/" + endpoint["model"],
         "override_timeout_sec": 1200,
         "kwargs": {"max_turns": 30, "temperature": 0.6, "api_base": endpoint["api_base"],
                    "enable_summarize": False, "collect_rollout_details": True,
                    "store_all_messages": True, "trajectory_config": {"raw_content": True, "linear_history": True},
                    "model_info": {"max_input_tokens": 45056, "max_output_tokens": 4096, "max_tokens": 49152,
-                                  "input_cost_per_token": 0.0, "output_cost_per_token": 0.0, "litellm_provider": "hosted_vllm", "mode": "chat"},
+                                  "input_cost_per_token": 0.0, "output_cost_per_token": 0.0, "litellm_provider": "openai", "mode": "chat"},
                    "llm_call_kwargs": {"max_tokens": 4096, "top_p": 0.95,
                                        "extra_body": {"chat_template_kwargs": {"enable_thinking": True}, "top_k": 20}}}}
     return {"job_name": name, "jobs_dir": str(ROOT / "results/rollouts"), "n_attempts": attempts,

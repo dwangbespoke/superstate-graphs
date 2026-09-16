@@ -30,7 +30,8 @@ sandboxes. Instructions, oracle, and verifier contents remain unchanged.
 - Learner decoding: temperature 0.6, top-p 0.95, top-k 20, thinking enabled;
   4,096 output-token cap, 30 turns, 20-minute episode limit, no summarization.
 - Model server: one L40S learner container; one H100 reflector only when needed.
-  Short idle shutdown and finite server lifetime prevent unbounded deployments.
+  A finite local server lifetime and explicit stop markers prevent unbounded deployments.
+  One warm container avoids repeated model reloads between rollout tool calls.
 
 ## Run sequence
 

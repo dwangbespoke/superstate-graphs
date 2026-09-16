@@ -37,3 +37,23 @@ benchmark copies, databases, raw trajectories, and large artifacts remain outsid
 Git. Downloaded benchmark material retains its upstream license.
 
 See `docs/EXPERIMENT.md` for the execution plan and interpretation boundaries.
+
+## Run the proof of concept
+
+```bash
+uv run python -m superstate_graphs.prepare
+SG_MODEL_ROLE=learner uv run modal run scripts/modal_models.py --duration-seconds 10800
+# In a second terminal after the runtime endpoint file appears:
+uv run python scripts/run_rollouts.py --name pilot-v1
+# Bring up the reflector when rollouts are available:
+SG_MODEL_ROLE=reflector uv run modal run scripts/modal_models.py --duration-seconds 7200
+uv run python -m superstate_graphs.analyze --max-metric-calls 144
+```
+
+Endpoint files in `results/runtime/` contain temporary credentials and are ignored
+by Git. Stop a server by creating `results/runtime/learner.stop` or
+`results/runtime/reflector.stop`; remove that marker explicitly before restarting.
+
+`python scripts/fetch_runtime_database.py` exports the pristine materialized
+benchmark database for local task construction. The generated SQL workflow task
+format and its limitations are documented in `docs/TASK_FORMAT.md`.
