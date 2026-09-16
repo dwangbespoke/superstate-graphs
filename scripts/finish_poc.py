@@ -47,6 +47,11 @@ def main():
     run('scripts/generate_examples.py','--analysis',str(a.analysis),'--count','3')
     run('scripts/build_report.py','--analysis',str(a.analysis))
     run('scripts/export_review_bundle.py','--analysis',str(a.analysis))
+    summary=json.loads((a.analysis/'summary.json').read_text())
+    graph=json.loads((a.analysis/'selected_graph.json').read_text())
+    examples=list((ROOT/'results/generated_tasks').glob('*/instruction.md'))
+    if summary.get('evaluated_revision_count',0)<2 or not graph.get('edges') or len(examples)<2:
+        raise RuntimeError('Partial artifacts exported; POC still needs prompt revisions, a witnessed graph, and at least two task examples')
     for role in ('learner','reflector'):
         (ROOT/f'results/runtime/{role}.stop').touch()
     print(json.dumps({'event':'poc_artifacts_ready','analysis':str(a.analysis)}),flush=True)
