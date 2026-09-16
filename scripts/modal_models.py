@@ -26,7 +26,7 @@ image = (
     modal.Image.from_registry("nvidia/cuda:12.9.0-devel-ubuntu22.04", add_python="3.12")
     .entrypoint([])
     .uv_pip_install(WHEEL)
-    .env({"VLLM_API_KEY": API_KEY, "VLLM_DEEP_GEMM_WARMUP": "skip", "HF_XET_HIGH_PERFORMANCE": "1", "TOKENIZERS_PARALLELISM": "false"})
+    .env({"SG_MODEL_ROLE": ROLE, "VLLM_API_KEY": API_KEY, "VLLM_DEEP_GEMM_WARMUP": "skip", "HF_XET_HIGH_PERFORMANCE": "1", "TOKENIZERS_PARALLELISM": "false"})
 )
 
 
@@ -80,7 +80,9 @@ def serve(duration_seconds: int = 10800):
     while time.time() < deadline and not stop.exists():
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
-                json.load(response)
+                models = json.load(response)
+            if MODEL_ID not in {m["id"] for m in models.get("data", [])}:
+                raise RuntimeError("Endpoint served a different model than requested")
             print(json.dumps({"event": "model_ready", "role": ROLE}), flush=True)
             break
         except Exception as exc:

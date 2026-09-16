@@ -99,3 +99,76 @@ def test_synthetic_demo_is_not_grounded_or_trained():
     assert report["metrics"]["valid"] == 1
     assert report["grounded_metrics"]["valid"] == 0
     assert report["proxy_metrics"]["valid"] == 0
+
+
+def test_execution_alignment_preserves_repeated_occurrences_and_time_bounds():
+    from superstate_graphs.analyze import align_prefix_events, trajectory_events
+    command = json.dumps({"commands": [{"keystrokes": "ls\n"}]})
+    steps = [
+        {"step_id": 2, "source": "agent", "message": command, "timestamp": 10,
+         "observation": {"results": [{"content": "Previous response had parsing errors"}]}},
+        {"step_id": 3, "source": "agent", "message": command, "timestamp": 20,
+         "observation": {"results": [{"content": "retail.duckdb"}]}},
+    ]
+    events = trajectory_events({"steps": steps}, "synthetic-trajectory")
+    prefix = [{"role": "assistant", "content": command},
+              {"role": "user", "content": "Previous response had parsing errors"}]
+    first = align_prefix_events(prefix, events, cutoff_epoch=15)
+    assert first[0]["step_id"] == 2
+    assert first[0]["status"] == "rejected_parse_response"
+    extended = prefix + [{"role": "assistant", "content": command},
+                         {"role": "user", "content": "retail.duckdb"}]
+    both = align_prefix_events(extended, events, cutoff_epoch=25)
+    assert [event["step_id"] for event in both] == [2, 3]
+    too_early = align_prefix_events(extended, events, cutoff_epoch=15)
+    assert too_early[1]["status"] == "unmatched_assistant_occurrence"
+
+
+def test_one_execution_cannot_certify_multicall_segment(tmp_path):
+    from superstate_graphs.analyze import load_corpus
+    agent = tmp_path / "job" / "task__trial" / "agent"
+    agent.mkdir(parents=True)
+    command = json.dumps({"commands": [{"keystrokes": "ls\n"}]})
+    unconfirmed = json.dumps({"commands": [{"keystrokes": "echo UNCONFIRMED\n"}]})
+    initial = [{"role": "user", "content": "Inspect"}]
+    final = initial + [{"role": "assistant", "content": command},
+                       {"role": "user", "content": "retail.duckdb"},
+                       {"role": "assistant", "content": unconfirmed},
+                       {"role": "user", "content": "UNCONFIRMED"}]
+    calls = [{"call_index": 0, "messages": initial}, {"call_index": 2, "messages": final}]
+    (agent / "policy_calls.jsonl").write_text("\n".join(json.dumps(c) for c in calls))
+    (agent / "trajectory.json").write_text(json.dumps({"steps": [{
+        "step_id": 2, "source": "agent", "message": command,
+        "observation": {"results": [{"content": "retail.duckdb"}]}}]}))
+    (agent.parent / "result.json").write_text(json.dumps({
+        "config": {"task": {"path": "/tasks/taskA"}}, "verifier_result": None}))
+    corpus = load_corpus(tmp_path)
+    assert len(corpus["segments"]) == 0
+    assert len(corpus["provisional_segments"]) == 1
+    assert len(corpus["provisional_segments"][0]["unresolved_occurrences"]) == 1
+
+
+def test_path_export_blocks_known_bad_splice_and_marks_unknown():
+    from superstate_graphs.analyze import export_paths, junction_evidence
+    hs = [History("a0", "A", "a", 0, "start"), History("a1", "A", "a", 1, "junction"),
+          History("b0", "B", "b", 0, "junction"), History("b1", "B", "b", 1, "end")]
+    assignments = {"a0": {"superstate_id": "start"}, "a1": {"superstate_id": "junction"},
+                   "b0": {"superstate_id": "junction"}, "b1": {"superstate_id": "end"}}
+    transitions = [ObservedTransition("a0", "a1", "prepare", "wa"),
+                   ObservedTransition("b0", "b1", "aggregate", "wb")]
+    graph = build_graph(hs, transitions, assignments)
+    positive = Evidence("supported", "llm", "frozen:1")
+    negative = Evidence("contradicted", "llm", "frozen:2")
+    bank = ProbeBank((Probe("bad", "a1", "b0", positive, negative),))
+    stats = [{"superstate_id": "junction", "pooled_binary_variance": .25, "distinct_rollouts": 2}]
+    receipts = {h.history_id: {"extraction": {"prerequisites": []}} for h in hs}
+    segments = {w: {"observed_messages": []} for w in ("wa", "wb")}
+    result = export_paths(graph, hs, stats, receipts, segments, bank)
+    assert result["paths"] == []
+    assert len(result["known_contradicted_junctions_excluded"]) == 1
+    unknown = Evidence("unknown", "llm", "frozen:3")
+    unknown_bank = ProbeBank((Probe("unknown", "a1", "b0", positive, unknown),))
+    result = export_paths(graph, hs, stats, receipts, segments, unknown_bank)
+    assert result["paths"][0]["junction_evidence"]["status"] == "unknown"
+    reverse_bank = ProbeBank((Probe("reverse", "b0", "a1", positive, negative),))
+    assert junction_evidence("a1", "b0", reverse_bank)["status"] == "unknown"
