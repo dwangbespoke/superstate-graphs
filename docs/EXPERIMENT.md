@@ -75,3 +75,12 @@ the actual resulting artifacts rather than expanding the scope of validation.
 - https://huggingface.co/Qwen/Qwen3.5-35B-A3B-FP8
 - https://arxiv.org/abs/2507.19457
 - https://gepa-ai.github.io/gepa/guides/adapters/
+
+## Executed scope correction
+
+The complete collection contains 12 rollouts. A post-collection, instruction-based
+world audit found that dbt-consolidate uses separate task-specific CSV inputs. Its
+two rollouts remain auxiliary; the core graph/GEPA use the other five tasks and
+ten rollouts. All nine graded core outcomes are zero; one context-limit error is
+ungraded. See PILOT_AUDIT.md. The SQL construction POC therefore uses a support
+fallback and cannot claim high-variance target discovery in this run.
