@@ -294,17 +294,41 @@ def _excerpt(value: Any, max_chars: int) -> Any:
             "note": "Excerpt only; full original is retained in provenance.json"}
 
 
+def _decision_prefix(value: Any, supplemental_budget: int) -> Any:
+    """Never trim the extracted fields that define the learner's decision situation."""
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return value
+        return _decision_prefix(parsed, supplemental_budget)
+    if not isinstance(value, dict):
+        return value
+    core = {"decision", "remaining_goal", "known_facts", "unresolved_questions",
+            "prior_attempts", "prerequisites", "possible_operations", "objects",
+            "history_id", "task_id", "rollout_id", "step", "cutoff_step"}
+    return {key: (_decision_prefix(item, supplemental_budget) if key == "prefix"
+                  else item if key in core else _excerpt(item, supplemental_budget))
+            for key, item in value.items()}
+
+
 def _prompt_path(path_spec: dict[str, Any], *, max_chars: int = 18_000) -> dict[str, Any]:
-    """Bound prompt evidence while retaining all source IDs and full disk provenance."""
+    """Preserve learned decision meaning before budgeting secondary path evidence."""
     identity_fields = {"transition_id", "source_task_id", "source_history_id", "target_history_id"}
+    target_fields = {"target_definition", "junction_prefix_A", "junction_prefix_B"}
     for field_budget in (3000, 1800, 1000, 500, 250):
         projected: dict[str, Any] = {
             "path_id": path_spec["path_id"],
-            "target_superstate": _excerpt(path_spec["target_superstate"], field_budget),
+            "target_superstate": path_spec["target_superstate"],
             "transitions": [],
         }
+        if "target_definition" in path_spec:
+            projected["target_definition"] = path_spec["target_definition"]
+        for key in ("junction_prefix_A", "junction_prefix_B"):
+            if key in path_spec:
+                projected[key] = _decision_prefix(path_spec[key], field_budget)
         additional = {key: value for key, value in path_spec.items()
-                      if key not in {"path_id", "target_superstate", "transitions"}}
+                      if key not in {"path_id", "target_superstate", "transitions"} | target_fields}
         if additional:
             projected["additional_path_metadata"] = _excerpt(additional, field_budget)
         for transition in path_spec["transitions"]:
@@ -316,20 +340,40 @@ def _prompt_path(path_spec: dict[str, Any], *, max_chars: int = 18_000) -> dict[
             projected["transitions"].append(record)
         if len(_json(projected)) <= max_chars:
             return projected
-    raise ValueError("Path identities/evidence exceed prompt budget; select a shorter path")
+    raise ValueError("Learned target definition, decision prefixes, and path identities cannot fit "
+                     "the prompt budget without losing decision meaning; select a shorter path")
 
 
 def construction_prompt(path_spec: dict[str, Any], context: dict[str, Any], *,
                         max_chars: int = DEFAULT_PROMPT_CHAR_BUDGET) -> str:
     prompt = """Construct ONE new executable analytical task in this shared DuckDB warehouse.
 The supplied path is a cross-task combination of actual learner transition witnesses.
-Reuse their meaningful operation patterns in a coherent workflow with a NEW terminal
-objective. A paraphrase of a source instruction is insufficient. Preserve the targeted
-decision's prerequisites and ambiguity where possible; do not reveal the solution in
-the instruction. Do not claim to preserve a learner's knowledge state just because
-SQL executes. Explain any mismatch in target_recreation_limitations.
+FIRST read the learned target_definition and junction_prefix_A / junction_prefix_B.
+Identify the ACTUAL DECISION: what the learner already knows, what remains unresolved,
+which alternatives it must choose between, and which prerequisites/remaining goals
+make that choice consequential. A shared topic, table, business domain, or command
+name is not the same decision. Merely mentioning both source tasks does not recreate it.
 
-Return JSON only. Required schema:
+Reuse their meaningful operation patterns in a coherent workflow with a NEW terminal
+objective. A paraphrase of a source instruction is insufficient. The new task must
+require that core decision, preserving its prerequisites and relevant ambiguity;
+do not reveal the answer in the instruction. In target_recreation, explicitly name
+the decision, its source evidence, the competing choices, and where the new task
+requires it. Explain non-core mismatches in target_recreation_limitations. SQL
+executability alone never establishes preservation of a learner's knowledge state.
+
+If this read-only SQL format CANNOT preserve the core decision, do not invent task
+fidelity. For example, choosing/fixing dbt profiles, diagnosing a project/network
+configuration, installing dependencies, or recovering command-line setup cannot be
+recreated by an unrelated SELECT about the same retail tables. Return ONLY:
+{"status":"unsupported_target", "targeted_decision":"the actual source decision",
+ "reason":"why SQL task construction cannot preserve it (or evidence is insufficient)",
+ "missing_capabilities":["required environment/action/information capability"],
+ "required_task_format":"e.g. a mutable dbt project, or stronger prefix evidence"}.
+Also use unsupported_target if no learned target_definition or adequate junction
+decision evidence was supplied. Unsupported is an honest outcome, not a repair error.
+
+Otherwise return JSON only with this required task schema:
 {
   "task_id": "short_lowercase_slug",
   "title": "...",
@@ -444,6 +488,12 @@ def compare_results(expected: dict[str, Any], actual: dict[str, Any], *, ordered
 def validate_candidate(candidate: dict[str, Any], path_spec: dict[str, Any],
                        db_path: str | Path) -> dict[str, Any]:
     """Execute the whole composition, alternate formulation, and generated checks."""
+    if not path_spec.get("target_definition"):
+        raise ValueError("Cannot claim target reconstruction without the learned target_definition; "
+                         "return unsupported_target for insufficient evidence")
+    if not path_spec.get("junction_prefix_A") or not path_spec.get("junction_prefix_B"):
+        raise ValueError("Cannot claim target reconstruction without both junction decision prefixes; "
+                         "return unsupported_target for insufficient evidence")
     for field in ("task_id", "title", "instruction", "novel_objective", "target_recreation"):
         if not isinstance(candidate.get(field), str) or not candidate[field].strip():
             raise ValueError(f"Missing nonempty candidate field: {field}")
@@ -587,7 +637,9 @@ def construct_task(path_spec: dict[str, Any], llm: Callable[[str], str | dict[st
     """Generate, execute, repair, and export one task from a finalized graph path.
 
     At most ``max_repairs + 1`` LLM calls are made through the supplied callable.
-    All unsuccessful attempts are recorded. No model provider is assumed.
+    All unsuccessful attempts are recorded. An unsupported target returns a
+    receipt with status ``unsupported_target`` and emits no task or grader.
+    No model provider is assumed.
     """
     db_path, output = Path(db_path), Path(output_dir)
     if max_repairs < 0:
@@ -595,7 +647,17 @@ def construct_task(path_spec: dict[str, Any], llm: Callable[[str], str | dict[st
     if output.exists() and any(output.iterdir()):
         raise FileExistsError(f"Refusing to overwrite nonempty task directory: {output}")
     path_spec = normalize_path(path_spec)
-    context = context if context is not None else database_context(db_path, path_spec=path_spec)
+    if context is None:
+        try:
+            context = database_context(db_path, path_spec=path_spec)
+        except ValueError as error:
+            if not str(error).startswith("No path-related table matched"):
+                raise
+            # A setup/configuration decision may have no table references. Give
+            # the constructor its decision evidence so it can report unsupported
+            # rather than replacing it with an arbitrary SQL topic.
+            context = {"engine": "DuckDB", "tables": [],
+                       "retrieval": {"status": "no_relevant_schema", "reason": str(error)}}
     base_prompt = construction_prompt(path_spec, context, max_chars=max_prompt_chars)
     prompt = base_prompt
     attempts: list[dict[str, Any]] = []
@@ -604,12 +666,39 @@ def construct_task(path_spec: dict[str, Any], llm: Callable[[str], str | dict[st
         candidate: dict[str, Any] | None = None
         try:
             candidate = _parse_candidate(response)
+            if candidate.get("status") == "unsupported_target":
+                for field in ("targeted_decision", "reason", "required_task_format"):
+                    if not isinstance(candidate.get(field), str) or not candidate[field].strip():
+                        raise ValueError(f"unsupported_target requires nonempty {field}")
+                missing = candidate.get("missing_capabilities")
+                if not isinstance(missing, list) or not missing or not all(
+                    isinstance(item, str) and item.strip() for item in missing
+                ):
+                    raise ValueError("unsupported_target requires a nonempty missing_capabilities list")
+                attempts.append({"attempt": attempt + 1, "status": "unsupported_target",
+                                 "candidate": candidate})
+                report = {**candidate, "format_version": FORMAT_VERSION,
+                          "path_id": path_spec["path_id"], "target_superstate": path_spec["target_superstate"],
+                          "construction_attempts": len(attempts),
+                          "prompt_characters": len(prompt), "max_prompt_characters": max_prompt_chars,
+                          "task_files_emitted": False,
+                          "interpretation": "Generator-declared format/evidence mismatch; no task was constructed."}
+                output.mkdir(parents=True, exist_ok=True)
+                (output / "unsupported_target.json").write_text(_json(report) + "\n")
+                (output / "construction_attempts.json").write_text(_json(attempts) + "\n")
+                (output / "schema_context.json").write_text(_json(context) + "\n")
+                (output / "provenance.json").write_text(_json({
+                    "format_version": FORMAT_VERSION, "status": "unsupported_target", "path": path_spec,
+                }) + "\n")
+                return {"status": "unsupported_target", "task_id": None,
+                        "output_dir": str(output), "report": report}
             report = validate_candidate(candidate, path_spec, db_path)
         except (ValueError, KeyError, TypeError, duckdb.Error) as error:
             attempts.append({"attempt": attempt + 1, "status": "rejected", "error": str(error),
                              "candidate": candidate, "response": response if candidate is None else None})
             repair_suffix = ("\nEXECUTION/VALIDATION FAILURE:\n" + str(error)[:2000]
-                             + "\nReturn the FULL corrected JSON task. Keep the intended cross-task composition.")
+                             + "\nReturn the FULL corrected JSON task, or valid unsupported_target if this "
+                             "format cannot preserve the learned decision. Keep the intended composition.")
             remaining = max_prompt_chars - len(base_prompt) - len(repair_suffix) - 400
             if remaining < 500:
                 raise ValueError("Prompt budget leaves insufficient room for repair feedback") from error
@@ -627,7 +716,8 @@ def construct_task(path_spec: dict[str, Any], llm: Callable[[str], str | dict[st
         # The exported grading route must accept the actual composed oracle.
         report["oracle_verifier_check"] = verify_submission(output, db_path, (output / "oracle.sql").read_text())
         (output / "validation.json").write_text(_json(report) + "\n")
-        return {"task_id": candidate["task_id"], "output_dir": str(output), "report": report}
+        return {"status": "validated", "task_id": candidate["task_id"],
+                "output_dir": str(output), "report": report}
     output.mkdir(parents=True, exist_ok=True)
     (output / "construction_attempts.json").write_text(_json(attempts) + "\n")
     raise TaskConstructionError(f"No valid task after {len(attempts)} attempts; see {output / 'construction_attempts.json'}")

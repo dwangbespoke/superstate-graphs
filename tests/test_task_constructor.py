@@ -10,6 +10,7 @@ import pytest
 
 from superstate_graphs.task_constructor import (
     TaskConstructionError,
+    _prompt_path,
     construction_prompt,
     construct_task,
     database_context,
@@ -36,6 +37,26 @@ def path_spec():
     return {
         "path_id": "test_cross_task_path",
         "target_superstate": "aggregate_grain_established",
+        "target_definition": {
+            "id": "aggregate_grain_established",
+            "description": "Choose aggregate grain before adding geographic dimensions",
+            "roles": ["entity", "metric", "dimension"],
+            "requirements": ["Source grain and intended output grain are known"],
+        },
+        "junction_prefix_A": {
+            "decision": "Choose aggregation before joining customer metadata",
+            "remaining_goal": "Compute eligible-customer revenue",
+            "known_facts": ["Orders can repeat customer IDs"],
+            "unresolved_questions": ["Whether aggregation should precede the join"],
+            "possible_operations": ["Aggregate first", "Join first"],
+        },
+        "junction_prefix_B": {
+            "decision": "Choose customer grain before geographic reporting",
+            "remaining_goal": "Report the eligible cohort by country",
+            "known_facts": ["Geographic metadata is one row per customer"],
+            "unresolved_questions": ["Which grain preserves the customer threshold"],
+            "possible_operations": ["Filter at customer grain", "Filter at country grain"],
+        },
         "transitions": [
             {"transition_id": "edge_0", "source_task_id": "customer_totals",
              "source_history_id": "a_before", "target_history_id": "a_after",
@@ -87,6 +108,7 @@ def candidate():
 def test_constructed_task_and_standalone_verifier(warehouse, path_spec, candidate, tmp_path):
     output = tmp_path / "constructed"
     result = construct_task(path_spec, lambda prompt: candidate, warehouse, output)
+    assert result["status"] == "validated"
     assert result["report"]["oracle_verifier_check"]["reward"] == 1
     assert result["report"]["result"]["rows"] == [["US", "50.00"]]
     provenance = json.loads((output / "provenance.json").read_text())
@@ -206,3 +228,53 @@ def test_prompt_evidence_is_bounded_without_losing_source_identity(path_spec):
     assert "full original is retained in provenance.json" in prompt
     with pytest.raises(ValueError, match="strict 10000-character budget"):
         construction_prompt(path_spec, {"large_context": "x" * 12_000}, max_chars=10_000)
+
+
+def test_learned_decision_evidence_precedes_generic_metadata(path_spec):
+    path_spec["generic_statistics"] = {"large_unrelated_statistic": "X" * 80_000}
+    path_spec["junction_prefix_A"]["evidence"] = "Long raw observation " * 10_000
+    path_spec["junction_prefix_B"]["evidence"] = "Another observation " * 10_000
+    path_spec["transitions"][0]["witness"]["long_observation"] = "Transition observation " * 10_000
+    projected = _prompt_path(path_spec)
+    assert projected["target_definition"] == path_spec["target_definition"]
+    for side in ("junction_prefix_A", "junction_prefix_B"):
+        for field in ("decision", "remaining_goal", "known_facts", "unresolved_questions", "possible_operations"):
+            assert projected[side][field] == path_spec[side][field]
+        assert projected[side]["evidence"]["note"].startswith("Excerpt only")
+    assert len(json.dumps(projected, indent=2, sort_keys=True)) <= 18_000
+    too_large = copy.deepcopy(path_spec)
+    too_large["target_definition"]["requirements"] = ["Core decision requirement " * 1000]
+    with pytest.raises(ValueError, match="without losing decision meaning"):
+        _prompt_path(too_large)
+
+
+def test_unsupported_target_returns_receipt_without_task_files(warehouse, path_spec, tmp_path):
+    output = tmp_path / "unsupported"
+    response = {
+        "status": "unsupported_target",
+        "targeted_decision": "Identify the active dbt profile before diagnosing model execution",
+        "reason": "A SELECT over retail tables cannot recreate choosing project profiles",
+        "missing_capabilities": ["Mutable dbt project files and command execution"],
+        "required_task_format": "A dbt project task with conflicting profile configurations",
+    }
+    calls = []
+    def llm(prompt):
+        calls.append(prompt)
+        return response
+    result = construct_task(path_spec, llm, warehouse, output)
+    assert result["status"] == "unsupported_target"
+    assert result["task_id"] is None
+    assert len(calls) == 1
+    assert "shared topic" in calls[0]
+    assert result["report"]["task_files_emitted"] is False
+    assert not (output / "instruction.md").exists()
+    assert not (output / "oracle.sql").exists()
+    assert not (output / "verifier.py").exists()
+    assert json.loads((output / "provenance.json").read_text())["path"] == path_spec
+    assert json.loads((output / "construction_attempts.json").read_text())[0]["status"] == "unsupported_target"
+
+
+def test_missing_decision_evidence_cannot_claim_successful_construction(warehouse, path_spec, candidate):
+    del path_spec["target_definition"]
+    with pytest.raises(ValueError, match="learned target_definition"):
+        validate_candidate(candidate, path_spec, warehouse)

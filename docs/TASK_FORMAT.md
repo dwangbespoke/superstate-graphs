@@ -16,7 +16,12 @@ result = construct_task(
 )
 ```
 
-`path_spec` contains `path_id`, `target_superstate`, and `transitions`. Each transition
+`path_spec` contains `path_id`, `target_superstate`, `target_definition`,
+`junction_prefix_A`, `junction_prefix_B`, and `transitions`. `target_definition`
+is the full learned codebook entry, and both junction prefixes contain the
+extracted decision, remaining goal, knowledge, unresolved questions, prior attempts,
+prerequisites, object roles, and possible operations available at that junction.
+A superstate ID alone is insufficient to claim target reconstruction. Each transition
 requires `source_task_id`, `source_history_id`, `target_history_id`, and `operation`.
 Provide `transition_id` if available; otherwise IDs are assigned as `edge_0`, etc.
 Include complete concrete witnesses, prerequisites, effects, and graph metadata as
@@ -41,9 +46,12 @@ instead of supplying arbitrary tables. A small-catalog fallback is explicitly la
 
 The complete prompt is capped at 60,000 characters, including repair feedback.
 This is a character cap, not a tokenizer-specific token bound. Large path evidence
-is visibly excerpted with hashes; source task/history/transition IDs remain intact,
-and the full original path is retained in provenance. A caller-provided schema must
-fit this cap too. No extra LLM call is used for schema retrieval.
+is visibly excerpted with hashes; source task/history/transition IDs, the complete
+learned definition, and both prefixes' core decision fields remain intact. Generic
+metadata, statistics, and raw evidence are shortened first. If core decision meaning
+cannot fit the 18,000-character path budget, construction fails rather than silently
+truncating it. The full original path is retained in provenance. A caller-provided
+schema must fit the total prompt cap too. No extra LLM call is used for retrieval.
 
 The model returns the schema shown in `construction_prompt`. Intermediate stages
 are dependent, named SELECT queries assembled into one CTE chain. Stage definitions
@@ -51,6 +59,37 @@ cite actual transition IDs. The final query must consume the last stage. Executi
 checks every stage for nonempty output and checks the final query against a second
 formulation and at least two result constraints. Failed candidates and feedback
 are retained; the constructor makes at most `max_repairs + 1` model calls.
+
+The construction prompt distinguishes the actual decision from a merely shared
+topic or table. It requires an account of established knowledge, unresolved choices,
+and how the new task requires the same core decision. The SQL format cannot preserve
+every target. A dbt profile, network setup, dependency installation, or project repair
+decision must not become an unrelated SELECT task about the same business domain.
+
+When the generator returns `status: "unsupported_target"`, the constructor stops
+without making an instruction, oracle, or verifier. It returns:
+
+```python
+{
+    "status": "unsupported_target",
+    "task_id": None,
+    "output_dir": "...",
+    "report": {
+        "targeted_decision": "...",
+        "reason": "...",
+        "missing_capabilities": ["..."],
+        "required_task_format": "...",
+        # Receipt fields also describe attempts, path, and prompt size.
+    },
+}
+```
+
+It saves `unsupported_target.json`, attempts, schema context, and full provenance.
+The runner can try another selected path. This is a generator-declared mismatch,
+not an independently proven impossibility. Successful construction returns
+`status: "validated"` and the executable files below. Neither status establishes
+independent semantic fidelity; missing learned definitions/prefixes cannot pass
+the successful-construction validation route.
 
 The generated directory contains:
 
