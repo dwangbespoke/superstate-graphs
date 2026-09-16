@@ -14,6 +14,7 @@ import re
 import shutil
 import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from datetime import datetime
@@ -29,7 +30,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def save(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    # Identical histories can request the same cache entry concurrently. Each
+    # writer needs its own temporary path before the atomic replacement.
+    temporary = path.with_suffix(path.suffix + f".{uuid.uuid4().hex}.tmp")
     temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False, default=str))
     temporary.replace(path)
 

@@ -348,3 +348,13 @@ def test_protocol_retains_concrete_negative_judgment_without_optimistic_repair(r
     decision["decision"]["rationale"] = reason
     assert validate_judgment(decision, DECISION_SCHEMA, ("decision",))["decision"] == {
         "label": "contradicted", "rationale": reason}
+def test_concurrent_cache_writers_leave_one_complete_json(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from superstate_graphs.analyze import save
+    destination = tmp_path / "shared.json"
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(lambda i: save(destination, {"writer": i, "payload": "x" * 5000}), range(40)))
+    result = json.loads(destination.read_text())
+    assert result["writer"] in range(40)
+    assert result["payload"] == "x" * 5000
+    assert list(tmp_path.glob("*.tmp")) == []
