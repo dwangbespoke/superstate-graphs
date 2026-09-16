@@ -10,7 +10,6 @@ not an independent demonstration that an LLM-authored task is correct.
 from __future__ import annotations
 
 import argparse
-import collections
 import datetime as dt
 import decimal
 import hashlib
@@ -25,6 +24,8 @@ import duckdb
 
 FORMAT_VERSION = "superstate-sql-task-v1"
 NAME = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+DEFAULT_SCHEMA_CHAR_BUDGET = 24_000
+DEFAULT_PROMPT_CHAR_BUDGET = 60_000
 LIMITATIONS = [
     "The oracle, alternate query, and constraints share a generator; agreement is not independent correctness evidence.",
     "Provenance identifies source witnesses, but semantic preservation of their decision situations still needs review.",
@@ -79,7 +80,8 @@ def _query(connection: Any, sql: str, *, max_rows: int = 1000,
     try:
         cursor = connection.execute(sql)
         columns = [column[0] for column in cursor.description]
-        types = [str(column[1]) for column in cursor.description]
+        types = ["BOOLEAN" if str(column[1]).upper() in {"BOOL", "BOOLEAN"}
+                 else str(column[1]) for column in cursor.description]
         rows = cursor.fetchmany(max_rows + 1)
         if len(rows) > max_rows:
             raise ValueError(f"Query returned more than {max_rows} rows; aggregate the final output")
@@ -95,27 +97,168 @@ def _qualify(schema: str, table: str) -> str:
     return '"' + schema.replace('"', '""') + '"."' + table.replace('"', '""') + '"'
 
 
-def database_context(db_path: str | Path, *, sample_rows: int = 2) -> dict[str, Any]:
-    """Read schema and a few real values; no test or reference-solution input."""
+def _strings(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [text for item in value.values() for text in _strings(item)]
+    if isinstance(value, list):
+        return [text for item in value for text in _strings(item)]
+    return []
+
+
+def _terms(text: str) -> set[str]:
+    stop = {"select", "from", "where", "group", "order", "table", "schema", "source",
+            "history", "transition", "task", "stage", "selecting", "main", "raw", "data"}
+    return {word.rstrip("s") for word in re.findall(r"[a-zA-Z][a-zA-Z0-9]*", text.lower())
+            if len(word) > 2 and word not in stop}
+
+
+def _rank_tables(inventory: list[tuple[str, str, str]], path_spec: dict[str, Any] | None
+                 ) -> tuple[list[dict[str, Any]], list[str]]:
+    """Rank only catalogued identifiers; an unresolved mention is never a new table."""
+    text = "\n".join(_strings(path_spec or {}))
+    # Remove identifier quote delimiters, while retaining the exact catalog spelling below.
+    normalized = re.sub(r'["`]', "", text).lower()
+    sql_refs = set(re.findall(
+        r"\b(?:from|join)\s+([a-z_][a-z0-9_]*(?:\.[a-z_][a-z0-9_]*)?)", normalized))
+    catalog = {f"{schema}.{table}".lower() for schema, table, _ in inventory}
+    bare = {table.lower() for _, table, _ in inventory}
+    unresolved = sorted(ref for ref in sql_refs if ref not in catalog and ref not in bare)
+    terms = _terms(text)
+    ranked = []
+    for schema, table, table_type in inventory:
+        qualified = f"{schema}.{table}"
+        key, name = qualified.lower(), table.lower()
+        if (schema.lower() == "main" and key not in sql_refs and name not in sql_refs
+                and any(ref.endswith("." + name) for ref in sql_refs)):
+            # A qualified witness already identifies another relation; do not spend
+            # its context budget on an unreferenced main-view namesake.
+            continue
+        reasons: list[str] = []
+        score = 0
+        if key in sql_refs:
+            score += 1000
+            reasons.append("qualified SQL reference")
+        elif name in sql_refs:
+            score += 800
+            reasons.append("unqualified SQL reference (catalog candidate)")
+        if re.search(r"(?<![a-z0-9_])" + re.escape(key) + r"(?![a-z0-9_])", normalized):
+            score += 400
+            reasons.append("qualified identifier in path evidence")
+        elif re.search(r"(?<![a-z0-9_])" + re.escape(name) + r"(?![a-z0-9_])", normalized):
+            score += 150
+            reasons.append("table identifier in path evidence")
+        overlap = terms.intersection(_terms(qualified))
+        if overlap:
+            score += 8 * len(overlap)
+            reasons.append("lexical overlap: " + ", ".join(sorted(overlap)))
+        if score:
+            # Prefer underlying tables to thousands of duplicate main views, but retain
+            # explicitly referenced views. Backups remain eligible only when warranted.
+            if table_type == "BASE TABLE":
+                score += 20
+            if schema.lower() != "main":
+                score += 5
+            if re.search(r"(?:^|_)(?:hist|backup|tmp|stg|v[0-9]+)(?:_|$)", name):
+                score -= 10
+            ranked.append({"schema": schema, "table": table, "table_type": table_type,
+                           "qualified_name": qualified, "score": score, "selection_reasons": reasons})
+    if not ranked and len(inventory) <= 40:
+        ranked = [{"schema": schema, "table": table, "table_type": table_type,
+                   "qualified_name": f"{schema}.{table}", "score": 0,
+                   "selection_reasons": ["small-catalog fallback; no matching path reference"]}
+                  for schema, table, table_type in inventory]
+    ranked.sort(key=lambda item: (-item["score"], item["qualified_name"]))
+    return ranked, unresolved
+
+
+def database_context(db_path: str | Path, *, path_spec: dict[str, Any] | None = None,
+                     sample_rows: int = 2, max_tables: int = 24,
+                     max_chars: int = DEFAULT_SCHEMA_CHAR_BUDGET) -> dict[str, Any]:
+    """Retrieve a bounded relevant schema, without sampling the whole warehouse.
+
+    Only a compact table-name inventory is loaded globally. Columns and samples
+    are fetched for at most ``max_tables`` catalogued relations. Exact SQL/table
+    mentions rank above lexical similarity. Returned metadata makes omissions and
+    ambiguous/unresolved references visible; no physical table is invented.
+    """
+    if not 1 <= max_tables <= 40 or not 0 <= sample_rows <= 3 or max_chars < 2000:
+        raise ValueError("Require 1–40 tables, 0–3 sample rows, and at least 2000 context characters")
     connection = _connect(db_path)
     try:
-        rows = connection.execute(
-            "SELECT table_schema, table_name, column_name, data_type "
-            "FROM information_schema.columns "
+        inventory = connection.execute(
+            "SELECT table_schema, table_name, table_type FROM information_schema.tables "
             "WHERE table_schema NOT IN ('information_schema', 'pg_catalog') "
-            "ORDER BY table_schema, table_name, ordinal_position"
+            "ORDER BY table_schema, table_name"
         ).fetchall()
-        tables: dict[tuple[str, str], list[dict[str, str]]] = {}
-        for schema, table, column, dtype in rows:
-            tables.setdefault((schema, table), []).append({"name": column, "type": dtype})
-        context = []
-        for (schema, table), columns in tables.items():
-            sample = _query(connection, f"SELECT * FROM {_qualify(schema, table)} LIMIT {int(sample_rows)}")
-            sample["rows"] = [[cell[:200] if isinstance(cell, str) else cell for cell in row]
-                              for row in sample["rows"]]
-            context.append({"schema": schema, "table": table, "columns": columns,
-                            "sample_rows": sample["rows"]})
-        return {"engine": "DuckDB", "tables": context}
+        ranked, unresolved = _rank_tables(inventory, path_spec)
+        if not ranked:
+            raise ValueError("No path-related table matched the large warehouse catalog; "
+                             "supply concrete SQL/table mentions in path witnesses")
+        context: dict[str, Any] = {
+            "engine": "DuckDB", "tables": [],
+            "retrieval": {
+                "catalog_relation_count": len(inventory), "relevant_candidate_count": len(ranked),
+                "max_tables": max_tables, "max_characters": max_chars,
+                "unresolved_sql_references": unresolved[:25],
+                "unresolved_sql_reference_count": len(unresolved),
+                "selection": "Exact witnessed SQL/identifiers, then lexical overlap; base tables preferred",
+                "interpretation": "A bounded retrieval, not the full schema. Unresolved references may be CTEs, dbt models, or unavailable tables.",
+                "sampled_relation_count": 0, "omitted_relevant_relation_count": len(ranked),
+            },
+        }
+        sampled = 0
+        for relation in ranked[:max_tables]:
+            schema, table = relation["schema"], relation["table"]
+            column_rows = connection.execute(
+                "SELECT column_name, data_type FROM information_schema.columns "
+                "WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position",
+                [schema, table],
+            ).fetchall()
+            record = dict(relation)
+            # Wide retail tables have >100 columns; compact names→types retains
+            # their whole schema without verbose repeated metadata keys.
+            record["columns"] = dict(column_rows)
+            record["sample_rows"] = []
+            if sample_rows:
+                try:
+                    evidence = "\n".join(_strings(path_spec or {})).lower()
+                    sample_columns = sorted(
+                        [column for column, _ in column_rows],
+                        key=lambda column: (
+                            -int(bool(re.search(r"\b" + re.escape(column.lower()) + r"\b", evidence))),
+                            -int(column.lower().endswith("_id")), column,
+                        ),
+                    )[:12]
+                    selection = ", ".join('"' + column.replace('"', '""') + '"'
+                                          for column in sample_columns)
+                    sample = _query(connection,
+                                    f"SELECT {selection} FROM {_qualify(schema, table)} LIMIT {sample_rows}")
+                    sampled += 1
+                    record["sample_columns"] = sample["columns"]
+                    record["sample_rows"] = [
+                        [cell[:120] if isinstance(cell, str) else cell for cell in row]
+                        for row in sample["rows"]
+                    ]
+                except (ValueError, duckdb.Error) as error:
+                    record["sample_error"] = str(error)[:300]
+            context["tables"].append(record)
+            if len(_json(context)) > max_chars - 200:
+                record["sample_rows"] = []
+                record["samples_omitted_for_budget"] = True
+            if len(_json(context)) > max_chars - 200:
+                context["tables"].pop()
+                continue
+        context["retrieval"]["sampled_relation_count"] = sampled
+        context["retrieval"]["selected_relation_count"] = len(context["tables"])
+        context["retrieval"]["omitted_relevant_relation_count"] = len(ranked) - len(context["tables"])
+        context["retrieval"]["context_characters"] = 0
+        for _ in range(3):
+            context["retrieval"]["context_characters"] = len(_json(context))
+        if not context["tables"] or len(_json(context)) > max_chars:
+            raise ValueError("Relevant schema cannot fit the context budget; increase max_chars or narrow path")
+        return context
     finally:
         connection.close()
 
@@ -142,8 +285,43 @@ def normalize_path(path_spec: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def construction_prompt(path_spec: dict[str, Any], context: dict[str, Any]) -> str:
-    return """Construct ONE new executable analytical task in this shared DuckDB warehouse.
+def _excerpt(value: Any, max_chars: int) -> Any:
+    serialized = value if isinstance(value, str) else _json(value)
+    if len(serialized) <= max_chars:
+        return value
+    return {"excerpt": serialized[:max_chars], "original_characters": len(serialized),
+            "sha256": hashlib.sha256(serialized.encode()).hexdigest(),
+            "note": "Excerpt only; full original is retained in provenance.json"}
+
+
+def _prompt_path(path_spec: dict[str, Any], *, max_chars: int = 18_000) -> dict[str, Any]:
+    """Bound prompt evidence while retaining all source IDs and full disk provenance."""
+    identity_fields = {"transition_id", "source_task_id", "source_history_id", "target_history_id"}
+    for field_budget in (3000, 1800, 1000, 500, 250):
+        projected: dict[str, Any] = {
+            "path_id": path_spec["path_id"],
+            "target_superstate": _excerpt(path_spec["target_superstate"], field_budget),
+            "transitions": [],
+        }
+        additional = {key: value for key, value in path_spec.items()
+                      if key not in {"path_id", "target_superstate", "transitions"}}
+        if additional:
+            projected["additional_path_metadata"] = _excerpt(additional, field_budget)
+        for transition in path_spec["transitions"]:
+            record = {key: transition[key] for key in identity_fields}
+            record["operation"] = _excerpt(transition["operation"], field_budget)
+            evidence = {key: value for key, value in transition.items()
+                        if key not in identity_fields | {"operation"}}
+            record["evidence"] = _excerpt(evidence, field_budget)
+            projected["transitions"].append(record)
+        if len(_json(projected)) <= max_chars:
+            return projected
+    raise ValueError("Path identities/evidence exceed prompt budget; select a shorter path")
+
+
+def construction_prompt(path_spec: dict[str, Any], context: dict[str, Any], *,
+                        max_chars: int = DEFAULT_PROMPT_CHAR_BUDGET) -> str:
+    prompt = """Construct ONE new executable analytical task in this shared DuckDB warehouse.
 The supplied path is a cross-task combination of actual learner transition witnesses.
 Reuse their meaningful operation patterns in a coherent workflow with a NEW terminal
 objective. A paraphrase of a source instruction is insufficient. Preserve the targeted
@@ -185,6 +363,8 @@ Every stage after the first must consume the immediately previous stage's CTE; t
 final SQL must consume the last stage. Keep the final result between 1 and 1000 rows.
 Stage names start with sg_ and use lowercase letters, digits and underscores.
 SQL may only SELECT/WITH; no writes, extensions, files, PRAGMAs, or external access.
+The schema is a relevance-filtered subset. Use exact qualified table names and
+provided columns; do not invent missing tables or silently replace unresolved names.
 Every intermediate stage must return at least one row. All intermediate stages are
 named CTEs visible to subsequent stages. Constraints see the stage CTEs plus sg_result
 and each must return exactly one TRUE boolean, inspecting sg_result nontrivially.
@@ -192,7 +372,10 @@ Avoid unbounded raw joins; aggregate intermediate data at a specified grain.
 The alternate query is a self-consistency check, not independent oracle evidence.
 
 PATH AND ACTUAL WITNESSES:
-""" + _json(path_spec) + "\nWAREHOUSE SCHEMA AND REAL SAMPLE VALUES:\n" + _json(context)
+""" + _json(_prompt_path(path_spec)) + "\nWAREHOUSE SCHEMA AND REAL SAMPLE VALUES:\n" + _json(context)
+    if len(prompt) > max_chars:
+        raise ValueError(f"Construction prompt exceeds strict {max_chars}-character budget: {len(prompt)}")
+    return prompt
 
 
 def _parse_candidate(value: str | dict[str, Any]) -> dict[str, Any]:
@@ -357,7 +540,8 @@ def verify_submission(task_dir: str | Path, db_path: str | Path,
 
 
 def _write_task(output: Path, candidate: dict[str, Any], path_spec: dict[str, Any],
-                report: dict[str, Any], attempts: list[dict[str, Any]], db_path: Path) -> None:
+                report: dict[str, Any], attempts: list[dict[str, Any]], db_path: Path,
+                context: dict[str, Any]) -> None:
     oracle = _ctes(candidate["stages"]) + _select(candidate["final_sql"]) + ";\n"
     instruction = candidate["instruction"].strip() + (
         "\n\nSubmit your solution as a single read-only DuckDB SELECT/WITH query in `answer.sql`. "
@@ -379,6 +563,7 @@ def _write_task(output: Path, candidate: dict[str, Any], path_spec: dict[str, An
         "alternate.sql": _select(candidate["alternate_sql"]) + ";\n",
         "task.json": _json(candidate) + "\n", "provenance.json": _json(provenance) + "\n",
         "expected_result.json": _json(report["result"]) + "\n",
+        "schema_context.json": _json(context) + "\n",
         "validation.json": _json(report) + "\n", "construction_attempts.json": _json(attempts) + "\n",
         # Copy this module so a task can be evaluated with only Python + duckdb.
         "verifier.py": Path(__file__).read_text(),
@@ -397,7 +582,8 @@ def _write_task(output: Path, candidate: dict[str, Any], path_spec: dict[str, An
 
 def construct_task(path_spec: dict[str, Any], llm: Callable[[str], str | dict[str, Any]],
                    db_path: str | Path, output_dir: str | Path, *, max_repairs: int = 2,
-                   context: dict[str, Any] | None = None) -> dict[str, Any]:
+                   context: dict[str, Any] | None = None,
+                   max_prompt_chars: int = DEFAULT_PROMPT_CHAR_BUDGET) -> dict[str, Any]:
     """Generate, execute, repair, and export one task from a finalized graph path.
 
     At most ``max_repairs + 1`` LLM calls are made through the supplied callable.
@@ -409,7 +595,9 @@ def construct_task(path_spec: dict[str, Any], llm: Callable[[str], str | dict[st
     if output.exists() and any(output.iterdir()):
         raise FileExistsError(f"Refusing to overwrite nonempty task directory: {output}")
     path_spec = normalize_path(path_spec)
-    prompt = construction_prompt(path_spec, context if context is not None else database_context(db_path))
+    context = context if context is not None else database_context(db_path, path_spec=path_spec)
+    base_prompt = construction_prompt(path_spec, context, max_chars=max_prompt_chars)
+    prompt = base_prompt
     attempts: list[dict[str, Any]] = []
     for attempt in range(max_repairs + 1):
         response = llm(prompt)
@@ -420,15 +608,22 @@ def construct_task(path_spec: dict[str, Any], llm: Callable[[str], str | dict[st
         except (ValueError, KeyError, TypeError, duckdb.Error) as error:
             attempts.append({"attempt": attempt + 1, "status": "rejected", "error": str(error),
                              "candidate": candidate, "response": response if candidate is None else None})
-            prompt = (construction_prompt(path_spec, context if context is not None else database_context(db_path))
-                      + "\nPREVIOUS CANDIDATE:\n" + _json(candidate if candidate is not None else response)
-                      + "\nEXECUTION/VALIDATION FAILURE:\n" + str(error)
-                      + "\nReturn the FULL corrected JSON task. Keep the intended cross-task composition.")
+            repair_suffix = ("\nEXECUTION/VALIDATION FAILURE:\n" + str(error)[:2000]
+                             + "\nReturn the FULL corrected JSON task. Keep the intended cross-task composition.")
+            remaining = max_prompt_chars - len(base_prompt) - len(repair_suffix) - 400
+            if remaining < 500:
+                raise ValueError("Prompt budget leaves insufficient room for repair feedback") from error
+            previous = _excerpt(candidate if candidate is not None else response, min(12_000, remaining))
+            prompt = base_prompt + "\nPREVIOUS CANDIDATE:\n" + _json(previous) + repair_suffix
+            if len(prompt) > max_prompt_chars:
+                raise ValueError("Repair prompt exceeds strict character budget") from error
             continue
         attempts.append({"attempt": attempt + 1, "status": "accepted"})
         report.update({"format_version": FORMAT_VERSION, "construction_attempts": len(attempts),
-                       "path_id": path_spec["path_id"], "target_superstate": path_spec["target_superstate"]})
-        _write_task(output, candidate, path_spec, report, attempts, db_path)
+                       "path_id": path_spec["path_id"], "target_superstate": path_spec["target_superstate"],
+                       "schema_retrieval": context.get("retrieval", {"provided_by_caller": True}),
+                       "prompt_characters": len(prompt), "max_prompt_characters": max_prompt_chars})
+        _write_task(output, candidate, path_spec, report, attempts, db_path, context)
         # The exported grading route must accept the actual composed oracle.
         report["oracle_verifier_check"] = verify_submission(output, db_path, (output / "oracle.sql").read_text())
         (output / "validation.json").write_text(_json(report) + "\n")

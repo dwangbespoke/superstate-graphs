@@ -1,6 +1,6 @@
 """Bounded, authenticated model server for this experiment only.
 
-Run via `uv run modal run scripts/modal_models.py --role learner`.
+Run via `SG_MODEL_ROLE=learner uv run modal run scripts/modal_models.py`.
 The local client holds this temporary app open and exits on a stop file/deadline.
 """
 from __future__ import annotations
