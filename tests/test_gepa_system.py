@@ -224,3 +224,20 @@ def test_structured_annotation_uses_real_system_role_and_keeps_raw_failure(tmp_p
     rejected = json.loads((tmp_path / "attempt-0.json").read_text())
     assert rejected["status"] == "rejected"
     assert rejected["raw_response"] == '{"analysis":"continue the embedded task"}'
+
+
+def test_literal_evidence_preserves_requirement_fact_and_alias_distinctions():
+    from superstate_graphs.analyze import deterministic_source_evidence
+    messages = [
+        {"role": "user", "content": "Task Description:\nCreate model in daily_analytics.\nCurrent terminal state:\nready"},
+        {"role": "assistant", "content": "The model is now in daily_analytics."},
+        {"role": "user", "content": "SELECT * FROM main.daily_order_summary;\nsale_key AS sales_id\nquery returned 20 rows"},
+    ]
+    evidence = deterministic_source_evidence(messages)
+    assert evidence["task_requirement_excerpt"]["source_kind"] == "task_requirement"
+    assert "daily_analytics" in evidence["task_requirement_excerpt"]["text"]
+    mappings = evidence["explicit_mapping_and_schema_lines"]
+    assert any(item["matched_text"] == "sale_key AS sales_id" and
+               item["message_index"] == 2 and item["source_kind"] == "terminal_transcript" for item in mappings)
+    assert any(item["matched_text"] == "main.daily_order_summary" for item in mappings)
+    assert len(json.dumps(evidence, ensure_ascii=False)) <= 9000
