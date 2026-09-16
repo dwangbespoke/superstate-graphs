@@ -46,19 +46,27 @@ def main() -> None:
     parser.add_argument("--package-only", action="store_true")
     parser.add_argument("--judge-uncached", action="store_true",
                         help="Allow two bounded judge calls when no exact saved junction judgment exists")
+    parser.add_argument("--resume", action="store_true", help="Preserve earlier summary entries and skip completed paths")
     args = parser.parse_args()
     if not 1 <= args.count <= 3 or not args.count <= args.max_paths <= 12:
         parser.error("Use 1–3 tasks and count <= max-paths <= 12 for this POC")
     paths = json.loads((args.paths or args.analysis / "selected_paths.json").read_text())["paths"]
     client = analyze.CachedClient(args.endpoint, args.output / "cache", "mutable_dbt_constructor")
-    outcomes, seen = [], set()
+    summary_path = args.output / "summary.json"
+    outcomes = json.loads(summary_path.read_text())["attempted"] if args.resume and summary_path.exists() else []
+    completed_ids = {item["path_id"] for item in outcomes if item["status"] in
+                     {"validated", "unsupported_target", "construction_failed", "awaiting_runtime_validation"}}
+    seen, attempted_now = set(), 0
     for path in paths:
-        if len(outcomes) >= args.max_paths:
+        if attempted_now >= args.max_paths:
             break
+        if path["path_id"] in completed_ids:
+            continue
         identity = (path["target_superstate"], tuple(path.get("source_task_ids", [])))
         if identity in seen:
             continue
         seen.add(identity)
+        attempted_now += 1
         path = json.loads(json.dumps(path))
         try:
             originals = path.get("original_replay_judgments") or original_judgments(path, args.analysis)

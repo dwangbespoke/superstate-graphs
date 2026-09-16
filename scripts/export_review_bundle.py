@@ -14,7 +14,8 @@ def main():
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
     names=['summary.json','corpus_manifest.json','task_split.json','initial_candidate.json',
            'selected_candidate.json','selected_graph.json','pooled_outcomes.json',
-           'frozen_probe_bank.json','trajectory_coverage.json','probe_signal.json']
+           'frozen_probe_bank.json','trajectory_coverage.json','probe_signal.json',
+           'shared_start_paths.json','shared_start_paths_reviewed.json','selected_paths.json']
     for name in names:
         p=args.analysis/name
         if p.exists():
@@ -42,7 +43,8 @@ def main():
         out=args.output/'dbt_tasks'/task.parent.name
         out.mkdir(parents=True,exist_ok=True)
         for name in ('README.md','instruction.md','task.json','task.toml','provenance.json',
-                     'runtime_validation.json','construction_validation.json'):
+                     'runtime_validation.json','construction_validation.json',
+                     'scaffold_changes.json','original_proposal.json','construction_attempts.json'):
             source=task.parent/name
             if source.exists():
                 (out/name).write_text(source.read_text().replace(str(ROOT)+'/',''))

@@ -1,7 +1,6 @@
 """Build a portable local experiment report from recorded artifacts."""
 from pathlib import Path
 import argparse
-import html
 import json
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -15,12 +14,22 @@ def build(analysis:Path,output:Path):
           'report':read('selected_report.json'),'histories':read('histories.json'),
           'outcomes':read('pooled_outcomes.json'),'paths':read('selected_paths.json')}
     data['revisions']=[]
+    shared=analysis/'shared_start_paths.json'
+    data['shared_starts']=json.loads(shared.read_text()) if shared.exists() else {'paths':[]}
     for p in sorted((analysis/'evaluated_candidates').glob('*.json')):
         c=json.loads(p.read_text())
         data['revisions'].append({'candidate':c['candidate'],'metrics':c['report']['proxy_metrics'],
                                   'hash':c['report']['candidate_sha256'],'time':c['evaluated_at_epoch']})
     data['revisions'].sort(key=lambda r:r['time'])
     data['tasks']=[]
+    data['construction_attempts']=[]
+    for p in (ROOT/'results/generated_dbt_tasks').glob('**/summary.json'):
+        if 'cache' in p.parts:continue
+        for attempt in json.loads(p.read_text()).get('attempted',[]):
+            data['construction_attempts'].append({
+                'run':str(p.relative_to(ROOT/'results/generated_dbt_tasks')),
+                'path_id':attempt['path_id'],'status':attempt['status'],
+                'reason':attempt.get('reason',attempt.get('error',''))[:1000]})
     for p in sorted((ROOT/'results/generated_tasks').glob('*/instruction.md')):
         data['tasks'].append({'name':p.parent.name,'instruction':p.read_text(),
                               'format':'Read-only SQL workflow',
@@ -33,7 +42,8 @@ def build(analysis:Path,output:Path):
         if validation.get('status')!='validated':continue
         data['tasks'].append({'name':p.parent.name,'instruction':p.read_text(),
                               'format':'Mutable dbt project',
-                              'validation':validation,'path':str(p.parent)})
+                              'validation':validation,'path':str(p.parent),
+                              'provenance':json.loads((p.parent/'provenance.json').read_text())})
     template=(ROOT/'reports/template.html').read_text()
     payload=json.dumps(data,ensure_ascii=False).replace('<','\\u003c')
     output.parent.mkdir(parents=True,exist_ok=True)
