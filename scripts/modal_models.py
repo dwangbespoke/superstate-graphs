@@ -48,7 +48,7 @@ class ModelServer:
             "--served-model-name", MODEL_ID, "--host", "0.0.0.0", "--port", "8000",
             "--api-key", os.environ["VLLM_API_KEY"],
             "--max-model-len", "49152", "--max-num-seqs", "2",
-            "--gpu-memory-utilization", "0.90", "--enforce-eager",
+            "--gpu-memory-utilization", "0.90",
             "--language-model-only", "--reasoning-parser", "qwen3",
             "--generation-config", "vllm",
         ])

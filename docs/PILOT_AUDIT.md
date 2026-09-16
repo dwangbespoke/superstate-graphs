@@ -41,3 +41,24 @@ and one context-limit error with unknown reward.
 The CAC instruction also contains an upstream reference-path ambiguity between
 `/app/dbt_transforms` and backend-specific project directories; retain this caveat
 when interpreting those traces.
+
+## Prefix-compression audit
+
+A critic compared three actual annotations against their recorded prefixes. No
+future-action or reward leakage was found, but two important evidence losses were
+identified:
+
+- Daily order summary `h026` promoted the learner's assertion about
+  `daily_analytics` into a fact, despite visible evidence of a `main` output and a
+  profile without the required schema.
+- Channel revenue `h023` omitted the observed `sale_key AS sales_id` mapping and
+  described that mapping as still unknown. This confuses missing information with
+  observed information the learner has failed to use.
+- The initial geographic annotation described too much of a future workflow as
+  the current decision. This is a smaller precision issue.
+
+The extraction layer therefore needs to distinguish task requirements, tool
+observations, and learner beliefs; preserve conflicts and explicit mappings; and
+carry source-indexed evidence snippets alongside summaries. These annotations
+remain a model-generated approximation of the history, not certified sufficient
+statistics.
