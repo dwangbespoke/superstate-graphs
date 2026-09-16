@@ -241,3 +241,110 @@ def test_literal_evidence_preserves_requirement_fact_and_alias_distinctions():
                item["message_index"] == 2 and item["source_kind"] == "terminal_transcript" for item in mappings)
     assert any(item["matched_text"] == "main.daily_order_summary" for item in mappings)
     assert len(json.dumps(evidence, ensure_ascii=False)) <= 9000
+
+
+def test_real_gepa_engine_executes_one_stub_reflection_and_changes_candidate():
+    import gepa
+    hs = [History("a", "A", "rA", 0, "side A"), History("b", "B", "rB", 0, "side B")]
+    evidence = Evidence("supported", "synthetic", "unit-fixture")
+    probe = Probe("unit-transfer", "a", "b", evidence, evidence)
+    def classifier(prompt):
+        codebook = json.loads(prompt.split("\nCODEBOOK:\n")[1].split("\nHISTORY:\n")[0])
+        return {"superstate_id": "y" if len(codebook) > 1 and "side B" in prompt else "x"}
+    reflections = []
+    def reflection(prompt):
+        reflections.append(prompt)
+        return '```\n[{"id":"x","description":"Shared toy decision"}]\n```'
+    adapter = SuperstateAdapter(hs, [], ProbeBank((probe,)), classifier, objective_mode="synthetic")
+    initial = candidate("x", "y")
+    result = gepa.optimize(seed_candidate=initial, trainset=[probe], valset=[probe], adapter=adapter,
+                           reflection_lm=reflection, max_metric_calls=4,
+                           reflection_minibatch_size=1, module_selector="round_robin",
+                           display_progress_bar=False, raise_on_exception=True, seed=1)
+    assert len(reflections) == 1
+    assert result.num_candidates == 2
+    assert result.best_candidate != initial
+    assert result.val_aggregate_scores == [0.0, 1.0]
+
+
+def judge_fixtures(decision_label="supported", local_label="supported", full_label="unknown"):
+    decision = {"decision": {"label": decision_label, "rationale": "Both prefixes need DB_TYPE; output names differ."},
+                "local_decision_A": "Discover backend", "local_decision_B": "Discover backend",
+                "shared_local_decision": "Discover backend", "typed_role_bindings": [],
+                "material_differences": []}
+    transfer = {"local_transfer": {"label": local_label, "rationale": "All commands in first episode inspect backend/config."},
+                "full_segment_transfer": {"label": full_label, "rationale": "Later schema write is not bound at A."},
+                "typed_role_bindings": [], "prerequisites": ["Terminal available"],
+                "expected_effects": ["Observe backend and current dbt config"]}
+    return decision, transfer
+
+
+def test_local_judge_is_prefix_only_and_transfer_keeps_whole_first_batch(tmp_path):
+    from superstate_graphs.analyze import judge_pair
+    decision, transfer = judge_fixtures()
+    class Client:
+        def __init__(self):
+            self.requests = []
+        def call(self, messages, **kwargs):
+            self.requests.append(messages)
+            return json.dumps(decision if len(self.requests) == 1 else transfer)
+    client = Client()
+    segment = {"source": "synthetic-trace", "execution_witnesses": [
+        {"status": "execution_episode", "step_id": 7, "trajectory_occurrence": 1,
+         "commands": [{"keystrokes": "echo $DB_TYPE\n"}, {"keystrokes": "cat profiles.yml\n"}],
+         "observations": [{"content": "FUTURE_BACKEND_RESULT duckdb"}]},
+        {"status": "execution_episode", "step_id": 9, "trajectory_occurrence": 3,
+         "commands": [{"keystrokes": "WRITE_FUTURE_SCHEMA"}],
+         "observations": [{"content": "future-schema-created"}]}]}
+    parsed, attempts = judge_pair(client,
+        {"decision": "Discover backend", "task_requirements": ["Create geographic_analytics"]},
+        {"decision": "Discover backend", "task_requirements": ["Create daily_analytics"]},
+        segment, tmp_path)
+    first_request = json.dumps(client.requests[0])
+    assert "FUTURE_BACKEND_RESULT" not in first_request and "WRITE_FUTURE_SCHEMA" not in first_request
+    second_request = client.requests[1][1]["content"].split("\n\nEND OF QUOTED EVIDENCE")[0]
+    payload = json.loads(second_request)
+    episode = payload["first_witnessed_execution_episode"]["data"]
+    assert len(episode["commands"]) == 2
+    assert episode["step_id"] == 7 and parsed["judged_operation_step_ids"] == ["7"]
+    assert parsed["full_segment_step_ids"] == ["7", "9"]
+    assert parsed["splice"] == parsed["local_transfer"]
+    assert parsed["decision"]["label"] == "supported" and parsed["full_segment_transfer"]["label"] == "unknown"
+    assert set(attempts) == {"decision", "transfer"}
+
+
+def test_local_positive_cannot_certify_or_override_full_segment_contradiction():
+    from superstate_graphs.analyze import junction_evidence
+    positive = Evidence("supported", "llm", "unit:local")
+    negative = Evidence("contradicted", "llm", "unit:full")
+    probe = Probe("scope", "a", "b", positive, positive, negative,
+                  "first_witnessed_execution_episode", ("7",))
+    assignments = {"a": {"superstate_id": "x"}, "b": {"superstate_id": "x"}}
+    assert probe_result(probe, assignments, "proxy")["score"] == 1
+    assert junction_evidence("a", "b", ProbeBank((probe,)))["status"] == "contradicted"
+    no_full = replace(probe, full_segment=None)
+    assert junction_evidence("a", "b", ProbeBank((no_full,)))["status"] == "unknown"
+
+
+def test_transfer_rejects_messages_without_execution_witness_and_persona_binding():
+    from superstate_graphs.analyze import (DECISION_SCHEMA, validate_judgment,
+                                           witnessed_operations)
+    with pytest.raises(ValueError, match="full witnessed segment"):
+        witnessed_operations([{"role": "assistant", "content": "echo $DB_TYPE"}])
+    with pytest.raises(ValueError, match="confirmed execution"):
+        witnessed_operations({"execution_witnesses": [{"status": "rejected_parse_response"}]})
+    decision, _ = judge_fixtures()
+    decision["typed_role_bindings"] = [{"role": "learner", "type": "person", "A": "analyst",
+        "B": "analyst", "required_properties": "SQL", "evidence_A": "task", "evidence_B": "task"}]
+    with pytest.raises(ValueError, match="personae"):
+        validate_judgment(decision, DECISION_SCHEMA, ("decision",))
+
+
+@pytest.mark.parametrize("reason", ["A already knows DB_TYPE; B has not observed it.",
+                                   "A uses dollars, B uses cents, and no conversion is observed."])
+def test_protocol_retains_concrete_negative_judgment_without_optimistic_repair(reason):
+    from superstate_graphs.analyze import DECISION_SCHEMA, validate_judgment
+    decision, _ = judge_fixtures(decision_label="contradicted")
+    decision["decision"]["rationale"] = reason
+    assert validate_judgment(decision, DECISION_SCHEMA, ("decision",))["decision"] == {
+        "label": "contradicted", "rationale": reason}

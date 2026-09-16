@@ -62,3 +62,25 @@ observations, and learner beliefs; preserve conflicts and explicit mappings; and
 carry source-indexed evidence snippets alongside summaries. These annotations
 remain a model-generated approximation of the history, not certified sufficient
 statistics.
+# Frozen-judge protocol correction
+
+The first frozen bank labeled all 68 sampled pairs contradicted. An adversarial
+review found a concrete mismatch with the intended abstraction: two initial
+histories both needed to identify `$DB_TYPE`, yet the judge rejected them because
+their eventual output models and target schemas differed. Ten initial/initial
+pairs were present, so candidate retrieval had not simply missed this shared
+decision. Other negatives, such as initialization versus final validation, were
+legitimate.
+
+This unsuccessful downstream run is preserved in
+`results/analysis_v1/previous_task_identity_judge`. The revised protocol evaluates
+local decision compatibility from the prefixes alone, then evaluates a witnessed
+operation under explicit artifact bindings. Different final goals remain
+constraints to respect, rather than an automatic reason to reject a shared
+local decision. Local transfer evidence must not be presented as proof that a
+whole observed segment or graph path can be transplanted.
+
+The same run exposed a GEPA adapter integration error: a missing
+`propose_new_texts` attribute prevented reflective mutation. Its single evaluated
+seed is not a prompt evolution. The repair includes a cheap stub-based test of
+the actual installed optimizer's reflection path before paid optimization resumes.

@@ -98,6 +98,11 @@ class Probe:
     right_id: str
     decision: Evidence
     splice: Evidence
+    # Formation uses the first complete witnessed operation. Full continuation
+    # compatibility is separately judged and must not inherit this local label.
+    full_segment: Evidence | None = None
+    operation_scope: str = "full_observed_segment"
+    judged_operation_step_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.probe_id or self.left_id == self.right_id:
@@ -228,9 +233,12 @@ def probe_result(probe: Probe, assignments: Mapping[str, Mapping[str, Any]], mod
         status, score = "unknown", 0.0
     return {"probe_id": probe.probe_id, "status": status, "score": score,
             "offered": offered, "decision_label": labels[0], "splice_label": labels[1],
+            "operation_scope": probe.operation_scope,
+            "judged_operation_step_ids": list(probe.judged_operation_step_ids),
             "evidence_tiers": [probe.decision.tier, probe.splice.tier],
             "feedback": (f"Decision: {probe.decision.rationale} [{probe.decision.source_ref}]. "
-                         f"Splice: {probe.splice.rationale} [{probe.splice.source_ref}]. "
+                         f"Operation transfer ({probe.operation_scope}): {probe.splice.rationale} "
+                         f"[{probe.splice.source_ref}]. This does not certify the full segment or path. "
                          f"Effective status under {mode} evidence: {status}.")}
 
 
@@ -252,6 +260,10 @@ class SuperstateAdapter:
     A proxy run is permitted and explicitly reported. Independent frozen LLM
     judgments never become executed/grounded evidence just by being optimized.
     """
+
+    # GEPA 0.1.4 accesses this optional protocol field directly, rather than
+    # getattr(..., None). Its absence silently prevented all prompt proposals.
+    propose_new_texts = None
 
     def __init__(self, histories: Sequence[History], transitions: Sequence[ObservedTransition],
                  bank: ProbeBank, classifier: ModelCall, *, objective_mode: str = "proxy"):
