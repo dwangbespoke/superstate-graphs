@@ -7,7 +7,7 @@ import pytest
 
 from superstate_graphs.dbt_runtime import (
     _REMOTE_RUNNER, _shared_source, compare_results, load_spec, materialize_dbt_task,
-    validate_dbt_task,
+    relation_result, validate_dbt_task,
 )
 
 
@@ -51,6 +51,18 @@ def test_result_multiset_preserves_duplicates_and_column_order():
     assert not compare_results(permuted, expected, ordered=True)["matches"]
     assert not compare_results({**expected, "rows": [[1, 2], [3, 4]]}, expected)["matches"]
     assert not compare_results({**expected, "columns": ["y", "x"]}, expected)["matches"]
+
+
+def test_relation_must_be_materialized_table_not_equivalent_view(tmp_path):
+    import duckdb
+    database = str(tmp_path / "test.duckdb")
+    con = duckdb.connect(database)
+    con.execute("CREATE TABLE correct_table AS SELECT 3 AS n")
+    con.execute("CREATE VIEW equivalent_view AS SELECT 3 AS n")
+    con.close()
+    assert relation_result(database, "main", "correct_table") == {"columns": ["n"], "rows": [[3]]}
+    with pytest.raises(ValueError, match="BASE TABLE"):
+        relation_result(database, "main", "equivalent_view")
 
 
 def test_reference_cannot_modify_database(tmp_path):

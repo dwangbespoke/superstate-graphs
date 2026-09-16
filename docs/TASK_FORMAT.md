@@ -154,9 +154,21 @@ warehouse and sets `DB_TYPE=duckdb`. Instructions must leave the backend value t
 observed. Starter SQL contains comments/TODOs only, and the starter profile leaves
 backend configuration unresolved. Oracle files are kept outside the learner image.
 
-Every claimed decision-relevant known fact must have a `provided_context` entry
+Before validation, a deterministic assembly step supplies the fixed project/profile
+boilerplate and comment-only SQL starters, retaining the oracle's SQL and nested
+model paths. It copies declared known information verbatim into starter `CONTEXT.md`
+and points the instruction there. Existing `provided_context` evidence remains
+unchanged; additional exact known-fact deliveries are explicitly marked
+`model_assertion_only`, with no new claim of source grounding. The original proposal
+and exact before/after changes are retained as `original_proposal.json` and
+`scaffold_changes.json`, both per attempt and in accepted packages. This step does
+not repair goals, SQL, bindings, replay conflicts, or unknown information.
+
+Every claimed decision-relevant known fact must have a delivery entry
 pointing to exact text actually present in the instruction or a starter file.
-Every unknown fact has a corresponding intended discovery action. Information-state
+Unknown information requires documented discovery actions. Different wording between
+unknown facts and those action records produces a semantic-correspondence warning;
+literal string equality cannot establish or refute that correspondence. Information-state
 mismatches are explicitly listed. These structural checks expose the construction
 claim for review; they do not independently certify that all source information or
 meaningful alternatives were preserved.

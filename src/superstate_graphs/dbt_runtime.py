@@ -87,10 +87,31 @@ def compare_results(actual, expected, ordered=False):
             "actual_rows": len(actual_rows), "expected_rows": len(expected_rows)}
 
 
+def relation_result(database, schema, relation):
+    """A view with the right rows does not satisfy a materialized-table task."""
+    import duckdb
+
+    con = duckdb.connect(database, read_only=True, config={
+        "enable_external_access": "false", "threads": "2", "memory_limit": "1GB",
+    })
+    try:
+        rows = con.execute(
+            "SELECT table_type FROM information_schema.tables "
+            "WHERE table_schema = ? AND table_name = ?", [schema, relation],
+        ).fetchall()
+        if rows != [("BASE TABLE",)]:
+            raise ValueError(f"Target must be a materialized BASE TABLE; found {rows!r}")
+    finally:
+        con.close()
+    qualified = '"' + schema.replace('"', '""') + '"."' + relation.replace('"', '""') + '"'
+    return query_result(database, "SELECT * FROM " + qualified)
+
+
 def _shared_source() -> str:
     return "\n".join([
         "import collections, datetime as dt, decimal, json, math, threading",
         inspect.getsource(_cell), inspect.getsource(query_result), inspect.getsource(compare_results),
+        inspect.getsource(relation_result),
     ])
 
 
@@ -157,7 +178,7 @@ def materialize_dbt_task(task_dir: Path) -> Path:
     _write_files(task_dir / "solution/oracle", spec["oracle_files"])
     (task_dir / "instruction.md").write_text(spec["instruction"] + "\n")
     (task_dir / "environment/Dockerfile").write_text(
-        f"FROM {BASE_IMAGE}\nWORKDIR {PROJECT_ROOT}\nCOPY project/ {PROJECT_ROOT}/\n"
+        f"FROM {BASE_IMAGE}\nWORKDIR /app\nCOPY project/ {PROJECT_ROOT}/\n"
         f"ENV DB_TYPE=duckdb DUCKDB_PATH={DATABASE}\n")
     (task_dir / "task.toml").write_text(
         'version = "1.0"\n[metadata]\ncategory = "data-engineering"\n'
@@ -179,7 +200,7 @@ def main():
     print(run.stdout[-12000:]); print(run.stderr[-4000:])
     if run.returncode:
         raise RuntimeError('dbt run failed')
-    actual = query_result('/app/database/retail.duckdb', spec['target_sql'])
+    actual = relation_result('/app/database/retail.duckdb', spec['target_schema'], spec['target_relation'])
     result = compare_results(actual, expected, spec['ordered'])
     print(json.dumps(result))
     if not result['matches']:
@@ -189,7 +210,8 @@ if __name__ == '__main__':
 '''
     (task_dir / "tests/check_task.py").write_text(checker)
     (task_dir / "tests/check_spec.json").write_text(json.dumps({
-        "target_sql": f'SELECT * FROM "{spec["target_schema"]}"."{spec["target_relation"]}"',
+        "target_schema": spec["target_schema"], "target_relation": spec["target_relation"],
+        "required_relation_type": "BASE TABLE",
         "ordered": spec.get("ordered", False),
     }, indent=2))
     # Expected results do not exist until the sandbox computes them on pristine data.
@@ -227,8 +249,8 @@ def dbt(phase):
     return result
 def compare(expected):
     try:
-        actual = query_result(str(DB), 'SELECT * FROM "' + SPEC['target_schema'] + '"."' + SPEC['target_relation'] + '"')
-        return compare_results(actual, expected, SPEC.get('ordered', False))
+        actual = relation_result(str(DB), SPEC['target_schema'], SPEC['target_relation'])
+        return {**compare_results(actual, expected, SPEC.get('ordered', False)), 'relation_type': 'BASE TABLE'}
     except Exception as exc:
         return {'matches': False, 'error': type(exc).__name__ + ': ' + str(exc)[:2000]}
 try:

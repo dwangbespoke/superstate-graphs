@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 from superstate_graphs.dbt_constructor import (
-    construct_dbt_task, constructor_messages, replay_conflicts, task_contract, validate_spec,
+    apply_dbt_scaffold, construct_dbt_task, constructor_messages, replay_conflicts, task_contract, validate_spec,
 )
 from superstate_graphs.task_constructor import normalize_path
 
@@ -94,6 +94,8 @@ def test_package_has_only_starter_files_and_no_false_runtime_claim(inputs, tmp_p
     provenance = json.loads((output / "provenance.json").read_text())
     assert provenance["literal_replay_judgments_unchanged"] is True
     assert provenance["path"]["original_replay_judgments"] == path["original_replay_judgments"]
+    assert json.loads((output / "original_proposal.json").read_text()) == spec
+    assert json.loads((output / "scaffold_changes.json").read_text())["changes"]
 
 
 def test_repair_receives_reference_failure_and_system_role(inputs, tmp_path):
@@ -160,3 +162,75 @@ def test_unknown_backend_is_not_an_instruction_and_local_contradiction_is_reject
     path["original_replay_judgments"][0]["judgment"]["decision"]["label"] = "contradicted"
     with pytest.raises(ValueError, match="contradicted local decision"):
         validate_spec(spec, path, db)
+
+
+def test_paraphrased_unknown_metadata_is_flagged_without_false_semantic_verdict(inputs):
+    db, path, spec = inputs
+    spec["preserved_decision"]["unknown_information"] = ["What is the DB_TYPE value?"]
+    result = validate_spec(spec, path, db)
+    assert result["metadata_warnings"]
+    assert "not established" in result["metadata_warnings"][0]
+    spec["information_state_contract"]["withheld_until_observation"] = []
+    with pytest.raises(ValueError, match="discovery action"):
+        validate_spec(spec, path, db)
+
+
+def test_scaffold_repairs_only_boilerplate_and_delivers_declared_context(inputs):
+    db, path, spec = inputs
+    old_name = f"models/{spec['model_name']}.sql"
+    nested_name = f"models/marts/{spec['model_name']}.sql"
+    sql = spec["oracle_files"].pop(old_name)
+    spec["oracle_files"][nested_name] = sql
+    spec["starting_files"][old_name] = "SELECT 1 AS solved_placeholder"
+    spec["oracle_files"]["dbt_project.yml"] = "name: wrong\nvars:\n  retained_business_constant: 7\n"
+    spec["oracle_files"]["profiles.yml"] = "wrong: {}"
+    spec["information_state_contract"]["provided_context"][0]["given_to_learner"] = "Explicit model-declared context text."
+    spec["information_state_contract"]["provided_context"][0]["delivery_location"] = "instruction"
+    del spec["ordered"]
+    before = copy.deepcopy(spec)
+    repaired, receipt = apply_dbt_scaffold(spec, path)
+    assert spec == before
+    assert repaired["oracle_files"][nested_name] == sql
+    assert old_name not in repaired["starting_files"]
+    assert repaired["starting_files"][nested_name].startswith("-- TODO")
+    assert repaired["ordered"] is False
+    project = yaml.safe_load(repaired["oracle_files"]["dbt_project.yml"])
+    assert project["config-version"] == 2
+    assert project["vars"] == {"retained_business_constant": 7}
+    assert "type: duckdb" not in repaired["starting_files"]["profiles.yml"]
+    for field in ("new_goal", "composition_bindings", "changed_terminal_obligations", "preserved_decision", "reference_sql"):
+        assert repaired[field] == before[field]
+    info = repaired["information_state_contract"]
+    assert info["provided_context"][0]["source_evidence"] == before["information_state_contract"]["provided_context"][0]["source_evidence"]
+    assert info["withheld_until_observation"] == before["information_state_contract"]["withheld_until_observation"]
+    assert "Explicit model-declared context text." in repaired["starting_files"]["CONTEXT.md"]
+    assert all(item["grounding"] == "model_assertion_only" for item in info["assembled_known_information_deliveries"])
+    assert receipt["changes"]
+    assert validate_spec(repaired, path, db)["status"] == "reference_validated"
+
+
+def test_scaffold_does_not_resolve_ordering_or_semantic_provenance(inputs):
+    db, path, spec = inputs
+    del spec["ordered"]
+    spec["instruction"] += " Rows must be sorted by revenue."
+    repaired, _ = apply_dbt_scaffold(spec, path)
+    assert "ordered" not in repaired
+    with pytest.raises(ValueError, match="ordered=false"):
+        validate_spec(repaired, path, db)
+    spec["ordered"] = False
+    spec["composition_bindings"][0]["source_task_id"] = "invented-source"
+    repaired, _ = apply_dbt_scaffold(spec, path)
+    with pytest.raises(ValueError, match="actual witnessed source transition"):
+        validate_spec(repaired, path, db)
+    unsupported = {"status": "unsupported_target", "reason": "Wrong target"}
+    assert apply_dbt_scaffold(unsupported, path) == (unsupported, {"changes": []})
+
+
+def test_long_repair_candidate_cannot_hide_error_or_review_findings(inputs):
+    _, path, _ = inputs
+    path["construction_review_findings"] = ["The requested full grid differs from observed groups."]
+    messages = constructor_messages(path, {}, {"candidate": {"long": "x" * 12_000},
+                                               "validation_error": "EXACT_VISIBLE_VALIDATION_ERROR"})
+    payload = json.loads(messages[1]["content"].split("\nEND QUOTED EVIDENCE")[0])
+    assert payload["previous_candidate_and_validation_feedback"]["validation_error"] == "EXACT_VISIBLE_VALIDATION_ERROR"
+    assert payload["construction_review_findings"] == path["construction_review_findings"]
