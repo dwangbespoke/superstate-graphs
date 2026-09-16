@@ -397,6 +397,14 @@ the decision, its source evidence, the competing choices, and where the new task
 requires it. Explain non-core mismatches in target_recreation_limitations. SQL
 executability alone never establishes preservation of a learner's knowledge state.
 
+Any full_segment_transfer verdict refers to replay under the OLD task obligations.
+Keep a rejected replay rejected; a new task must explicitly resolve its conflicts
+through grounded bindings and stated changes to terminal obligations. Address each
+recorded replay conflict in target_recreation_limitations and explain its resolution
+in target_recreation. Never invent missing prerequisites or remove the targeted
+ambiguity merely to make a path executable. If a core conflict cannot be resolved
+while preserving the decision, return unsupported_target.
+
 If this read-only SQL format CANNOT preserve the core decision, do not invent task
 fidelity. For example, choosing/fixing dbt profiles, diagnosing a project/network
 configuration, installing dependencies, or recovering command-line setup cannot be

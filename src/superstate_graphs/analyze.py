@@ -912,7 +912,7 @@ def joint_evidence_counts(probes: list[Probe]) -> dict[str, int]:
 
 
 def junction_evidence(left_id: str, right_id: str, bank: ProbeBank) -> dict:
-    """Full-path gating uses full segment evidence, never local formation credit."""
+    """Keep literal replay evidence separate from unassessed new-task compilation."""
     exact = [p for p in bank.probes if (p.left_id, p.right_id) == (left_id, right_id)]
     reverse = [p for p in bank.probes if (p.left_id, p.right_id) == (right_id, left_id)]
     decisions = [p.decision for p in exact + reverse]
@@ -927,7 +927,12 @@ def junction_evidence(left_id: str, right_id: str, bank: ProbeBank) -> dict:
     grounded = (any(e.effective_label("grounded") == "supported" for e in decisions)
                 and any(e.effective_label("grounded") == "supported" for e in splices))
     status = "contradicted" if contradicted else "supported" if supported else "unknown"
+    decision_status = ("contradicted" if any(e.effective_label("proxy") == "contradicted" for e in decisions)
+                       else "supported" if any(e.effective_label("proxy") == "supported" for e in decisions)
+                       else "unknown")
     return {"left_history_id": left_id, "right_history_id": right_id, "status": status,
+            "literal_replay_status": status, "decision_status": decision_status,
+            "compilation_status": "blocked_decision_mismatch" if decision_status == "contradicted" else "unassessed",
             "tier": "grounded" if status == "supported" and grounded else "proxy" if status == "supported" else "unknown_or_contradicted",
             "exact_probe_ids": [p.probe_id for p in exact],
             "reverse_decision_probe_ids": [p.probe_id for p in reverse],
@@ -938,7 +943,7 @@ def junction_evidence(left_id: str, right_id: str, bank: ProbeBank) -> dict:
                 "scope": p.operation_scope, "step_ids": list(p.judged_operation_step_ids)} for p in exact],
             "evidence_scope": "full_observed_segment",
             "bank_sha256": bank.sha256,
-            "note": "Local transfer supports formation only. Unknown full-segment junctions require validation; shared membership is not a splice proof."}
+            "note": "Full-segment labels assess continuation under the original task. Rejected literal replay does not certify or rule out a new task; compilation must explicitly resolve bindings, changed obligations, and preserved decision information."}
 
 
 class ParallelAdapter(SuperstateAdapter):
@@ -1049,7 +1054,7 @@ def export_paths(graph: dict, histories: list[History], stats: list[dict], recei
                             continue
                         seen.add(identity)
                         junction = junction_evidence(a["target_id"], b["source_id"], probe_bank)
-                        if junction["status"] == "contradicted":
+                        if junction["compilation_status"] == "blocked_decision_mismatch":
                             excluded.append({"transition_identity": identity, "junction_evidence": junction})
                             continue
                         transitions = []
@@ -1069,6 +1074,7 @@ def export_paths(graph: dict, histories: list[History], stats: list[dict], recei
                                       "selection_reason": "positive pooled outcome variance" if (stat["pooled_binary_variance"] or 0) > 0 else "high-support fallback; no positive variance for this node",
                                       "target_statistics": stat, "transitions": transitions,
                                       "junction_evidence": junction,
+                                      "compilation_obligations": "Preserve the targeted decision and its information/prerequisites; state new terminal obligations and explicit artifact bindings; resolve every recorded replay conflict. A negative replay label is not relabeled as support.",
                                       "status": "proposed_cross_task_path_requires_concrete_instantiation",
                                       "terminal_endpoint": "intermediate policy prefix; constructor must supply a terminal goal and verifier",
                                       "splice_obligation": "Bind first segment destination to second segment source; reconcile goal, schema, units, and known information."})
@@ -1088,9 +1094,56 @@ def export_paths(graph: dict, histories: list[History], stats: list[dict], recei
             break
     return {"any_positive_variance": positive, "paths": selected_paths,
             "selection_policy": "Cover distinct targets and source-task pairs before filling repeated combinations; retain evidence/variance ranking within passes.",
-            "known_contradicted_junctions_excluded": excluded,
+            "known_decision_mismatches_excluded": excluded,
             "unjudged_junction_shortlist": shortlist,
-            "note": "Paths are proposals through uncontradicted junctions, not executable or terminal-task guarantees."}
+            "note": "Paths are new-task compilation proposals, not certified literal continuations. Original replay verdicts and conflicts remain attached; executable construction and decision-fidelity evidence are still required."}
+
+
+def refresh_compilation_paths(out: Path, *, limit: int = 12) -> dict:
+    """Re-export saved graph witnesses for new-task compilation; no model calls.
+
+    The live optimizer may have imported the earlier replay-only export policy.
+    Preserve that export and every frozen judgment rather than rerunning GEPA.
+    """
+    def read(name):
+        return json.loads((out / name).read_text())
+    existing = read("selected_paths.json")
+    if existing.get("path_export_protocol") == "new_task_compilation_v1":
+        return existing
+    before = out / "selected_paths_before_compilation_scope.json"
+    if not before.exists():
+        save(before, existing)
+    histories = [History.from_dict(record) for record in read("histories.json")]
+    probes = []
+    for record in read("frozen_probe_bank.json")["probes"]:
+        record = dict(record)
+        for key in ("decision", "splice", "full_segment"):
+            if record.get(key) is not None:
+                record[key] = Evidence(**record[key])
+        record["judged_operation_step_ids"] = tuple(record.get("judged_operation_step_ids", []))
+        probes.append(Probe(**record))
+    transitions = read("observed_transitions.json")
+    segments = {record["witness_ref"]: json.loads(Path(record["witness_ref"]).read_text())
+                for record in transitions}
+    receipts = read("extraction_provenance.json")
+    result = export_paths(read("selected_graph.json"), histories, read("pooled_outcomes.json"),
+                          receipts, segments, ProbeBank(tuple(probes)), limit=limit)
+    candidate = read("selected_candidate.json")
+    definitions = {entry["id"]: entry for entry in json.loads(candidate["codebook"])}
+    for path in result["paths"]:
+        junction = path["junction_evidence"]
+        path["target_definition"] = definitions[path["target_superstate"]]
+        path["junction_prefix_A"] = receipts[junction["left_history_id"]]["extraction"]
+        path["junction_prefix_B"] = receipts[junction["right_history_id"]]["extraction"]
+        path["definition_candidate_sha256"] = fingerprint(candidate)
+    result["path_export_protocol"] = "new_task_compilation_v1"
+    save(out / "selected_paths.json", result)
+    summary = read("summary.json")
+    summary.update(cross_task_paths=len(result["paths"]),
+                   path_export_protocol=result["path_export_protocol"],
+                   compilation_scope="New goal and artifact bindings require construction evidence; original replay verdicts remain unchanged.")
+    save(out / "summary.json", summary)
+    return result
 
 
 def run(args: argparse.Namespace) -> dict:

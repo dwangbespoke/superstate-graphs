@@ -48,9 +48,12 @@ def judge_junction(client, payload, path_id, output):
 
 
 def junction_is_contradicted(judgment):
-    """A locally transferable operation cannot excuse an incompatible full path."""
-    return any(judgment[key]['label'] == 'contradicted'
-               for key in ('decision', 'full_segment_transfer'))
+    """A new goal cannot excuse a contradicted target decision.
+
+    Literal replay conflicts remain in the payload for the constructor to resolve;
+    they do not by themselves decide whether a NEW goal/environment can be compiled.
+    """
+    return judgment['decision']['label'] == 'contradicted'
 
 
 def load_segment_witness(transition, analysis_dir):
@@ -96,7 +99,7 @@ def main():
     parser.add_argument('--output',type=Path,default=ROOT/'results/generated_tasks')
     parser.add_argument('--count',type=int,default=3)
     args=parser.parse_args()
-    paths=json.loads((args.analysis/'selected_paths.json').read_text())['paths']
+    paths=analyze.refresh_compilation_paths(args.analysis)['paths']
     histories={h['history_id']:h for h in json.loads((args.analysis/'histories.json').read_text())}
     client=CachedClient(ROOT/'results/runtime/reflector.json',args.output/'cache','constructor')
     outcomes=[]

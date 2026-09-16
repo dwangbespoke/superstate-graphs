@@ -64,6 +64,29 @@ remain a model-generated approximation of the history, not certified sufficient
 statistics.
 # Frozen-judge protocol correction
 
+## Replay versus new-task compilation
+
+A later review of the actual locally supported pairs found a separate scope issue
+in construction gating. The full-segment verdict asks whether B can continue A's
+original task. For example, a segment that inspects ORDERS was rejected because it
+did not also inspect CUSTOMER_ADDRESSES and implement A's final geographic models.
+That does not establish an operational contradiction, or rule out a new combined
+goal. Other pairs do contain real profile/schema conflicts and observed command
+failures, which must remain visible.
+
+Path exports now separate `literal_replay_status` from `compilation_status`.
+Contradicted target decisions still block proposals. A rejected replay remains
+rejected; a proposed new task must give explicit artifact bindings, changed terminal
+obligations, preserved decision information, and resolutions of every relevant
+conflict. Execution checks do not establish decision fidelity by themselves.
+This changes the construction gate, not the frozen labels or GEPA formation score.
+
+The first shared decisions concern backend discovery and configuration. A read-only
+SQL task cannot reproduce these. A mutable dbt task format is therefore needed for
+such nodes; the SQL constructor must continue to decline unsupported targets.
+
+## Judging protocol and decoding
+
 The revised local-decision protocol still rejected all 68 decisions when the
 35B judge ran without reasoning. A bounded same-pair diagnostic kept its prompt,
 schema, and input fixed and enabled reasoning: the judge then correctly recognized

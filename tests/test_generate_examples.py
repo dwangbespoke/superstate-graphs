@@ -30,7 +30,9 @@ def test_junction_uses_shared_judge_and_records_scope(monkeypatch, tmp_path):
     result = runner.judge_junction(client, payload, "path_1", tmp_path)
     assert calls[0][1:4] == (payload["prefix_A"], payload["prefix_B"], payload["observed_segment_after_B"])
     assert calls[0][4] == tmp_path / "junction_judgment_attempts/path_1"
-    assert runner.junction_is_contradicted(result)
+    assert not runner.junction_is_contradicted(result)
+    assert result["full_segment_transfer"]["label"] == "contradicted"
+    assert runner.junction_is_contradicted({**result, "decision": {"label": "contradicted"}})
     receipt = json.loads((tmp_path / "junction_judgments/path_1.json").read_text())
     assert receipt["status"] == "accepted"
     assert receipt["judgment"] == judgment

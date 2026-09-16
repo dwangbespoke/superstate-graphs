@@ -148,7 +148,7 @@ def test_one_execution_cannot_certify_multicall_segment(tmp_path):
     assert len(corpus["provisional_segments"][0]["unresolved_occurrences"]) == 1
 
 
-def test_path_export_blocks_known_bad_splice_and_marks_unknown():
+def test_path_export_distinguishes_decision_mismatch_from_replay_conflicts():
     from superstate_graphs.analyze import export_paths, junction_evidence
     hs = [History("a0", "A", "a", 0, "start"), History("a1", "A", "a", 1, "junction"),
           History("b0", "B", "b", 0, "junction"), History("b1", "B", "b", 1, "end")]
@@ -164,8 +164,12 @@ def test_path_export_blocks_known_bad_splice_and_marks_unknown():
     receipts = {h.history_id: {"extraction": {"prerequisites": []}} for h in hs}
     segments = {w: {"observed_messages": []} for w in ("wa", "wb")}
     result = export_paths(graph, hs, stats, receipts, segments, bank)
-    assert result["paths"] == []
-    assert len(result["known_contradicted_junctions_excluded"]) == 1
+    assert result["paths"][0]["junction_evidence"]["literal_replay_status"] == "contradicted"
+    assert result["paths"][0]["junction_evidence"]["compilation_status"] == "unassessed"
+    mismatch_bank = ProbeBank((Probe("mismatch", "a1", "b0", negative, negative),))
+    blocked = export_paths(graph, hs, stats, receipts, segments, mismatch_bank)
+    assert blocked["paths"] == []
+    assert len(blocked["known_decision_mismatches_excluded"]) == 1
     unknown = Evidence("unknown", "llm", "frozen:3")
     unknown_bank = ProbeBank((Probe("unknown", "a1", "b0", positive, unknown),))
     result = export_paths(graph, hs, stats, receipts, segments, unknown_bank)
@@ -322,6 +326,7 @@ def test_local_positive_cannot_certify_or_override_full_segment_contradiction():
     assignments = {"a": {"superstate_id": "x"}, "b": {"superstate_id": "x"}}
     assert probe_result(probe, assignments, "proxy")["score"] == 1
     assert junction_evidence("a", "b", ProbeBank((probe,)))["status"] == "contradicted"
+    assert junction_evidence("a", "b", ProbeBank((probe,)))["compilation_status"] == "unassessed"
     no_full = replace(probe, full_segment=None)
     assert junction_evidence("a", "b", ProbeBank((no_full,)))["status"] == "unknown"
 

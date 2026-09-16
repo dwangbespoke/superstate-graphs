@@ -63,8 +63,11 @@ The proxy GEPA objective rewards compatible cross-task reuse and penalizes
 contradicted joins. Decision judgments use prefixes only. Transfer judgments
 distinguish the first witnessed execution episode from the entire observed
 segment. Positive local transfer evidence may support formation; it does not
-certify the full segment or path. Full-segment contradictions block construction
-proposals. These proxies do not prove shared per-history difficulty, whole-path
+certify the full segment or path. A contradicted local decision blocks a proposal.
+Full-segment verdicts refer to replay under the original task and remain attached
+as evidence; a new-task compiler must explicitly resolve their conflicts through
+grounded bindings and changed terminal obligations. It cannot simply relabel a
+rejected replay as executable. These proxies do not prove shared per-history difficulty, whole-path
 executability, or training benefit. Constructed tasks are the next concrete test.
 
 Two independent adversarial critics reviewed intent and evidence alignment.
