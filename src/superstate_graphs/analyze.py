@@ -498,7 +498,14 @@ class ParallelAdapter(SuperstateAdapter):
         report = super().evaluate_report(candidate, probes)
         self.evaluated_candidates.add(key)
         if self.report_dir:
-            save(self.report_dir / f"{key}.json", {"candidate": candidate, "report": report,
+            # Artifact comparisons always use the same entire frozen bank. This
+            # adds no inference: all assignments are already cached. GEPA still
+            # receives only its requested subset and subset feedback below.
+            full_report = report if probes is None else super().evaluate_report(candidate)
+            save(self.report_dir / f"{key}.json", {"candidate": candidate, "report": full_report,
+                "artifact_score_scope": "entire_frozen_probe_bank",
+                "latest_requested_batch": {"probe_ids": [r["probe_id"] for r in report["probe_results"]],
+                                           "metrics": report["metrics"]},
                 "evaluated_at_epoch": time.time()})
         return report
 
@@ -521,6 +528,29 @@ def pooled_statistics(histories: list[History], assignments: dict, rewards: dict
                        "reward_sources": [r["source"] for r in rollouts.values()],
                        "estimand": "Equal-weight terminal outcomes among rollouts visiting this node; not within-history variance."})
     return sorted(result, key=lambda x: (-(x["pooled_binary_variance"] or 0), -x["distinct_rollouts"]))
+
+
+def select_diverse_paths(ranked_paths: list[dict], limit: int) -> list[dict]:
+    """Cover targets and source-task pairs before repeating their combination."""
+    selected, ids, targets, pairs, combinations = [], set(), set(), set(), set()
+    for phase in range(5):
+        for path in ranked_paths:
+            if len(selected) >= limit:
+                return selected
+            target, pair = path["target_superstate"], tuple(path["source_task_ids"])
+            if path["path_id"] in ids:
+                continue
+            eligible = ((target not in targets and pair not in pairs) if phase == 0 else
+                        target not in targets if phase == 1 else
+                        pair not in pairs if phase == 2 else
+                        (target, pair) not in combinations if phase == 3 else True)
+            if eligible:
+                selected.append(path)
+                ids.add(path["path_id"])
+                targets.add(target)
+                pairs.add(pair)
+                combinations.add((target, pair))
+    return selected
 
 
 def export_paths(graph: dict, histories: list[History], stats: list[dict], receipts: dict,
@@ -570,10 +600,21 @@ def export_paths(graph: dict, histories: list[History], stats: list[dict], recei
     paths.sort(key=lambda p: (p["junction_evidence"]["status"] != "supported",
                              -(p["target_statistics"]["pooled_binary_variance"] or 0),
                              -p["target_statistics"]["distinct_rollouts"], p["path_id"]))
-    return {"any_positive_variance": positive, "paths": paths[:limit],
+    selected_paths = select_diverse_paths(paths, limit)
+    unknown_paths = select_diverse_paths([p for p in paths if p["junction_evidence"]["status"] == "unknown"], len(paths))
+    shortlist, junction_ids = [], set()
+    for path in unknown_paths:
+        evidence = path["junction_evidence"]
+        identity = (evidence["left_history_id"], evidence["right_history_id"])
+        if identity not in junction_ids:
+            shortlist.append(evidence)
+            junction_ids.add(identity)
+        if len(shortlist) == 3:
+            break
+    return {"any_positive_variance": positive, "paths": selected_paths,
+            "selection_policy": "Cover distinct targets and source-task pairs before filling repeated combinations; retain evidence/variance ranking within passes.",
             "known_contradicted_junctions_excluded": excluded,
-            "unjudged_junction_shortlist": [p["junction_evidence"] for p in paths
-                                             if p["junction_evidence"]["status"] == "unknown"][:3],
+            "unjudged_junction_shortlist": shortlist,
             "note": "Paths are proposals through uncontradicted junctions, not executable or terminal-task guarantees."}
 
 

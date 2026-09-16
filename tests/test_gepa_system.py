@@ -172,3 +172,31 @@ def test_path_export_blocks_known_bad_splice_and_marks_unknown():
     assert result["paths"][0]["junction_evidence"]["status"] == "unknown"
     reverse_bank = ProbeBank((Probe("reverse", "b0", "a1", positive, negative),))
     assert junction_evidence("a1", "b0", reverse_bank)["status"] == "unknown"
+
+
+def test_persisted_candidate_metrics_use_entire_frozen_bank(tmp_path):
+    from superstate_graphs.analyze import ParallelAdapter
+    positive = Evidence("supported", "llm", "judge:1")
+    negative = Evidence("contradicted", "llm", "judge:2")
+    probes = [Probe("positive", "a", "b", positive, positive),
+              Probe("negative", "a", "b", positive, negative)]
+    adapter = ParallelAdapter(histories(), [], ProbeBank(tuple(probes)),
+                              lambda _: {"superstate_id": "x"}, report_dir=tmp_path)
+    subset = adapter.evaluate_report(candidate("x"), probes[:1])
+    assert subset["metrics"]["denominator"] == 1 and subset["metrics"]["score"] == 1
+    saved = json.loads(next(tmp_path.glob("*.json")).read_text())
+    assert saved["report"]["metrics"]["denominator"] == 2
+    assert saved["report"]["metrics"]["score"] == -1.5
+    assert saved["latest_requested_batch"]["probe_ids"] == ["positive"]
+    assert adapter.classifier_calls == 2
+
+
+def test_path_shortlist_covers_targets_and_task_pairs_before_duplicates():
+    from superstate_graphs.analyze import select_diverse_paths
+    paths = [{"path_id": str(i), "target_superstate": "S1", "source_task_ids": ["A", "B"]}
+             for i in range(6)]
+    paths.extend([{"path_id": "different-pair", "target_superstate": "S1", "source_task_ids": ["A", "C"]},
+                  {"path_id": "different-target", "target_superstate": "S2", "source_task_ids": ["C", "D"]}])
+    selected = select_diverse_paths(paths, 3)
+    assert len({p["target_superstate"] for p in selected}) == 2
+    assert len({tuple(p["source_task_ids"]) for p in selected}) == 3
