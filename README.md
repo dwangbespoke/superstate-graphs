@@ -59,9 +59,11 @@ The composite difference is **+0.0180**, with a paired original-task bootstrap
 specifications and one cached set of LLM judgments; it excludes generation and
 optimization uncertainty. The gain is a graph-proxy result. It does not establish
 an improved state partition, universal applicability, or learner improvement.
-The [qualitative review](docs/FROZEN_GRAPH_REVIEW.md) records redundant additions
-and concrete contract conflicts. All-corpus completion and reconstructed contracts
-are separate from this frozen test comparison.
+The [frozen graph review](docs/FROZEN_GRAPH_REVIEW.md) records redundant additions
+and concrete contract conflicts. The [14-prefix census review](docs/CENSUS_QUALITATIVE_REVIEW.md)
+records assignment conflicts alongside consistent and ambiguous cases; it is a
+purposive post-formation inspection, not an accuracy estimate. All-corpus completion
+and reconstructed contracts are separate from this frozen test comparison.
 
 ## Reproduction
 
