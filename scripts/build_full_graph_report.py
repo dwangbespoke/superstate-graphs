@@ -206,6 +206,176 @@ def variance_census_verified(value: dict | None, assignments: dict | None) -> bo
     return True
 
 
+def collect_usage(run_dir: Path, completion: dict | None = None) -> dict:
+    """Account for retained successful request keys without adding overlapping process counters."""
+
+    def count(value: Any) -> int | None:
+        return (
+            value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+        )
+
+    def tokens(value: Any) -> dict:
+        value = value if isinstance(value, dict) else {}
+        return {key: count(value.get(key)) for key in ("prompt_tokens", "completion_tokens")}
+
+    def empty_totals() -> dict:
+        return {
+            "responses": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "responses_missing_usage": 0,
+        }
+
+    def add(total: dict, usage: dict) -> None:
+        total["responses"] += 1
+        total["responses_missing_usage"] += any(value is None for value in usage.values())
+        for key in ("prompt_tokens", "completion_tokens"):
+            if usage[key] is not None:
+                total[key] += usage[key]
+
+    records, conflicts = {}, set()
+    files_scanned = invalid_files = duplicate_copies = 0
+    cache_dirs = (
+        sorted(path for path in run_dir.rglob("llm_cache") if path.is_dir())
+        if run_dir.exists()
+        else []
+    )
+    for cache_dir in cache_dirs:
+        for path in sorted(cache_dir.glob("*/*.json")):
+            files_scanned += 1
+            try:
+                raw = json.loads(path.read_bytes())
+                key = raw.get("cache_key")
+                if (
+                    not isinstance(key, str)
+                    or not re.fullmatch(r"[0-9a-f]{64}", key)
+                    or path.stem != key
+                    or not isinstance(raw.get("result"), dict)
+                    or raw.get("finish_reason", "stop") != "stop"
+                ):
+                    raise ValueError("Invalid successful cache record")
+                final_usage = tokens(raw.get("usage"))
+                attempts = raw.get("attempt_outcomes")
+                complete_attempt_ledger = (
+                    isinstance(attempts, list)
+                    and bool(attempts)
+                    and all(isinstance(item, dict) for item in attempts)
+                    and attempts[-1].get("finish_reason") == "stop"
+                    and tokens(attempts[-1].get("usage")) == final_usage
+                )
+                record = {
+                    "model": safe_text(raw.get("model")),
+                    "revision": safe_text(raw.get("model_revision")),
+                    "final_usage": final_usage,
+                    "recorded_attempt_usage": [tokens(item.get("usage")) for item in attempts]
+                    if complete_attempt_ledger
+                    else [final_usage],
+                    "complete_attempt_ledger": complete_attempt_ledger,
+                    "finished_at_epoch": numeric(raw.get("finished_at_epoch")),
+                }
+                if key in records:
+                    duplicate_copies += 1
+                    if record != records[key]:
+                        conflicts.add(key)
+                else:
+                    records[key] = record
+            except (OSError, ValueError, TypeError, AttributeError):
+                invalid_files += 1
+    final_totals, attempt_totals = empty_totals(), empty_totals()
+    model_totals = {}
+    ledger_count = 0
+    digest = hashlib.sha256()
+    for key, record in sorted(records.items()):
+        if key in conflicts:
+            continue  # A key identifies inputs, not separate executions; ambiguous copies are not summed.
+        digest.update(
+            json.dumps({"key": key, **record}, sort_keys=True, separators=(",", ":")).encode()
+        )
+        digest.update(b"\n")
+        identity = record["model"], record["revision"]
+        model = model_totals.setdefault(
+            identity,
+            {
+                "model": identity[0],
+                "revision": identity[1],
+                "successful_cached_requests": 0,
+                "final_responses": empty_totals(),
+                "recorded_response_attempts": empty_totals(),
+            },
+        )
+        model["successful_cached_requests"] += 1
+        add(final_totals, record["final_usage"])
+        add(model["final_responses"], record["final_usage"])
+        ledger_count += record["complete_attempt_ledger"]
+        for usage in record["recorded_attempt_usage"]:
+            add(attempt_totals, usage)
+            add(model["recorded_response_attempts"], usage)
+
+    snapshots, snapshot_errors = [], 0
+    fields = ("requests", "cache_hits", "prompt_tokens", "completion_tokens", "retries")
+    for role, filename, completion_key in (
+        ("router", "llm_usage.json", "llm_usage"),
+        ("teacher", "teacher_usage.json", "teacher_usage"),
+    ):
+        current = (completion or {}).get(completion_key)
+        sources = []
+        if isinstance(current, dict):
+            sources.append(("completion.json:" + completion_key, "final_process", current, None))
+        elif (run_dir / filename).exists():
+            sources.append((filename, "latest_written_process_snapshot", None, run_dir / filename))
+        for archive in ("operational_restarts", "initialization_rejected"):
+            for path in sorted((run_dir / archive).rglob(filename)):
+                sources.append(
+                    (str(path.relative_to(run_dir)), "archived_process_snapshot", None, path)
+                )
+        for artifact, scope, value, path in sources:
+            try:
+                raw_bytes = path.read_bytes() if path is not None else None
+                value = json.loads(raw_bytes) if raw_bytes is not None else value
+                if not isinstance(value, dict):
+                    raise ValueError("Invalid process snapshot")
+                snapshots.append(
+                    {
+                        "artifact": safe_text(artifact),
+                        "scope": scope,
+                        "role": role,
+                        "source_sha256": hashlib.sha256(raw_bytes).hexdigest()
+                        if raw_bytes is not None
+                        else None,
+                        "counters": {key: count(value.get(key)) for key in fields},
+                    }
+                )
+            except (OSError, ValueError, TypeError):
+                snapshot_errors += 1
+    return {
+        "scope": "All retained successful JSON request records under this run's llm_cache directories, including earlier initialization and rejected candidates sharing those caches",
+        "cache_directories": [safe_text(str(path.relative_to(run_dir))) for path in cache_dirs],
+        "cache_files_scanned": files_scanned,
+        "unique_successful_request_keys": len(records),
+        "duplicate_cache_copies_not_added": duplicate_copies,
+        "conflicting_request_keys_excluded_from_token_totals": len(conflicts),
+        "invalid_or_unreadable_cache_files": invalid_files,
+        "successful_requests_with_usable_metadata": len(records) - len(conflicts),
+        "request_chains_with_attempt_ledger": ledger_count,
+        "request_chains_with_final_response_only": len(records) - len(conflicts) - ledger_count,
+        "final_responses": final_totals,
+        "recorded_response_attempts": attempt_totals,
+        "by_model": [model_totals[key] for key in sorted(model_totals)],
+        "cache_metadata_sha256": digest.hexdigest(),
+        "process_snapshots": snapshots,
+        "unreadable_process_snapshots": snapshot_errors,
+        "actual_billing_available": False,
+        "interpretation": [
+            "Final-response totals count each usable cache key once. Recorded-attempt totals replace, rather than add to, final-response totals and include saved output retries.",
+            "Process counters overlap cached records and are shown separately without summing across snapshots or roles. Completion counters take precedence over duplicate current usage files.",
+            "A process's requests counter counts returned API responses, including invalid-output responses; it is not a complete count of attempted network requests.",
+            "Calls that never produced a retained cache record, deleted or overwritten records, diagnostics outside this run, and missing token metadata are not fully represented.",
+            "Initialization versus selected-candidate usage cannot be separated reliably from cache metadata. Successful means a cached JSON response, not a scientifically accepted graph decision.",
+            "Endpoint-reported prompt and completion tokens are not measured hardware work or billing. No exact spend is inferred; a live snapshot can lag concurrent requests.",
+        ],
+    }
+
+
 def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
     warnings: list[str] = []
     receipts: dict[str, str] = {}
@@ -604,6 +774,7 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
             "teacher": teacher_model,
             "independent_audit": audit_model,
         },
+        "usage": collect_usage(run_dir, completion),
         "optimization": {
             "proposals_observed": attempts,
             "proposal_budget": numeric(contract.get("max_proposals")),
@@ -929,6 +1100,74 @@ def markdown_report(report: dict) -> str:
             )
             + " |"
         )
+    usage = report["usage"]
+    lines += [
+        "",
+        "## Inference usage accounting",
+        "",
+        usage["scope"] + ".",
+        "",
+        f"Unique successful request keys: {md(usage['unique_successful_request_keys'])}. "
+        f"Duplicate cache copies excluded: {md(usage['duplicate_cache_copies_not_added'])}. "
+        f"Conflicting keys excluded from token totals: {md(usage['conflicting_request_keys_excluded_from_token_totals'])}.",
+        "",
+        "| Cache accounting scope | Recorded responses | Prompt tokens | Completion tokens | Responses missing usage |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for label, key in (
+        ("Final successful responses", "final_responses"),
+        ("All recorded attempts in successful request chains", "recorded_response_attempts"),
+    ):
+        values = usage[key]
+        lines.append(
+            "| "
+            + " | ".join(
+                md(value)
+                for value in (
+                    label,
+                    *[
+                        values[name]
+                        for name in (
+                            "responses",
+                            "prompt_tokens",
+                            "completion_tokens",
+                            "responses_missing_usage",
+                        )
+                    ],
+                )
+            )
+            + " |"
+        )
+    lines += [
+        "",
+        "Process snapshots below overlap the cache totals above and are not added to them.",
+        "",
+        "| Snapshot | Role | Returned responses | Cache hits | Prompt tokens | Completion tokens | Retries |",
+        "|---|---|---:|---:|---:|---:|---:|",
+    ]
+    for snapshot in usage["process_snapshots"]:
+        lines.append(
+            "| "
+            + " | ".join(
+                md(value)
+                for value in (
+                    snapshot["artifact"],
+                    snapshot["role"],
+                    *[
+                        snapshot["counters"][key]
+                        for key in (
+                            "requests",
+                            "cache_hits",
+                            "prompt_tokens",
+                            "completion_tokens",
+                            "retries",
+                        )
+                    ],
+                )
+            )
+            + " |"
+        )
+    lines += ["", *["- " + text for text in usage["interpretation"]], ""]
     lines += [
         "",
         "## Interpretation and limits",
@@ -1185,6 +1424,42 @@ def html_report(report: dict) -> str:
         for task in report["executable_tasks"]["selected_examples"]
     )
     models = report["model_provenance"]
+    usage = report["usage"]
+    usage_rows = "".join(
+        "<tr><td>"
+        + esc(label)
+        + "</td>"
+        + "".join(
+            "<td>" + esc(usage[key][field]) + "</td>"
+            for field in (
+                "responses",
+                "prompt_tokens",
+                "completion_tokens",
+                "responses_missing_usage",
+            )
+        )
+        + "</tr>"
+        for label, key in (
+            ("Final successful responses", "final_responses"),
+            (
+                "All recorded response attempts in successful request chains",
+                "recorded_response_attempts",
+            ),
+        )
+    )
+    process_rows = "".join(
+        "<tr><td>"
+        + esc(snapshot["artifact"])
+        + "</td><td>"
+        + esc(snapshot["role"])
+        + "</td>"
+        + "".join(
+            "<td>" + esc(snapshot["counters"][key]) + "</td>"
+            for key in ("requests", "cache_hits", "prompt_tokens", "completion_tokens", "retries")
+        )
+        + "</tr>"
+        for snapshot in usage["process_snapshots"]
+    )
     execution = report["executable_tasks"]
     reached = (
         "Yes"
@@ -1256,6 +1531,11 @@ Available graph: {esc(graph["artifact"])}.</p><p>Observed transitions: {esc(grap
 <h2>Locally executed synthetic tasks</h2><p>Stage: {esc(execution["status"])}. Reference-query agreement receipts: <b>{esc(execution["receipt_supported_consistent_count"])}</b> of {esc(execution["requested_examples"])} requested. Target reached: <b>{esc(reached)}</b>. Construction errors: {esc(execution["construction_error_count"])}. Failed requests, when recorded: {esc(execution["failed_requests"])}.</p>
 <table><thead><tr><th>Task</th><th>Reference executed</th><th>Independent query executed</th><th>Results agree</th></tr></thead><tbody>{execution_rows}</tbody></table>
 <p>Execution here means two reference queries ran on a new synthetic DuckDB fixture and agreed. It does not establish learner success or reproduce official benchmark verification.</p></section>
+<section><h2>Inference usage accounting</h2><p>{esc(usage["scope"])}.</p>
+<p>Unique successful request keys: {esc(usage["unique_successful_request_keys"])}. Duplicate cache copies excluded: {esc(usage["duplicate_cache_copies_not_added"])}. Conflicting keys excluded from token totals: {esc(usage["conflicting_request_keys_excluded_from_token_totals"])}.</p>
+<table><thead><tr><th>Cache accounting scope</th><th>Recorded responses</th><th>Prompt tokens</th><th>Completion tokens</th><th>Responses missing usage</th></tr></thead><tbody>{usage_rows}</tbody></table>
+<p>Process snapshots overlap the cache totals and are not added to them.</p><div class="scroll"><table><thead><tr><th>Snapshot</th><th>Role</th><th>Returned responses</th><th>Cache hits</th><th>Prompt tokens</th><th>Completion tokens</th><th>Retries</th></tr></thead><tbody>{process_rows}</tbody></table></div>
+<ul>{"".join("<li>" + esc(text) + "</li>" for text in usage["interpretation"])}</ul></section>
 <section><h2>Interpretation and limits</h2><ul>{"".join("<li>" + esc(text) + "</li>" for text in report["limitations"])}</ul>
 <details><summary>Snapshot warnings</summary><ul>{"".join("<li>" + esc(text) + "</li>" for text in report["warnings"]) or "<li>None.</li>"}</ul></details></section>
 <footer>Self-contained report. No raw histories, task transcripts, assignment evidence, or runtime credentials are embedded. Graph witness references are explicitly limited to three per edge; the full local graph is unchanged.</footer>

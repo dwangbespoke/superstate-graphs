@@ -588,3 +588,109 @@ def test_stale_or_different_rollout_comparison_is_not_presented_as_verified(tmp_
     assert report["status"] == "partial"
     assert not report["heldout_comparison"]["identities_and_census_verified"]
     assert "0.1000 to 0.5000" not in (output / "report.html").read_text()
+
+
+def cache_record(root, label, *, prompt=100, completion=5, attempts=None):
+    key = hashlib.sha256(label.encode()).hexdigest()
+    row = {
+        "cache_key": key,
+        "model": "Qwen/test",
+        "model_revision": "pinned",
+        "result": {"private": "RAW_CACHED_RESULT_SECRET"},
+        "usage": {"prompt_tokens": prompt, "completion_tokens": completion},
+        "finish_reason": "stop",
+        "finished_at_epoch": 100,
+        "api_key": "RAW_CACHE_SECRET",
+        "messages": "RAW_REQUEST_SECRET",
+    }
+    if attempts is not None:
+        row["attempt_outcomes"] = attempts
+    name = f"llm_cache/{key[:2]}/{key}.json"
+    write(root, name, row)
+    return name, row
+
+
+def test_usage_deduplicates_cache_keys_and_keeps_retry_and_process_views_separate(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    name, row = cache_record(
+        run,
+        "with-retry",
+        attempts=[
+            {"finish_reason": "length", "usage": {"prompt_tokens": 100, "completion_tokens": 10}},
+            {"finish_reason": "stop", "usage": {"prompt_tokens": 100, "completion_tokens": 5}},
+        ],
+    )
+    archive = run / "operational_restarts/first"
+    write(archive, name, row)
+    cache_record(run, "legacy-final-only", prompt=20, completion=2)
+    write(
+        archive,
+        "llm_usage.json",
+        {
+            "requests": 99,
+            "prompt_tokens": 9999,
+            "completion_tokens": 999,
+            "api_key": "RAW_USAGE_SECRET",
+        },
+    )
+    write(run, "llm_usage.json", {"requests": 55, "prompt_tokens": 5555})
+    completion = json.loads((run / "completion.json").read_text())
+    completion["llm_usage"] = {
+        "requests": 1,
+        "prompt_tokens": 3,
+        "completion_tokens": 4,
+        "cache_hits": 2,
+        "retries": 0,
+        "private": "RAW_COMPLETION_SECRET",
+    }
+    write(run, "completion.json", completion)
+    report = report_module.build_report(run, corpus, output)
+    usage = report["usage"]
+    assert usage["unique_successful_request_keys"] == 2
+    assert usage["duplicate_cache_copies_not_added"] == 1
+    assert usage["final_responses"] == {
+        "responses": 2,
+        "prompt_tokens": 120,
+        "completion_tokens": 7,
+        "responses_missing_usage": 0,
+    }
+    assert usage["recorded_response_attempts"] == {
+        "responses": 3,
+        "prompt_tokens": 220,
+        "completion_tokens": 17,
+        "responses_missing_usage": 0,
+    }
+    assert usage["request_chains_with_attempt_ledger"] == 1
+    assert usage["request_chains_with_final_response_only"] == 1
+    assert len(usage["process_snapshots"]) == 2
+    assert usage["process_snapshots"][0]["scope"] == "final_process"
+    assert usage["process_snapshots"][0]["counters"]["requests"] == 1
+    assert usage["process_snapshots"][1]["counters"]["requests"] == 99
+    assert usage["actual_billing_available"] is False
+    assert usage["by_model"][0]["final_responses"] == usage["final_responses"]
+    for name in ("README.md", "report.html", "report.json"):
+        content = (output / name).read_text()
+        assert "RAW_" not in content
+        assert "Inference usage accounting" in content or name == "report.json"
+
+
+def test_usage_reports_conflicting_copies_and_missing_records_without_guessing_tokens(tmp_path):
+    run = tmp_path / "run"
+    name, row = cache_record(run, "conflict")
+    row["finished_at_epoch"] = (
+        200  # Could be a re-execution, so it cannot be summed as a copied request.
+    )
+    write(run / "initialization_rejected/older", name, row)
+    _, unknown = cache_record(run, "unknown-usage", prompt=None, completion=None)
+    invalid = run / "llm_cache/zz/invalid.json"
+    invalid.parent.mkdir(parents=True)
+    invalid.write_text("RAW_INCOMPLETE_CACHE_SECRET")
+    usage = report_module.collect_usage(run)
+    assert usage["unique_successful_request_keys"] == 2
+    assert usage["conflicting_request_keys_excluded_from_token_totals"] == 1
+    assert usage["successful_requests_with_usable_metadata"] == 1
+    assert usage["invalid_or_unreadable_cache_files"] == 1
+    assert usage["final_responses"]["responses_missing_usage"] == 1
+    assert usage["final_responses"]["prompt_tokens"] == 0
+    assert usage["recorded_response_attempts"]["completion_tokens"] == 0
+    assert "RAW_" not in json.dumps(usage)

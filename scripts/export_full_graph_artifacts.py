@@ -611,6 +611,7 @@ def export_artifacts(
         )
         if report["heldout_comparison"]["identities_and_census_verified"]:
             save_json("heldout_comparison.json", report["heldout_comparison"])
+        save_json("usage_accounting.json", report["usage"])
         task_receipts = []
         if include_tasks and (run_dir / "executable_task_summary.json").exists():
             summary = load("executable_task_summary.json")
@@ -850,6 +851,7 @@ def export_artifacts(
                 "| splits.json | Full original-task and rollout split membership |\n"
                 "| state_reward_variance.json | Full outcome moments, weightings, intervals, and manual-grade sensitivity |\n"
                 "| evaluation_summary.json; provenance.json | Observed evaluation summaries and source fingerprints |\n"
+                "| usage_accounting.json | Deduplicated successful cached-request usage and separate overlapping process snapshots; not billing |\n"
                 "| heldout_comparison.json (when available) | Paired seed-versus-selected held-out aggregates, task-cluster intervals, and common rollout IDs; no inference evidence |\n"
                 "| manifest.json | Exported-file SHA-256 hashes and record counts |\n\n"
                 "JSONL compression uses gzip with a fixed timestamp. Read with Python's `gzip.open(path, 'rt')`; "

@@ -291,3 +291,26 @@ git add -f reports/full-corpus-2026-09-17/artifacts/executable_tasks/*/fixture.d
 
 Do not stage the unrestricted `results/` directory. Retain the exported manifest
 with its files so a downloaded copy can be checked against the local final export.
+
+### Usage across operational restarts
+
+The report and `usage_accounting.json` distinguish cumulative retained-cache
+evidence from process-local counters. Cache usage is deduplicated by request key
+across the current and archived `llm_cache` directories. This includes earlier
+initialization and rejected candidates that share those caches; cache metadata
+cannot reliably attribute every request to the selected graph. A successful
+cached request means a completed JSON response, not scientific acceptance.
+
+Two overlapping views are shown: the last successful response for each key, and
+all saved response attempts in each successful request chain, including output
+retries. The final response is included once in the latter view. Older records
+without an attempt ledger contribute only their saved final response. Conflicting
+copies of one key are flagged and excluded from token totals.
+
+Current/final and archived process counters are displayed separately and never
+added to the cache totals or summed across snapshots. This prevents both counting
+retained requests twice after a restart and presenting a restarted process's
+counters as the whole experiment. Calls without a retained successful cache
+record, overwritten/deleted records, and diagnostics outside the run directory
+remain incompletely measured. Endpoint-reported token totals are not measured
+hardware work or invoices; no exact spend is inferred.
