@@ -90,8 +90,10 @@ The graph JSON has exactly these top-level fields:
  "edges": [{"id": string, "source": state_id, "target": state_id,
             "operation": string, "effect": string, "bindings": string}]}
 Use compact stable IDs. Keep descriptions specific but reusable. You may add,
-split, merge, remove, or rewrite nodes AND edges together. Preserve coherent
-coverage of previously supported histories and transitions, not their old labels.
+split, merge, remove, or rewrite nodes AND edges together. Keep every previously
+classified history assigned to a non-null state, by history identity rather than
+count; labels may change. Semantic membership and edge quality remain evaluated
+by the fixed score, not by freezing earlier positive semantic judgments.
 Return the entire revised JSON, with no omitted unchanged sections.
 """
 
@@ -1075,7 +1077,9 @@ class GraphGEPAAdapter:
                 "\nRECOMBINE WITH THIS COMPLEMENTARY CANDIDATE:\n"
                 + canonical(validate_spec(self.state.program_candidates[other]))
                 + "\nResolve node identity/definition conflicts and revalidate edge semantics; "
-                "preserve the supported training coverage of BOTH parents. Do not blindly union."
+                "preserve non-null history assignment coverage of BOTH parents. Labels may change; "
+                "earlier positive semantic or transition judgments are not hard constraints. "
+                "Do not blindly union."
             )
         else:
             prompt += (
@@ -1176,25 +1180,21 @@ class RememberingParetoSelector(ParetoCandidateSelector):
         return index
 
 
-def supported_sets(result: dict) -> tuple[set[str], set[str]]:
-    histories = {
-        a["history_id"]
-        for a, valid in zip(result.get("assignments", []), result.get("membership_supported", []))
-        if valid
+def classified_history_ids(result: dict) -> set[str]:
+    """Routing coverage is independent of the evaluator's semantic verdicts."""
+    return {
+        assignment["history_id"]
+        for assignment in result.get("assignments", [])
+        if assignment.get("state_id") is not None
     }
-    transitions = {
-        f"{result['rollout_id']}:t{t['step']:04d}"
-        for t in result.get("transitions", [])
-        if t["supported"]
-    }
-    return histories, transitions
 
 
 class CoverageAcceptance:
-    """Preserve all supported TRAINING evidence encountered by each parent.
+    """Preserve non-null classification of encountered TRAINING histories.
 
     This is an evolving observed-history ledger, not a claim of an exhaustive
-    training-corpus census at every mutation. The final census is exhaustive.
+    training-corpus census or monotone semantic accuracy. Labels may change;
+    prior membership/transition judgments do not impose an additional hard gate.
     """
 
     def __init__(self, adapter: GraphGEPAAdapter):
@@ -1256,18 +1256,18 @@ class CoverageAcceptance:
                     adapter.train[rid] for rid in sorted(adapter.seen.get(digest(spec), set()))
                 ]
                 for old in adapter.evaluate(relevant, spec).outputs:
-                    old_h, old_t = supported_sets(old)
-                    new_h, new_t = supported_sets(child_by_id[old["rollout_id"]])
-                    if not old_h <= new_h or not old_t <= new_t:
+                    old_h = classified_history_ids(old)
+                    new_h = classified_history_ids(child_by_id[old["rollout_id"]])
+                    if not old_h <= new_h:
                         losses.append(
                             {
                                 "rollout_id": old["rollout_id"],
                                 "lost_histories": sorted(old_h - new_h),
-                                "lost_transitions": sorted(old_t - new_t),
+                                "lost_transitions": [],
                             }
                         )
             if losses:
-                self.reason = f"Historical coverage lost on {len(losses)} training rollouts"
+                self.reason = f"Historical routing coverage lost on {len(losses)} training rollouts"
                 adapter.retention_failures.append({"candidate_hash": child_hash, "losses": losses})
                 write_json(adapter.runtime.directory / "rejections" / f"{child_hash}.json", losses)
                 return False

@@ -21,10 +21,10 @@ from superstate_graphs.graph_evolution import (
     apply_graph_patch,
     candidate_from_graph,
     canonical,
+    classified_history_ids,
     digest,
     numbered_transcript,
     routing_history,
-    supported_sets,
     validate_spec,
 )
 
@@ -331,9 +331,9 @@ def test_judge_receives_numbered_full_transcript_and_valid_support_sets(tmp_path
     assert result["metrics"]["history_coverage"] == 1
     assert result["metrics"]["transition_coverage"] == 1
     assert result["score"] == pytest.approx(1 - 0.03 * len(canonical(graph())) / 100_000)
-    histories, transitions = supported_sets(result)
+    histories = classified_history_ids(result)
     assert histories == {f"r1:h{i:04d}" for i in range(3)}
-    assert transitions == {"r1:t0000", "r1:t0001"}
+    assert all(transition["supported"] for transition in result["transitions"])
     judge_request = llm.calls[-1]["messages"][1]["content"]
     assert numbered_transcript(run) in judge_request
     assert "GROUP 1: TRANSITION 0, ENDING AT HISTORY 1" in judge_request
@@ -351,7 +351,8 @@ def test_impossible_edge_and_unsupported_membership_never_get_coverage_credit(tm
     result = asyncio.run(runtime.evaluate_rollout(candidate_from_graph(graph()), rollout()))
     assert result["metrics"]["history_coverage"] == pytest.approx(2 / 3)
     assert result["metrics"]["transition_coverage"] == 0
-    assert supported_sets(result)[1] == set()
+    assert not any(transition["supported"] for transition in result["transitions"])
+    assert classified_history_ids(result) == {f"r1:h{i:04d}" for i in range(3)}
 
 
 @pytest.mark.parametrize(
@@ -449,10 +450,12 @@ def test_historical_retrieval_is_training_only_complete_and_reports_omissions(tm
         assert retrieved["examples"][1]["step"] == 1
 
 
-def _supported_result(rid, membership=(True, True, True), transition_support=(True, True)):
+def _supported_result(rid, membership=(True, True, True), transition_support=(True, True),
+                      *, states=("A", "A", "A")):
     return {
         "rollout_id": rid,
-        "assignments": [{"history_id": f"{rid}:h{i:04d}", "state_id": "A"} for i in range(3)],
+        "assignments": [{"history_id": f"{rid}:h{i:04d}", "state_id": state}
+                        for i, state in enumerate(states)],
         "membership_supported": list(membership),
         "transitions": [
             {"step": i, "supported": valid} for i, valid in enumerate(transition_support)
@@ -500,17 +503,31 @@ def _retention_case(tmp_path, old_result, new_result):
     return adapter, state, proposal
 
 
-def test_retention_preserves_ids_not_counts_and_checks_history_and_transition_sets(tmp_path: Path):
-    old = _supported_result("r1", (True, True, False), (False, False))
-    new = _supported_result("r1", (False, True, True), (False, False))
+def test_retention_preserves_classified_history_ids_not_counts(tmp_path: Path):
+    old = _supported_result("r1", (True, True, False), (False, False), states=("A", "A", None))
+    new = _supported_result("r1", (False, True, True), (False, False), states=(None, "A", "A"))
     adapter, state, proposal = _retention_case(tmp_path, old, new)
     criterion = CoverageAcceptance(adapter)
     assert not criterion.should_accept(proposal, state)
     assert adapter.retention_failures[0]["losses"][0]["lost_histories"] == ["r1:h0000"]
-    old, new = _supported_result("r1"), _supported_result("r1", transition_support=(True, False))
+    assert adapter.retention_failures[0]["losses"][0]["lost_transitions"] == []
+
+
+def test_retention_cannot_drop_classified_history_even_if_judge_never_supported_it(tmp_path: Path):
+    old = _supported_result("r1", (False, True, True))
+    new = _supported_result("r1", (False, True, True), states=(None, "A", "A"))
     adapter, state, proposal = _retention_case(tmp_path, old, new)
     assert not CoverageAcceptance(adapter).should_accept(proposal, state)
-    assert adapter.retention_failures[0]["losses"][0]["lost_transitions"] == ["r1:t0001"]
+    assert adapter.retention_failures[0]["losses"][0]["lost_histories"] == ["r1:h0000"]
+
+
+def test_improving_child_may_withdraw_prior_membership_and_transition_judgments(tmp_path: Path):
+    old = _supported_result("r1")
+    new = _supported_result("r1", (True, False, True), (False, False))
+    adapter, state, proposal = _retention_case(tmp_path, old, new)
+    assert sum(proposal.subsample_scores_after) > sum(proposal.subsample_scores_before)
+    assert CoverageAcceptance(adapter).should_accept(proposal, state)
+    assert not adapter.retention_failures
 
 
 def test_retention_accepts_relabeling_and_is_explicitly_seen_ledger_not_census(tmp_path: Path):
@@ -531,12 +548,15 @@ def test_nonimproving_minibatch_rejected_before_retention_evaluation(tmp_path: P
     assert not adapter.calls
 
 
-def test_crossover_preserves_union_of_parent_supported_histories(tmp_path: Path):
+def test_crossover_preserves_union_of_parent_classified_histories(tmp_path: Path):
     a, b, child = [candidate_from_graph(graph(name)) for name in ("a", "b", "child")]
     outputs = {
-        (digest(a), "r1"): _supported_result("r1", (True, True, False), (False, False)),
-        (digest(b), "r1"): _supported_result("r1", (False, True, True), (False, False)),
-        (digest(child), "r1"): _supported_result("r1", (True, True, False), (False, False)),
+        (digest(a), "r1"): _supported_result("r1", (True, True, False), (False, False),
+                                             states=("A", "A", None)),
+        (digest(b), "r1"): _supported_result("r1", (False, True, False), (False, False),
+                                             states=(None, "A", "A")),
+        (digest(child), "r1"): _supported_result("r1", (True, True, False), (False, False),
+                                                 states=("A", "A", None)),
     }
     for i in range(3):
         outputs[(digest(child), f"p{i}")] = _supported_result(f"p{i}")

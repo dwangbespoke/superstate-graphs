@@ -119,7 +119,7 @@ Algorithm 2: Evolve a Graph with Historical Retention
     Propose an atomic joint state/edge patch, optionally reconciling a second parent.
     Evaluate the child on the same minibatch; apply the improvement screen.
     Reevaluate the union of parents' previously encountered training rollouts.
-    Reject if any supported history or transition identity is lost.
+    Reject if any previously non-null classified history becomes unassigned.
     Otherwise evaluate every Pareto rollout and add the child to GEPA's archive.
   Select the archived candidate with the highest mean Pareto score.
 
@@ -138,8 +138,12 @@ evidence to the proposer while numerical scores govern selection and acceptance.
 
 Each candidate tracks every training rollout evaluated under that candidate.
 After the cheap minibatch screen, a child is evaluated on the union of its
-parents' previously evaluated training rollouts. Supported history and recorded
-transition sets must be retained by identity, not just by count. Labels may change.
+parents' previously evaluated training rollouts. Every history assigned a non-null
+state by either parent must remain assigned a non-null state, by history identity
+rather than count. Labels may change, including reassignment after node splitting,
+merging, or removal. This gate applies even if the evaluator previously judged the
+assignment unsupported. Semantic membership and transition judgments remain in the
+fixed score; their earlier Boolean verdicts are not additional hard constraints.
 
 This is an **evolving observed-training ledger**. It does not claim to reroute all
 730 training rollouts after every proposal. All 1,030 rollouts are exhaustively
@@ -150,8 +154,15 @@ Every fifth proposal can attempt semantic crossover when complementary
 nonancestor Pareto candidates share ancestry. A joint LLM rewrite reconciles
 definitions, IDs, and edges. A small Pareto subset screens it against both
 parents; no Pareto transcript or textual critique enters reflection. Accepted
-crossovers retain both parents' supported training evidence and record both
+crossovers retain both parents' non-null training-history coverage and record both
 parents in GEPA's ancestry. If no pair exists, the step remains reflection.
+
+Before the first production proposal, the retention gate was corrected from an
+unexercised design that would have hard-retained positive membership and transition
+judgments. The declared correction matches the classification-coverage requirement;
+it was not selected from proposal or heldout outcomes. The fixed evaluator, score,
+minibatch/crossover screens, and Pareto selection were unchanged. No empirical
+comparison or superiority over the earlier design is claimed.
 
 ## Exhaustive final graph and held-out interpretation
 
