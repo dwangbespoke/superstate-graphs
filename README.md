@@ -101,6 +101,9 @@ uv run pytest -q
 uv run python scripts/verify_frozen_graph_comparison.py \
   --run results/full_graph/run_v1 --corpus results/full_graph/corpus \
   --output results/full_graph/run_v1/verification/frozen_heldout_verification.json
+uv run python scripts/verify_full_corpus_assignments.py \
+  --run results/full_graph/run_v1 --corpus results/full_graph/corpus \
+  --output reports/full-corpus-2026-09-17/assignment_verification.json
 uv run python scripts/build_full_graph_report.py
 uv run python scripts/export_full_graph_artifacts.py --include-tasks
 ```
