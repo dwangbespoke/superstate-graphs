@@ -56,9 +56,22 @@ The routing model never receives the edge table. An edge-only edit can therefore
 reuse state assignments exactly; a state-specification change creates a new
 assignment cache. Model, prompt, and corpus provenance are part of cache identity.
 
-An initial codebook is induced from one full training rollout per training task.
-These summaries help propose a codebook; subsequent routing still uses complete
-histories. Reflection evaluates minibatches of six rollouts from distinct original
+Routing uses pinned Qwen3.5-35B-A3B-FP8 replicas with reasoning enabled and
+an evidence-first response schema. Discovery, reflection, and
+semantic judging use Qwen3.5-122B-A10B-FP8 with reasoning enabled. The complete
+raw prefix is retained, followed by a repetition of the actual last observation
+and the exact parser-supplied completed-group count to anchor the current situation.
+Initial production
+grounding checks found that schema-constrained non-reasoning outputs could quote
+real text while confusing a requested deliverable with an observed outcome.
+Rejected initialization outputs are preserved and excluded from the seed graph.
+
+An initial codebook is induced from three explicit source-history/next-observation
+pairs in one training rollout per training task. Full source prefixes are supplied;
+the program assigns the actual history IDs and checks source, target, and observation
+quotes verbatim against the correct sections. Invalid proposals are repaired or
+retained as rejected evidence. These descriptions help propose a codebook;
+subsequent routing still uses complete histories. Reflection evaluates minibatches of six rollouts from distinct original
 tasks and can add, split, merge, remove, or rewrite nodes and edges together.
 
 The frozen rollout evaluator scores prefix membership, recognition of recorded
@@ -79,13 +92,49 @@ evaluator reports evidence and proposed distinctions for reflection; rewards do
 not enter this process. All full Pareto rollouts are evaluated for each accepted
 candidate. The final candidate maximizes mean Pareto score.
 
-The run allows up to 100 proposal attempts, with a four-hour optimization
+The run allows up to 100 proposal attempts, with a three-hour optimization
 deadline checked between iterations so time remains for exhaustive deployment
 and analysis. Actual attempts, accepted candidates, stopping reason, inference
 counts, and score changes must be reported from artifacts; a configured ceiling
 is not a completed number of updates.
 
 ## Historical retention and crossover
+
+The implemented control flow is:
+
+```text
+Algorithm 1: Evaluate a Recorded Rollout
+Input: frozen candidate C, one complete recorded rollout r
+  Independently route every complete prefix using C.state_spec and the full prefix.
+  Match each observed action–observation group against existing C.edge_spec edges.
+  Obtain fixed semantic membership, transition, coherence, and applicability verdicts.
+  Return the fixed scalar score, all identity-indexed verdicts, and textual evidence.
+
+Algorithm 2: Evolve a Graph with Historical Retention
+  Induce a grounded seed from training data; evaluate it on all Pareto rollouts.
+  Until the proposal or time budget is reached:
+    Select a parent using GEPA's per-example Pareto coverage strategy.
+    Sample six training rollouts from distinct original tasks.
+    Evaluate the parent and collect training-only reflective evidence.
+    Propose an atomic joint state/edge patch, optionally reconciling a second parent.
+    Evaluate the child on the same minibatch; apply the improvement screen.
+    Reevaluate the union of parents' previously encountered training rollouts.
+    Reject if any supported history or transition identity is lost.
+    Otherwise evaluate every Pareto rollout and add the child to GEPA's archive.
+  Select the archived candidate with the highest mean Pareto score.
+
+Algorithm 3: Complete and Audit the Corpus Graph
+  Evaluate the selected frozen candidate on test tasks and save those scores.
+  Route every corpus prefix; create explicit additional definitions for residual nulls.
+  Retain every observed adjacent-prefix transition with exact witness identities.
+  Propose bounded operation contracts and independently audit sampled applicability.
+  Estimate descriptive reward variances with trajectory/task dependence preserved.
+  Construct grounded task examples and execute those with supported local fixtures.
+```
+
+One rollout evaluation is one GEPA task. The minibatch average aggregates those
+per-rollout scores; it is not a second scoring rule. Textual feedback supplies
+evidence to the proposer while numerical scores govern selection and acceptance.
 
 Each candidate tracks every training rollout evaluated under that candidate.
 After the cheap minibatch screen, a child is evaluated on the union of its
@@ -161,7 +210,8 @@ uv run python -m superstate_graphs.full_graph \
   --runtime results/runtime/graph-two.json \
   --runtime results/runtime/graph-three.json \
   --runtime results/runtime/graph-four.json \
-  --proposals 100 --minibatch 6 --optimization-hours 4
+  --teacher-runtime results/runtime/graph-teacher.json \
+  --proposals 100 --minibatch 6 --optimization-hours 3
 ```
 
 Successful model responses, per-candidate assignments/evaluations, GEPA

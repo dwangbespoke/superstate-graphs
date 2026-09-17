@@ -303,6 +303,9 @@ def test_final_analysis_integration_is_restartable_and_separates_drafts_from_exe
 
         async def complete_json(self, messages, **kwargs):
             self.calls += 1
+            assert kwargs.get("schema"), "Every analysis inference needs a strict schema"
+            assert "historical/task material has ended" in messages[-1]["content"]
+            assert kwargs.get("thinking") is True
             system = messages[0]["content"]
             data = json.loads(messages[1]["content"])
             if system.startswith("You independently audit"):
@@ -318,6 +321,8 @@ def test_final_analysis_integration_is_restartable_and_separates_drafts_from_exe
                                    for t in data["transitions"]]}
             if system.startswith("Independently review"):
                 return {"verdict": "plausible", "findings": [], "missing_runtime_checks": ["execution"]}
+            if system.startswith("Create a SMALL"):
+                return {"status": "unsupported", "reason": "This integration fixture tests draft flow only"}
             raise AssertionError("Unexpected model request")
 
     rollouts = []
@@ -345,6 +350,7 @@ def test_final_analysis_integration_is_restartable_and_separates_drafts_from_exe
     assert result["all_histories_analyzed"] == 4
     assert result["tasks"]["draft_count"] == 1
     assert result["executed_task_count"] == 0
+    assert result["executable_tasks"]["attempt_status_counts"] == {"unsupported": 1}
     assert all(e["traversable"] for e in graph["edges"])
     assert all(not e["audit"]["universal_contract_certified"] for e in graph["edges"])
     assert "DO_NOT_WRITE_THIS_SECRET" not in (tmp_path / "independent_judge_provenance.json").read_text()

@@ -14,15 +14,16 @@ from gepa.core.adapter import EvaluationBatch
 from gepa.proposer.base import CandidateProposal
 
 from superstate_graphs.full_corpus import index_messages, render_history
-from superstate_graphs.graph_schemas import HISTORY_SUFFIX
 from superstate_graphs.graph_evolution import (
     CoverageAcceptance,
     GraphGEPAAdapter,
     GraphRuntime,
+    apply_graph_patch,
     candidate_from_graph,
     canonical,
     digest,
     numbered_transcript,
+    routing_history,
     supported_sets,
     validate_spec,
 )
@@ -155,7 +156,8 @@ def test_router_classifies_every_full_prefix_without_future_or_edges(tmp_path: P
     assert len(assigned) == run["history_count"] == 3
     assert [a["state_id"] for a in assigned] == ["A", "B", "B"]
     for step, request in enumerate(llm.calls):
-        assert request["messages"][1]["content"] == render_history(run, step) + HISTORY_SUFFIX
+        assert request["messages"][1]["content"] == routing_history(run, step)
+        assert request["messages"][1]["content"].startswith(render_history(run, step))
         assert "inspect_more" not in request["messages"][0]["content"]
         assert "SECRET_REWARD_DATA" not in canonical(request)
         assert "SECRET_KEY" not in canonical(request)
@@ -455,3 +457,37 @@ def test_crossover_preserves_union_of_parent_supported_histories(tmp_path: Path)
     adapter.results[(digest(child), "r1")] = _supported_result("r1")
     assert criterion.should_accept(proposal, state)
     assert proposal.parent_program_ids == [0, 1]
+
+
+def test_atomic_patch_preserves_parent_and_rejects_dangling_or_duplicate_edits():
+    parent = candidate_from_graph(graph())
+    original = copy.deepcopy(parent)
+    rewrite = {**graph()["states"][1], "description": "Inspected facts, with an unresolved decision"}
+    child = apply_graph_patch(parent, {"state_upserts": [rewrite]})
+    assert parent == original
+    assert child["edge_spec"] == parent["edge_spec"]
+    assert validate_spec(child)["states"][1] == rewrite
+    with pytest.raises(ValueError, match="Dangling"):
+        apply_graph_patch(parent, {"remove_state_ids": ["B"]})
+    with pytest.raises(ValueError, match="more than once"):
+        apply_graph_patch(parent, {"state_upserts": [rewrite, rewrite]})
+    assert parent == original
+
+
+def test_teacher_change_invalidates_judgments_without_rerouting(tmp_path: Path):
+    router = FakeLLM(model="router")
+    teacher = FakeLLM(model="teacher-v1")
+    candidate, run = candidate_from_graph(graph()), rollout()
+    first = GraphRuntime(router, tmp_path, teacher_llm=teacher)
+    asyncio.run(first.evaluate_rollout(candidate, run))
+    assert len(router.calls) == 3
+    assert len(teacher.calls) == 1
+    assert teacher.calls[0]["thinking"] is True
+    changed_teacher = FakeLLM(model="teacher-v2")
+    second = GraphRuntime(router, tmp_path, teacher_llm=changed_teacher)
+    asyncio.run(second.evaluate_rollout(candidate, run))
+    assert len(router.calls) == 3
+    assert len(changed_teacher.calls) == 1
+    assert first._cache_provenance(candidate, run, judge=True) != second._cache_provenance(
+        candidate, run, judge=True
+    )

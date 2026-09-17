@@ -63,21 +63,26 @@ class GraphLLM:
         cache_dir: str | Path = "results/cache/graph_llm",
         *,
         concurrency: int = 32,
-        timeout: float = 1800,
+        timeout: float = 900,
         attempts: int = 6,
+        transient_attempts: int = 3,
     ) -> None:
+        if concurrency < 1 or attempts < 1 or transient_attempts < 1 or timeout <= 0:
+            raise ValueError("Concurrency, attempts, and timeout must be positive")
         self.runtime = json.loads(Path(runtime_path).read_text())
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self._client = AsyncOpenAI(
             api_key=self.runtime["api_key"],
             base_url=self.runtime["api_base"],
-            timeout=timeout,
+            timeout=httpx.Timeout(timeout, connect=20, write=120, pool=60),
             max_retries=0,
         )
         self._semaphore = asyncio.Semaphore(concurrency)
         self._inflight: dict[str, asyncio.Task[dict[str, Any]]] = {}
         self.attempts = attempts
+        self.transient_attempts = transient_attempts
+        self._replicas: list[GraphLLM] = [self]
         self.stats = {"requests": 0, "cache_hits": 0, "prompt_tokens": 0,
                       "completion_tokens": 0, "retries": 0}
 
@@ -174,11 +179,16 @@ class GraphLLM:
     ) -> dict[str, Any]:
         last_error: Exception | None = None
         actual_request = dict(request)
+        replica_index = 0
+        transient_failures = 0
         for attempt in range(self.attempts):
             started = time.time()
+            serving_client = self._replicas[replica_index % len(self._replicas)]
             try:
-                async with self._semaphore:
-                    response = await self._client.chat.completions.create(**actual_request)
+                async with serving_client._semaphore:
+                    response = await serving_client._client.chat.completions.create(
+                        **actual_request
+                    )
                 self.stats["requests"] += 1
                 usage = response.usage.model_dump() if response.usage else {}
                 for field in ("prompt_tokens", "completion_tokens"):
@@ -195,12 +205,26 @@ class GraphLLM:
                     "cache_key": key,
                     "model": self.runtime["model"],
                     "model_revision": self.runtime.get("revision"),
+                    "serving_app_id": serving_client.runtime.get("app_id"),
                     "result": result,
                     "usage": usage,
                     "request_bytes": request_bytes,
+                    "messages_sha256": hashlib.sha256(json.dumps(
+                        request["messages"], ensure_ascii=False, sort_keys=True
+                    ).encode()).hexdigest(),
+                    "message_content_characters": [
+                        len(message.get("content", ""))
+                        if isinstance(message.get("content"), str) else None
+                        for message in request["messages"]
+                    ],
+                    "response_format_sha256": hashlib.sha256(json.dumps(
+                        request["response_format"], sort_keys=True
+                    ).encode()).hexdigest(),
+                    "finish_reason": choice.finish_reason,
                     "requested_max_tokens": request["max_tokens"],
                     "actual_max_tokens": actual_request["max_tokens"],
                     "attempt": attempt + 1,
+                    "transient_failures": transient_failures,
                     "elapsed_seconds": time.time() - started,
                     "finished_at_epoch": time.time(),
                 }
@@ -220,8 +244,19 @@ class GraphLLM:
                     # Never turn a long-history failure into input truncation.
                     raise
                 last_error = exc
-            except (APIConnectionError, APITimeoutError, InvalidModelJSON) as exc:
+                transient_failures += 1
+                replica_index += 1
+            except (APIConnectionError, APITimeoutError) as exc:
                 last_error = exc
+                transient_failures += 1
+                replica_index += 1
+            except InvalidModelJSON as exc:
+                # Content failures are not evidence that a replica is unavailable.
+                last_error = exc
+            if transient_failures >= self.transient_attempts:
+                raise RuntimeError(
+                    f"Inference unavailable after {transient_failures} transient failures"
+                ) from last_error
             if attempt + 1 < self.attempts:
                 self.stats["retries"] += 1
                 await asyncio.sleep(min(2 ** attempt, 30) + random.random())
@@ -251,8 +286,9 @@ class GraphLLMPool:
             raise ValueError("A model pool requires identical models and revisions")
         self.clients = [GraphLLM(path, cache_dir, **kwargs) for path in runtime_paths]
         shared_inflight: dict[str, asyncio.Task[dict[str, Any]]] = {}
-        for client in self.clients:
+        for index, client in enumerate(self.clients):
             client._inflight = shared_inflight
+            client._replicas = self.clients[index:] + self.clients[:index]
         self.runtime = self.clients[0].runtime
         self._next = 0
 

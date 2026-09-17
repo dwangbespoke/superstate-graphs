@@ -17,7 +17,7 @@ from superstate_graphs.full_graph import (
     complete_unassigned,
     exhaustive_assign,
 )
-from superstate_graphs.graph_evolution import candidate_from_graph
+from superstate_graphs.graph_evolution import GraphRuntime, candidate_from_graph
 from superstate_graphs.graph_schemas import HISTORY_SUFFIX
 
 
@@ -220,7 +220,7 @@ def test_completion_routes_every_unknown_full_prefix_and_preserves_old_rows_and_
     llm = CompletionLLM()
     graph, assignments = asyncio.run(
         complete_unassigned(
-            SimpleNamespace(llm=llm),
+            GraphRuntime(llm, tmp_path),
             candidate_from_graph(_graph()),
             [run],
             initial,
@@ -238,7 +238,9 @@ def test_completion_routes_every_unknown_full_prefix_and_preserves_old_rows_and_
         for messages in llm.calls
         if messages[0]["content"].startswith("Classify this full policy-visible history")
     ]
-    assert routed == [render_history(run, step) + HISTORY_SUFFIX for step in (1, 2, 2)]
+    from superstate_graphs.graph_evolution import routing_history
+
+    assert routed == [routing_history(run, step) for step in (1, 2, 2)]
     assert "OUTCOME_SECRET" not in json.dumps(llm.calls)
     assert len(graph["routing_stages"]) == 3
     checkpoint = json.loads((tmp_path / "completion_checkpoint.json").read_text())
@@ -249,7 +251,7 @@ def test_completion_resumes_matching_inputs_but_rejects_changed_corpus(tmp_path:
     run, original = _run(), _assignments(_run(), ("A", None, None))
     candidate = candidate_from_graph(_graph())
     llm = CompletionLLM()
-    runtime = SimpleNamespace(llm=llm)
+    runtime = GraphRuntime(llm, tmp_path)
     completed, assignments = asyncio.run(
         complete_unassigned(runtime, candidate, [run], copy.deepcopy(original), tmp_path)
     )
@@ -278,7 +280,7 @@ def test_completion_rejects_missing_state_id_and_honestly_keeps_unassigned_after
     with pytest.raises(ValueError, match="invalid state or evidence"):
         asyncio.run(
             complete_unassigned(
-                SimpleNamespace(llm=CompletionLLM(malformed=True)),
+                GraphRuntime(CompletionLLM(malformed=True), tmp_path),
                 candidate_from_graph(_graph()),
                 [run],
                 _assignments(run, ("A", None, None)),
@@ -287,7 +289,7 @@ def test_completion_rejects_missing_state_id_and_honestly_keeps_unassigned_after
         )
     graph, assignments = asyncio.run(
         complete_unassigned(
-            SimpleNamespace(llm=CompletionLLM(never_assign=True)),
+            GraphRuntime(CompletionLLM(never_assign=True), tmp_path),
             candidate_from_graph(_graph()),
             [run],
             _assignments(run, ("A", None, None)),
@@ -326,7 +328,7 @@ def test_witnessed_edges_account_for_every_transition_once_including_unassigned(
 
     llm = ContractLLM()
     output = asyncio.run(
-        build_witnessed_edges(SimpleNamespace(llm=llm), graph, assignments, runs, tmp_path)
+        build_witnessed_edges(GraphRuntime(llm, tmp_path), graph, assignments, runs, tmp_path)
     )
     accounted = [w["transition_id"] for edge in output["edges"] for w in edge["witnesses"]]
     accounted.extend(w["transition_id"] for w in output["unassigned_transitions"])

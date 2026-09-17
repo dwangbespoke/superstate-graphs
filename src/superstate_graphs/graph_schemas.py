@@ -73,6 +73,23 @@ DISCOVERY_SCHEMA = obj(
     }
 )
 LOCAL_STATE_SCHEMA = obj({"name": TEXT, "description": SHORT, "exclusions": TEXTS})
+GROUNDED_STATE = obj(
+    {
+        "name": TEXT,
+        "description": SHORT,
+        "exclusions": TEXTS,
+        "evidence_quote": {"type": "string", "maxLength": 240},
+    }
+)
+LOCAL_TRANSITION_SCHEMA = obj(
+    {
+        "source": GROUNDED_STATE,
+        "target": GROUNDED_STATE,
+        "operation": SHORT,
+        "effect": SHORT,
+        "observation_quote": {"type": "string", "maxLength": 240},
+    }
+)
 EDGE_CONTRACT_SCHEMA = obj(
     {
         "operation": SHORT,
