@@ -106,6 +106,15 @@ settings](https://huggingface.co/Qwen/Qwen3.5-35B-A3B-FP8#best-practices) and
 [vLLM reasoning budget
 control](https://docs.vllm.ai/en/latest/features/reasoning_outputs/#thinking-budget-control).
 
+Structured requests disable arbitrary JSON formatting whitespace. vLLM requires
+the same JSON constraint in both `response_format` and `structured_outputs` to
+accept this formatting option. The resolved policy records that duplication and
+the whitespace setting so higher-level caches invalidate when it changes. This
+guard passed the seven endpoint regressions under thinking mode. It is not proven
+to eliminate every output-length retry: an eight-router pre-guard diagnostic
+finished 255 of its first 256 requests and was interrupted after one long tail.
+No completed eight-router throughput measurement is claimed from that run.
+
 Reflection can use a larger output budget. A truncated
 output is rejected and retried with a larger output allowance. Transient
 network/server failures are retried with bounded backoff and, for a pool, fail
