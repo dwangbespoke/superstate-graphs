@@ -1,0 +1,113 @@
+{
+  "verified_at_utc": "2026-09-17T19:39:41.510676+00:00",
+  "teacher_shutdown_requested_at_utc": "2026-09-17T19:38:45.041193+00:00",
+  "status": "all_ten_compact_apps_stopped",
+  "scope": "Only the two explicitly authorized compact teacher stop markers were newly written; eight compact routers independently verified still stopped. No unrelated applications changed.",
+  "apps": [
+    {
+      "runtime_name": "graph-compact-teacher-one",
+      "app_id": "ap-WZ0EWhsHqGd7sIHkUzRSve",
+      "description": "superstate-graphs-full-qwen-teacher-compact-one",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 12:39:02-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-teacher-two",
+      "app_id": "ap-9agSEMRDOlDqdZc8LbslSU",
+      "description": "superstate-graphs-full-qwen-teacher-compact-two",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 12:39:06-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-one",
+      "app_id": "ap-wszaoXNj2livfJfVUeo4rn",
+      "description": "superstate-graphs-full-qwen-compact-one",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 10:58:31-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-two",
+      "app_id": "ap-nPaFWQxnnmRHId2FVdHrwg",
+      "description": "superstate-graphs-full-qwen-compact-two",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 10:58:34-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-three",
+      "app_id": "ap-nCLQ18HqNXiL6mguKs7yxD",
+      "description": "superstate-graphs-full-qwen-compact-three",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 10:58:32-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-four",
+      "app_id": "ap-ASEN9pe4X5qPp3DLXYzM1o",
+      "description": "superstate-graphs-full-qwen-compact-four",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 10:58:32-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-five",
+      "app_id": "ap-IdKTqCBwH1F9CtQNKhavx3",
+      "description": "superstate-graphs-full-qwen-compact-five",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 10:58:34-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-six",
+      "app_id": "ap-agPZpsgIUBDf27X3sh06gB",
+      "description": "superstate-graphs-full-qwen-compact-six",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 10:58:31-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-seven",
+      "app_id": "ap-uF1AwWAzhand0s40iAvuaB",
+      "description": "superstate-graphs-full-qwen-compact-seven",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 10:58:33-07:00",
+      "stop_marker_exists": true
+    },
+    {
+      "runtime_name": "graph-compact-eight",
+      "app_id": "ap-51biWB1CT7cq1Vs2OudtUp",
+      "description": "superstate-graphs-full-qwen-compact-eight",
+      "state": "stopped",
+      "tasks": "0",
+      "created_at": "2026-09-17 07:19:56-07:00",
+      "stopped_at": "2026-09-17 10:58:33-07:00",
+      "stop_marker_exists": true
+    }
+  ],
+  "newly_stopped_app_ids": [
+    "ap-WZ0EWhsHqGd7sIHkUzRSve",
+    "ap-9agSEMRDOlDqdZc8LbslSU"
+  ],
+  "all_apps_stopped_with_zero_tasks": true
+}

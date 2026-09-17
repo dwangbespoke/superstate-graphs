@@ -1,0 +1,79 @@
+{
+  "all_manifest_hashes_and_source_hashes_match_before_and_after_playback": true,
+  "both_examples_prominently_marked_failed_research_cases_not_learner_ready": true,
+  "both_manual_reviews_match_and_bind_all_five_artifacts": true,
+  "export_manifest_sha256": "3103f5ffab543d281c81284e4fe149a95682063eb4f443902f88eb2f816ae2f6",
+  "file_count_excluding_manifest": 23,
+  "five_task_artifacts_per_example_are_exact_source_byte_copies": true,
+  "format": "independent-exploratory-export-verification-v1",
+  "learner_ready_examples_certified": 0,
+  "limitations": [
+    "Acceptance by the original verifier checks preserved expected output, including known shared oracle defects; it does not reverse either failed manual semantic review.",
+    "The two published artifacts are failed research cases, not validated learner benchmarks.",
+    "This is packaging/provenance verification, not a new semantic evaluation or privacy certification.",
+    "No primary result, source artifact, exported artifact, or formation code was changed."
+  ],
+  "manual_semantic_verdict_counts": {
+    "failed": 2
+  },
+  "original_fixed_outcomes": {
+    "attempt_status_counts": {
+      "consistency_failed": 1,
+      "execution_failed": 3,
+      "independent_review_not_supported": 8,
+      "locally_executed_consistent": 2,
+      "unsupported": 2
+    },
+    "attempts": 16,
+    "query_agreement_count": 2,
+    "requested": 3,
+    "status": "exploratory_paths_exhausted",
+    "target_reached": false
+  },
+  "original_verifier_playback": [
+    {
+      "interpretation": "Matches preserved expected output only; manual semantic verdict remains failed.",
+      "original_verifier_status": "passed",
+      "path_id": "path_a264cce3ccec364d078e",
+      "query_file": "oracle.sql"
+    },
+    {
+      "interpretation": "Matches preserved expected output only; manual semantic verdict remains failed.",
+      "original_verifier_status": "passed",
+      "path_id": "path_a264cce3ccec364d078e",
+      "query_file": "independent.sql"
+    },
+    {
+      "interpretation": "Confirms the unchanged exported verifier rejects an empty answer; not semantic validation.",
+      "original_verifier_status": "incorrect_result",
+      "path_id": "path_a264cce3ccec364d078e",
+      "query_file": "generated_empty_result_control_not_published"
+    },
+    {
+      "interpretation": "Matches preserved expected output only; manual semantic verdict remains failed.",
+      "original_verifier_status": "passed",
+      "path_id": "path_c4e060c4230cbe9cc658",
+      "query_file": "oracle.sql"
+    },
+    {
+      "interpretation": "Matches preserved expected output only; manual semantic verdict remains failed.",
+      "original_verifier_status": "passed",
+      "path_id": "path_c4e060c4230cbe9cc658",
+      "query_file": "independent.sql"
+    },
+    {
+      "interpretation": "Confirms the unchanged exported verifier rejects an empty answer; not semantic validation.",
+      "original_verifier_status": "incorrect_result",
+      "path_id": "path_c4e060c4230cbe9cc658",
+      "query_file": "generated_empty_result_control_not_published"
+    }
+  ],
+  "publisher_matches_current_code": true,
+  "publisher_sha256": "f0305dfe1460d92ffbc56dfd76f93507ca07eaec5b6af81bf1b25e6cfe96f7fa",
+  "review_source_sha256": "724b81e15653e7083475c4edf3254435bbc8a9cf7ca1b961762594f00e04c3f0",
+  "source_hash_count": 112,
+  "status": "verified",
+  "verification_implementation": "Independent stdlib file/ledger assertions; original standalone submission verifier used for exported-package playback, no publisher invocation or inference",
+  "verified_at_utc": "2026-09-17T19:45:01.062673+00:00",
+  "verifier_sha256": "f519bd056745850d0c3e90db434e17eeabc1ff2e21e4c331e2e34f12c4171685"
+}

@@ -1,0 +1,974 @@
+{
+  "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+  "excluded_edge_reason_counts": {
+    "proposer_not_plausible": 180,
+    "validated_or_raw_counterexample": 343
+  },
+  "excluded_path_reason_counts": {
+    "draft_review_contradicted": 23,
+    "edge_sequence_rejected_by_primary_draft_review": 2,
+    "ineligible_edge": 1
+  },
+  "format": "exploratory-witness-task-plan-v1",
+  "limitations": [
+    "Witness-specific exploratory tasks, not sampled-supported graph paths.",
+    "Unknown applicability, including citation-invalidated judgments, remains unresolved; raw and validated verdicts are retained separately.",
+    "No validated or raw proposed counterexample is admitted. Particular observed witnesses may support a concrete task even when reusable source applicability is unestablished.",
+    "A successful receipt means a strict independent faithfulness review and two separately prompted SQL solutions executed and agreed on a synthetic fixture.",
+    "It does not prove reusable or universal edges, execution of arbitrary graph paths, learner success, or post-training lift.",
+    "Original graph, audit, completion, and executable-example results remain unchanged."
+  ],
+  "maximum_path_attempts": 24,
+  "original_executed_examples": 0,
+  "original_run_completed": true,
+  "original_supported_edges": 1,
+  "plan_sha256": "5d86073d88e69b4c7df504f82c3480805684bc68368ae5c2e69999ab9a2dad37",
+  "qualifying_exploratory_edges": 27,
+  "resample_filtered_paths_requested": true,
+  "resampling_seed": 20260919,
+  "selected_paths": [
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_7f531af69a9b": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_3b333ec8fc8df22a8185",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_e6ba8bc574db75c9468f",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_0ee11d6574e51d56ddc7",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_f0d3e1504400": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_90a527cbaa35f4128996",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_bb54cf6d29d356dacea0",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_8123cc657cee9711cb47",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_f0d3e1504400",
+        "E_7f531af69a9b"
+      ],
+      "path_id": "path_0206be1787df8b3a1890",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_573ad8b1cd98": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_54e27399103527411be3",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_0755fedb69790e0827e6",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_ed3cbf9371166e0dd7f5",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ],
+        "E_b405a305f817": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_f2f7d35acf0bba400dfc",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_fbf5b91c7812c74ef488",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_f8eb59fcd9ba1b6f8de8",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_573ad8b1cd98",
+        "E_b405a305f817"
+      ],
+      "path_id": "path_0788c0148d2793f7966a",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_08b763a839a1": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_dd93f81945e290e53479",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_ea1f991eb3480065286f",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_c5a3a3fc6b2911399bf3",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_32201af7feb0": [
+          {
+            "applicability_label": "unresolved_applicability",
+            "audit_id": "audit_7ded612733b0e0adef8d",
+            "citation_error_count": 0,
+            "original_verdict": "unknown",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_aa572ee42cf7231af66f",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_e71ea84bf223d831a5ed",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_32201af7feb0",
+        "E_08b763a839a1"
+      ],
+      "path_id": "path_185c9bfdb65671f7dadc",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_1901c1138853": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_de632034959002958e85",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_2dca71e29040ee38a7b2",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_ee7d92efbae7e4904abb",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_b5dfa0f344fd": [
+          {
+            "applicability_label": "unresolved_applicability",
+            "audit_id": "audit_33b32401aaef6db26bb6",
+            "citation_error_count": 0,
+            "original_verdict": "unknown",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_1f77f06dba322994e7d9",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_52900537b930db5a4eee",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_b5dfa0f344fd",
+        "E_1901c1138853"
+      ],
+      "path_id": "path_2cde21eecca0246dbcdf",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_27400d3c444d": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_3c30bd109efda8c87384",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_8aebbd106d55574d76c2",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_fc445adb3f51c3848141",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_5c940e5731a3": [
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_ad1f0d0f010c3d446052",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_536814731b289e79f927",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_1a03893b201e7c6a9234",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_5c940e5731a3",
+        "E_27400d3c444d"
+      ],
+      "path_id": "path_401f45c741b339373b12",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_b5dfa0f344fd": [
+          {
+            "applicability_label": "unresolved_applicability",
+            "audit_id": "audit_33b32401aaef6db26bb6",
+            "citation_error_count": 0,
+            "original_verdict": "unknown",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_1f77f06dba322994e7d9",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_52900537b930db5a4eee",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ],
+        "E_d956f867e2ee": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_6151bc9bc943252ecc21",
+            "citation_error_count": 3,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_7d4d02d602400653246d",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_b5453d724fe5be249821",
+            "citation_error_count": 3,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_b5dfa0f344fd",
+        "E_d956f867e2ee"
+      ],
+      "path_id": "path_6c8b8e08004c5930c749",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_065b57cd3dde": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_a5281561ec64cf17d9ed",
+            "citation_error_count": 3,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_0b3115db7c1f69113135",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_fc7084f185fcdd69619d",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_32201af7feb0": [
+          {
+            "applicability_label": "unresolved_applicability",
+            "audit_id": "audit_7ded612733b0e0adef8d",
+            "citation_error_count": 0,
+            "original_verdict": "unknown",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_aa572ee42cf7231af66f",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_e71ea84bf223d831a5ed",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_32201af7feb0",
+        "E_065b57cd3dde"
+      ],
+      "path_id": "path_80db13dc23d40982c2d9",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_b7bc79610e2c": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_263c8b4748b91ea79cc3",
+            "citation_error_count": 3,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_68cec45d1c5d3b50d4c3",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_8e70b104c42b1f7e2a5b",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_fed5351a5c1e": [
+          {
+            "applicability_label": "unresolved_applicability",
+            "audit_id": "audit_4b6e2b9c8b39c55b2db6",
+            "citation_error_count": 0,
+            "original_verdict": "unknown",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_6da5bd1fc7abb51492c5",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_53c68b799796eacb3864",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_fed5351a5c1e",
+        "E_b7bc79610e2c"
+      ],
+      "path_id": "path_9062afd954f3abc0f48f",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_1901c1138853": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_de632034959002958e85",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_2dca71e29040ee38a7b2",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_ee7d92efbae7e4904abb",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_82ff190c48fc": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_38016bdb98da63c227a5",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_37b50e3cef85db079381",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_652c737deedbeb966b5c",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_1901c1138853",
+        "E_82ff190c48fc"
+      ],
+      "path_id": "path_9094bc7e475264a4b660",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_945befbdb7a9": [
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_1ccbb7dac841edd230fe",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_6823cf15aae4aa5f017d",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_aa8aef6ec31fde993f01",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_fed5351a5c1e": [
+          {
+            "applicability_label": "unresolved_applicability",
+            "audit_id": "audit_4b6e2b9c8b39c55b2db6",
+            "citation_error_count": 0,
+            "original_verdict": "unknown",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_6da5bd1fc7abb51492c5",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_53c68b799796eacb3864",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_945befbdb7a9",
+        "E_fed5351a5c1e"
+      ],
+      "path_id": "path_a264cce3ccec364d078e",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_08b763a839a1": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_dd93f81945e290e53479",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_ea1f991eb3480065286f",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_c5a3a3fc6b2911399bf3",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_b405a305f817": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_f2f7d35acf0bba400dfc",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_fbf5b91c7812c74ef488",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_f8eb59fcd9ba1b6f8de8",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_08b763a839a1",
+        "E_b405a305f817"
+      ],
+      "path_id": "path_a720a1c9978d21328465",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_27400d3c444d": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_3c30bd109efda8c87384",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_8aebbd106d55574d76c2",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_fc445adb3f51c3848141",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_5c940e5731a3": [
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_ad1f0d0f010c3d446052",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_536814731b289e79f927",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_1a03893b201e7c6a9234",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_27400d3c444d",
+        "E_5c940e5731a3"
+      ],
+      "path_id": "path_a7dd34c498502b17cbc6",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_065b57cd3dde": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_a5281561ec64cf17d9ed",
+            "citation_error_count": 3,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_0b3115db7c1f69113135",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_fc7084f185fcdd69619d",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_573ad8b1cd98": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_54e27399103527411be3",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_0755fedb69790e0827e6",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_ed3cbf9371166e0dd7f5",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_065b57cd3dde",
+        "E_573ad8b1cd98"
+      ],
+      "path_id": "path_b5c4a6717930e4d87a8e",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_1901c1138853": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_de632034959002958e85",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_2dca71e29040ee38a7b2",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_ee7d92efbae7e4904abb",
+            "citation_error_count": 1,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ],
+        "E_f1c64ef4904a": [
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_cb89df9ef71d1edd291a",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_ca7a764bc6ff51c9f47d",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_13b874f37b5df218e01f",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_1901c1138853",
+        "E_f1c64ef4904a"
+      ],
+      "path_id": "path_c4e060c4230cbe9cc658",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_b5dfa0f344fd": [
+          {
+            "applicability_label": "unresolved_applicability",
+            "audit_id": "audit_33b32401aaef6db26bb6",
+            "citation_error_count": 0,
+            "original_verdict": "unknown",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_1f77f06dba322994e7d9",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_52900537b930db5a4eee",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ],
+        "E_f0d3e1504400": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_90a527cbaa35f4128996",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_bb54cf6d29d356dacea0",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_8123cc657cee9711cb47",
+            "citation_error_count": 2,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_b5dfa0f344fd",
+        "E_f0d3e1504400"
+      ],
+      "path_id": "path_f8eaddb6a8ff51dd0b2e",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    },
+    {
+      "draft_review": null,
+      "edge_audit_evidence": {
+        "E_b5dfa0f344fd": [
+          {
+            "applicability_label": "unresolved_applicability",
+            "audit_id": "audit_33b32401aaef6db26bb6",
+            "citation_error_count": 0,
+            "original_verdict": "unknown",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_1f77f06dba322994e7d9",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          },
+          {
+            "applicability_label": "sampled_source_supported",
+            "audit_id": "audit_52900537b930db5a4eee",
+            "citation_error_count": 0,
+            "original_verdict": "supported",
+            "validated_verdict": "supported"
+          }
+        ],
+        "E_befa7a9d968c": [
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_0458f1433cba07b6a483",
+            "citation_error_count": 3,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_0ab9ee0f57510a3af3cc",
+            "citation_error_count": 3,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          },
+          {
+            "applicability_label": "unresolved_applicability_due_to_citation_errors",
+            "audit_id": "audit_83e39ab644ea7a7e2a76",
+            "citation_error_count": 4,
+            "original_verdict": "supported",
+            "validated_verdict": "unknown"
+          }
+        ]
+      },
+      "edge_ids": [
+        "E_b5dfa0f344fd",
+        "E_befa7a9d968c"
+      ],
+      "path_id": "path_f96bb12ca1b8be6b0284",
+      "resampling_seed": 20260919,
+      "selection_origin": "resampled_filtered_observed_graph"
+    }
+  ],
+  "source_artifact_sha256": {
+    "corpus/histories.jsonl": "e5df9a993b86c4f42e7fe0712f7f17046cb05aa80205de048ee177e1fdb75113",
+    "corpus/manifest.json": "680eccc9ca6bb6238600dee73495df2a144a86b37145f6c0bbd27a7e4f6d4350",
+    "corpus/rollouts.jsonl": "80d5f8e4e807fc9699531568f3fbddc1a0ff66b9ba7ad7da671d32bd34f8c2fd",
+    "corpus/transitions.jsonl": "5ff9d185934cfea2dd10c7ff93f3523c04dc25756eac459054ac646cd1496736",
+    "run/assignments_all.json": "b23264bd1327c57df4a31e9730bf60b6790a4c43aa8a1481812876e39571339e",
+    "run/completion.json": "23ba2e831716e7f28237fbd2ca3e6f2623414ab12733792184e7d337172c7e2d",
+    "run/executable_task_summary.json": "93ec91c3eb528ace5051bbd968d82f205dcd6e1b3c5501611e56381336dc0650",
+    "run/graph.json": "03cda04302f45a928fd698304b3ffdfede4e314a7ed778504841a84684173fda",
+    "run/independent_audit_jobs.json": "40e24d6ed64d3eaa5c171a6949e1dff456d3c87043fef90a01138e6402b36b0a",
+    "run/independent_audit_results.json": "4a46489938f228cf58d8cd1ccff9414e7f0a1f43f5fe90fa1119dfe3ac2c6cc0",
+    "run/independent_audit_summary.json": "af3786259e13432c6b7504823579c47ac9fcf1c796cb1f0d50b2ce4dfdc13955",
+    "run/task_draft_summary.json": "df00f8deee83f3c5480a7ce42bdee3fe888b4a30f7c2d080e04be17f94a8c083",
+    "run/task_path_proposals.json": "23ec2ed990b07d9d44369134453208ec2a48c2e8c019abfaa718762eedcb0d39"
+  }
+}

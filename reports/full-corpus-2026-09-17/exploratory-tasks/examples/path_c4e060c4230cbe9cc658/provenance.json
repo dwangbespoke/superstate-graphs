@@ -1,0 +1,83 @@
+{
+  "cross_task": true,
+  "draft_review": null,
+  "edge_audit_evidence": {
+    "E_1901c1138853": [
+      {
+        "applicability_label": "unresolved_applicability_due_to_citation_errors",
+        "audit_id": "audit_de632034959002958e85",
+        "citation_error_count": 4,
+        "original_verdict": "supported",
+        "validated_verdict": "unknown"
+      },
+      {
+        "applicability_label": "sampled_source_supported",
+        "audit_id": "audit_2dca71e29040ee38a7b2",
+        "citation_error_count": 0,
+        "original_verdict": "supported",
+        "validated_verdict": "supported"
+      },
+      {
+        "applicability_label": "unresolved_applicability_due_to_citation_errors",
+        "audit_id": "audit_ee7d92efbae7e4904abb",
+        "citation_error_count": 1,
+        "original_verdict": "supported",
+        "validated_verdict": "unknown"
+      }
+    ],
+    "E_f1c64ef4904a": [
+      {
+        "applicability_label": "sampled_source_supported",
+        "audit_id": "audit_cb89df9ef71d1edd291a",
+        "citation_error_count": 0,
+        "original_verdict": "supported",
+        "validated_verdict": "supported"
+      },
+      {
+        "applicability_label": "unresolved_applicability_due_to_citation_errors",
+        "audit_id": "audit_ca7a764bc6ff51c9f47d",
+        "citation_error_count": 2,
+        "original_verdict": "supported",
+        "validated_verdict": "unknown"
+      },
+      {
+        "applicability_label": "unresolved_applicability_due_to_citation_errors",
+        "audit_id": "audit_13b874f37b5df218e01f",
+        "citation_error_count": 4,
+        "original_verdict": "supported",
+        "validated_verdict": "unknown"
+      }
+    ]
+  },
+  "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+  "independent_review_verdict": "faithful",
+  "manual_review": "review.json",
+  "path_id": "path_c4e060c4230cbe9cc658",
+  "resampling_seed": 20260919,
+  "selection_origin": "resampled_filtered_observed_graph",
+  "source_result_sha256": "6a9d6220d5dc8c7a6a12fa9dc1ed1b370d1b69ede1f66e1cc04666084a9800bd",
+  "state_ids": [
+    "model_files_created",
+    "dbt_deps_installed",
+    "partial_model_success"
+  ],
+  "universal_contract_certified": false,
+  "witnesses": [
+    {
+      "edge_id": "E_1901c1138853",
+      "rollout_id": "58b7c16c-15e6-47be-87df-1751080b6bef",
+      "source_history_id": "58b7c16c-15e6-47be-87df-1751080b6bef:h0013",
+      "target_history_id": "58b7c16c-15e6-47be-87df-1751080b6bef:h0014",
+      "task_id": "dbt-product-sales-velocity",
+      "witness_transition_id": "58b7c16c-15e6-47be-87df-1751080b6bef:t0013"
+    },
+    {
+      "edge_id": "E_f1c64ef4904a",
+      "rollout_id": "a9584652-9940-41ce-818b-19ffb5cd9a8b",
+      "source_history_id": "a9584652-9940-41ce-818b-19ffb5cd9a8b:h0026",
+      "target_history_id": "a9584652-9940-41ce-818b-19ffb5cd9a8b:h0027",
+      "task_id": "pos-operations",
+      "witness_transition_id": "a9584652-9940-41ce-818b-19ffb5cd9a8b:t0026"
+    }
+  ]
+}

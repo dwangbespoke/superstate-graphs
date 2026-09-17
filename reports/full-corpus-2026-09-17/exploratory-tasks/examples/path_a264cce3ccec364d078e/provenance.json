@@ -1,0 +1,83 @@
+{
+  "cross_task": true,
+  "draft_review": null,
+  "edge_audit_evidence": {
+    "E_945befbdb7a9": [
+      {
+        "applicability_label": "sampled_source_supported",
+        "audit_id": "audit_1ccbb7dac841edd230fe",
+        "citation_error_count": 0,
+        "original_verdict": "supported",
+        "validated_verdict": "supported"
+      },
+      {
+        "applicability_label": "sampled_source_supported",
+        "audit_id": "audit_6823cf15aae4aa5f017d",
+        "citation_error_count": 0,
+        "original_verdict": "supported",
+        "validated_verdict": "supported"
+      },
+      {
+        "applicability_label": "unresolved_applicability_due_to_citation_errors",
+        "audit_id": "audit_aa8aef6ec31fde993f01",
+        "citation_error_count": 1,
+        "original_verdict": "supported",
+        "validated_verdict": "unknown"
+      }
+    ],
+    "E_fed5351a5c1e": [
+      {
+        "applicability_label": "unresolved_applicability",
+        "audit_id": "audit_4b6e2b9c8b39c55b2db6",
+        "citation_error_count": 0,
+        "original_verdict": "unknown",
+        "validated_verdict": "unknown"
+      },
+      {
+        "applicability_label": "sampled_source_supported",
+        "audit_id": "audit_6da5bd1fc7abb51492c5",
+        "citation_error_count": 0,
+        "original_verdict": "supported",
+        "validated_verdict": "supported"
+      },
+      {
+        "applicability_label": "sampled_source_supported",
+        "audit_id": "audit_53c68b799796eacb3864",
+        "citation_error_count": 0,
+        "original_verdict": "supported",
+        "validated_verdict": "supported"
+      }
+    ]
+  },
+  "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+  "independent_review_verdict": "faithful",
+  "manual_review": "review.json",
+  "path_id": "path_a264cce3ccec364d078e",
+  "resampling_seed": 20260919,
+  "selection_origin": "resampled_filtered_observed_graph",
+  "source_result_sha256": "b6bc1a51dab89f204297127968d0bc212f677be4ee29efebb8f88072aacf34de",
+  "state_ids": [
+    "dbt_debug_verified",
+    "dbt_debug_verified",
+    "model_compilation_started"
+  ],
+  "universal_contract_certified": false,
+  "witnesses": [
+    {
+      "edge_id": "E_945befbdb7a9",
+      "rollout_id": "5d59e5dd-bc53-414e-abda-eddea5ff27ae",
+      "source_history_id": "5d59e5dd-bc53-414e-abda-eddea5ff27ae:h0017",
+      "target_history_id": "5d59e5dd-bc53-414e-abda-eddea5ff27ae:h0018",
+      "task_id": "dbt-inventory-stockout-risk",
+      "witness_transition_id": "5d59e5dd-bc53-414e-abda-eddea5ff27ae:t0017"
+    },
+    {
+      "edge_id": "E_fed5351a5c1e",
+      "rollout_id": "00b9900d-8f0b-4bf5-b5a6-00fcf8fc7cd7",
+      "source_history_id": "00b9900d-8f0b-4bf5-b5a6-00fcf8fc7cd7:h0010",
+      "target_history_id": "00b9900d-8f0b-4bf5-b5a6-00fcf8fc7cd7:h0011",
+      "task_id": "dbt-weekly-sales-growth",
+      "witness_transition_id": "00b9900d-8f0b-4bf5-b5a6-00fcf8fc7cd7:t0010"
+    }
+  ]
+}

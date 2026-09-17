@@ -67,6 +67,110 @@ def encode(value):
     )
 
 
+def load_manual_reviews(path: Path | None, successful: list[dict]):
+    """An optional review annotates fixed outcomes; it never changes their counts."""
+    if path is None:
+        return {}, None
+    raw = path.read_bytes()
+    export_checks.assert_publishable(raw, "manual review receipt")
+    value = json.loads(raw)
+    require(
+        isinstance(value, dict)
+        and set(value) == {"format", "reviews"}
+        and value["format"] == "exploratory-task-manual-review-v1"
+        and isinstance(value["reviews"], list),
+        "Invalid manual review format",
+    )
+    by_path = {row["path_id"]: row for row in successful}
+    reviews = {}
+    fields = {
+        "path_id",
+        "verdict",
+        "findings",
+        "review_method",
+        "reviewer_kind",
+        "reviewed_at_utc",
+        "reviewed_artifact_sha256",
+    }
+    for row in value["reviews"]:
+        require(isinstance(row, dict) and set(row) == fields, "Unexpected manual review fields")
+        pid = row["path_id"]
+        require(
+            isinstance(pid, str) and pid in by_path and pid not in reviews,
+            "Manual review path is duplicate or outside exported examples",
+        )
+        require(
+            row["verdict"] in {"failed", "no_defect_identified", "unresolved"}
+            and row["reviewer_kind"] in {"coding_agent", "human"},
+            "Invalid manual semantic verdict or reviewer kind",
+        )
+        require(
+            isinstance(row["findings"], list)
+            and 1 <= len(row["findings"]) <= 30
+            and all(
+                isinstance(text, str) and 0 < len(text.strip()) <= 5000 for text in row["findings"]
+            )
+            and isinstance(row["review_method"], str)
+            and 0 < len(row["review_method"].strip()) <= 2000,
+            "Manual review requires bounded finding and method summaries",
+        )
+        stamp = datetime.fromisoformat(row["reviewed_at_utc"])
+        require(
+            stamp.tzinfo is not None and stamp.utcoffset().total_seconds() == 0,
+            "Manual review timestamp must be UTC",
+        )
+        require(
+            row["reviewed_artifact_sha256"]
+            == {name: by_path[pid]["artifact_sha256"][name] for name in COPY_FILES},
+            "Manual review does not bind the current five task artifacts",
+        )
+        reviews[pid] = row
+    return reviews, hashlib.sha256(raw).hexdigest()
+
+
+def public_manual_review(pid: str, reviews: dict) -> dict:
+    row = reviews.get(pid)
+    return {
+        "format": "published-exploratory-task-manual-review-v1",
+        "path_id": pid,
+        "evidence_label": LABEL,
+        "review_record_supplied": row is not None,
+        "semantic_verdict": row["verdict"] if row else "not_reviewed",
+        "findings": row["findings"] if row else [],
+        **(
+            {
+                key: row[key]
+                for key in (
+                    "review_method",
+                    "reviewer_kind",
+                    "reviewed_at_utc",
+                    "reviewed_artifact_sha256",
+                )
+            }
+            if row
+            else {}
+        ),
+        "learner_readiness_certified": False,
+        "original_query_agreement_outcome_preserved": True,
+        "interpretation": "Manual review is scoped additional evidence. Local SQL agreement, an LLM faithfulness verdict, and no_defect_identified do not establish semantic validity or benchmark readiness.",
+    }
+
+
+def manual_review_warning(review: dict) -> str:
+    verdict = review["semantic_verdict"]
+    if verdict == "failed":
+        return (
+            "**FAILED RESEARCH CASE — NOT LEARNER-READY.** Manual review identified a semantic defect. "
+            "The preserved queries and expected output may encode an incorrect or underspecified task; "
+            "do not use this case as a validated learner benchmark. Local query agreement remains the original recorded outcome."
+        )
+    if verdict == "not_reviewed":
+        return "**NOT MANUALLY REVIEWED — SEMANTIC VALIDITY UNESTABLISHED.** Local query agreement does not establish that the instruction or oracle is correct."
+    if verdict == "unresolved":
+        return "**MANUAL SEMANTIC REVIEW UNRESOLVED — NOT CERTIFIED LEARNER-READY.** Do not interpret local query agreement as semantic validation."
+    return "**NO DEFECT IDENTIFIED IN THE RECORDED REVIEW SCOPE.** This is not benchmark validation or a learner-readiness certificate; inspect the review's methods and limits."
+
+
 def verify_experiment(experiment: Path, run: Path, corpus: Path):
     selection = read_json(experiment / "selection.json")
     summary = read_json(experiment / "exploratory_task_summary.json")
@@ -234,7 +338,9 @@ def verify_success(directory: Path, path: dict):
     return spec, validation
 
 
-def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
+def publish(
+    experiment: Path, run: Path, corpus: Path, output: Path, *, manual_review: Path | None = None
+) -> dict:
     experiment, run, corpus, output = map(Path.resolve, (experiment, run, corpus, output))
     require(not output.exists(), "Refusing to replace an existing supplementary export")
     require(
@@ -245,6 +351,13 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
         "Export must be separate from all sources",
     )
     plan, summary, source_hashes = verify_experiment(experiment, run, corpus)
+    reviews, review_sha = load_manual_reviews(manual_review, summary["selected_examples"])
+    if manual_review is not None:
+        require(
+            output not in manual_review.resolve().parents,
+            "Manual review source must be outside the export directory",
+        )
+        source_hashes["manual_review/receipt.json"] = review_sha
     planned = {item["path"]["path_id"]: item for item in plan["selected_paths"]}
     transition_index = {
         (row["source_history_id"], row["target_history_id"]): row["transition_id"]
@@ -287,8 +400,10 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
             pid = row["path_id"]
             item, directory = planned[pid], experiment / "examples" / pid
             path = item["path"]
+            semantic_review = public_manual_review(pid, reviews)
             spec, validation = verify_success(directory, path)
             base = f"examples/{pid}/"
+            save_json(base + "review.json", semantic_review)
             for name in COPY_FILES:
                 raw = (directory / name).read_bytes()
                 require(
@@ -313,6 +428,8 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
                     "format": FORMAT,
                     "synthetic_fixture": True,
                     "evidence_label": LABEL,
+                    "manual_semantic_verdict": semantic_review["semantic_verdict"],
+                    "learner_readiness_certified": False,
                 },
             )
             save_json(
@@ -335,6 +452,7 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
                     "synthetic_fixture": True,
                     "learner_evaluated": False,
                     "universal_graph_contract_certified": False,
+                    "manual_semantic_verdict": semantic_review["semantic_verdict"],
                 },
             )
             save_json(
@@ -364,6 +482,7 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
                     ],
                     "independent_review_verdict": "faithful",
                     "source_result_sha256": row["result_sha256"],
+                    "manual_review": "review.json",
                 },
             )
             save(
@@ -371,18 +490,28 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
                 (
                     "# Witness-specific exploratory SQL task\n\n"
                     f"Evidence label: `{LABEL}`. Reusable edge applicability remains unresolved.\n\n"
-                    "Give the learner only [instruction.md](instruction.md) and "
-                    "[fixture.duckdb](fixture.duckdb). Keep [oracle.sql](oracle.sql), "
-                    "[independent.sql](independent.sql), and [expected_result.json](expected_result.json) hidden.\n\n"
+                    + manual_review_warning(semantic_review)
+                    + "\n\n"
+                    + "See the [manual semantic review](review.json). The original artifacts remain unchanged, including any documented defects.\n\n"
+                    "The task-input artifacts are [instruction.md](instruction.md) and "
+                    "[fixture.duckdb](fixture.duckdb). [oracle.sql](oracle.sql), "
+                    "[independent.sql](independent.sql), and [expected_result.json](expected_result.json) "
+                    "are preserved reference outputs, not independently certified truth.\n\n"
                     "From this directory in the repository's Python environment:\n\n"
                     "```sh\npython -m superstate_graphs.graph_task_examples verify --task-dir . --submission answer.sql\n```\n\n"
                     "Two separately prompted queries ran and agreed on this synthetic fixture after a "
-                    "faithfulness review. No learner or training lift was evaluated. "
+                    "LLM faithfulness review. No learner or training lift was evaluated. "
                     "See [provenance](provenance.json) and [execution receipt](local_validation.json).\n"
                 ).encode(),
             )
             published.append(
-                {"path_id": pid, "directory": base.rstrip("/"), "evidence_label": LABEL}
+                {
+                    "path_id": pid,
+                    "directory": base.rstrip("/"),
+                    "evidence_label": LABEL,
+                    "manual_semantic_verdict": semantic_review["semantic_verdict"],
+                    "learner_readiness_certified": False,
+                }
             )
         public = {
             "format": FORMAT,
@@ -394,6 +523,7 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
             "attempted_path_count": len(attempts),
             "locally_executed_consistent_count": len(published),
             "target_reached": summary["target_reached"],
+            "target_semantics": "Original stopping target counts local query agreement, regardless of later manual semantic failures.",
             "attempt_status_counts": dict(Counter(row["status"] for row in attempts)),
             "attempts": attempts,
             "examples": published,
@@ -401,11 +531,22 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
             "limitations": experiment_code.LIMITATIONS,
             "privacy_review_note": PRIVACY_LIMITATION,
             "primary_graph_and_counts_unchanged": True,
+            "manual_review_supplied": manual_review is not None,
+            "manual_semantic_verdict_counts": dict(
+                Counter(row["manual_semantic_verdict"] for row in published)
+            ),
+            "learner_readiness_certified": False,
         }
         save_json("summary.json", public)
         save_json("selection.json", experiment_code.public_plan(plan))
         links = "\n".join(
-            f"- [{row['path_id']}]({row['directory']}/README.md)" for row in published
+            f"- [{row['path_id']}]({row['directory']}/README.md): manual semantic verdict `{row['manual_semantic_verdict']}`"
+            + (
+                " — **FAILED RESEARCH CASE, NOT LEARNER-READY**"
+                if row["manual_semantic_verdict"] == "failed"
+                else ""
+            )
+            for row in published
         )
         save(
             "README.md",
@@ -416,12 +557,14 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
                 f"(target {summary['requested_examples']}). Status: `{summary['status']}`. "
                 "Zero examples is a valid recorded outcome. These results are outside the primary "
                 "graph's sampled-supported paths and executable-example counts.\n\n"
+                "**Local query agreement is not semantic validation.** Manual review findings are recorded separately and do not replace the original run counts. Failed cases remain research evidence and are not learner-ready; missing reviews never count as passes.\n\n"
                 "[Verified summary](summary.json) · [Selection and audit labels](selection.json) · "
                 "[File and source hashes](manifest.json)\n\n"
                 + (links + "\n\n" if links else "")
                 + "Each example concerns particular cross-task witnesses. Unknown applicability remains "
-                "unknown, including citation-invalidated judgments; neither raw nor validated "
-                "contradictions were admitted. Selection was exploratory after the primary audit. "
+                "unknown, including citation-invalidated judgments. Path selection admitted no raw "
+                "or validated source-applicability audit contradiction; later manual task-semantic "
+                "failures are disclosed separately. Selection was exploratory after the primary audit. "
                 "Success establishes reviewed local fixture/query agreement, not reusable edges, "
                 "arbitrary path executability, benchmark reproduction, learner success, or training lift.\n\n"
                 + PRIVACY_LIMITATION
@@ -438,12 +581,17 @@ def publish(experiment: Path, run: Path, corpus: Path, output: Path) -> dict:
             "primary_graph_and_counts_unchanged": True,
             "publication_privacy_review_required": True,
             "privacy_review_note": PRIVACY_LIMITATION,
+            "manual_review_supplied": manual_review is not None,
         }
         save_json("manifest.json", manifest)
         # Recheck every source, including failed-attempt files, before atomic publication.
         for name, expected in source_hashes.items():
             kind, relative = name.split("/", 1)
-            source = {"run": run, "corpus": corpus, "experiment": experiment}[kind] / relative
+            source = (
+                manual_review
+                if kind == "manual_review"
+                else {"run": run, "corpus": corpus, "experiment": experiment}[kind] / relative
+            )
             require(fingerprint(source) == expected, "A source artifact changed during publication")
         staging.rename(output)
         return {
@@ -462,9 +610,24 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("experiment", "run", "corpus", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
+    parser.add_argument(
+        "--manual-review",
+        type=Path,
+        help="Optional artifact-bound semantic review receipt; never changes fixed run outcomes",
+    )
     args = parser.parse_args()
     try:
-        print(json.dumps(publish(args.experiment, args.run, args.corpus, args.output)))
+        print(
+            json.dumps(
+                publish(
+                    args.experiment,
+                    args.run,
+                    args.corpus,
+                    args.output,
+                    manual_review=args.manual_review,
+                )
+            )
+        )
     except Exception as error:
         parser.exit(
             1, f"Supplementary publication refused ({type(error).__name__}); sources unchanged.\n"

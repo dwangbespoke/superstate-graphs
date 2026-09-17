@@ -240,3 +240,97 @@ def test_decoded_fixture_cells_are_scanned_even_with_updated_file_receipts(tmp_p
     with pytest.raises(ValueError, match="synthetic fixture cell values"):
         publisher.publish(experiment, run, corpus, output)
     assert not output.exists()
+
+
+def manual_receipt(tmp_path, experiment, verdict="failed"):
+    path = tmp_path / "manual-review.json"
+    directory = experiment / "examples/saved_path"
+    write(
+        path,
+        {
+            "format": "exploratory-task-manual-review-v1",
+            "reviews": [
+                {
+                    "path_id": "saved_path",
+                    "verdict": verdict,
+                    "findings": ["Synthetic manual check identified a shared oracle defect."],
+                    "review_method": "Offline synthetic arithmetic and instruction inspection",
+                    "reviewer_kind": "coding_agent",
+                    "reviewed_at_utc": "2026-09-17T19:30:00+00:00",
+                    "reviewed_artifact_sha256": {
+                        name: publisher.fingerprint(directory / name)
+                        for name in publisher.COPY_FILES
+                    },
+                }
+            ],
+        },
+    )
+    return path
+
+
+def test_failed_manual_review_is_prominent_without_changing_fixed_success(tmp_path, monkeypatch):
+    run, corpus, experiment, output = finalized(tmp_path, monkeypatch)
+    manual = manual_receipt(tmp_path, experiment)
+    before = (experiment / "exploratory_task_summary.json").read_bytes()
+    publisher.publish(experiment, run, corpus, output, manual_review=manual)
+    summary = read(output / "summary.json")
+    assert summary["locally_executed_consistent_count"] == 1
+    assert summary["status"] == "target_reached" and summary["target_reached"] is True
+    assert summary["manual_semantic_verdict_counts"] == {"failed": 1}
+    assert summary["learner_readiness_certified"] is False
+    directory = output / "examples/saved_path"
+    assert "FAILED RESEARCH CASE" in (directory / "README.md").read_text()
+    assert "NOT LEARNER-READY" in (output / "README.md").read_text()
+    assert "Give the learner" not in (directory / "README.md").read_text()
+    assert read(directory / "review.json")["semantic_verdict"] == "failed"
+    assert read(directory / "local_validation.json")["status"] == "locally_executed_consistent"
+    assert read(output / "manifest.json")["source_artifact_sha256"][
+        "manual_review/receipt.json"
+    ] == publisher.fingerprint(manual)
+    assert (experiment / "exploratory_task_summary.json").read_bytes() == before
+
+
+@pytest.mark.parametrize(
+    "verdict, expected",
+    [
+        (None, "not_reviewed"),
+        ("unresolved", "unresolved"),
+        ("no_defect_identified", "no_defect_identified"),
+    ],
+)
+def test_missing_or_scoped_manual_review_never_fabricates_validation(
+    tmp_path, monkeypatch, verdict, expected
+):
+    run, corpus, experiment, output = finalized(tmp_path, monkeypatch)
+    manual = manual_receipt(tmp_path, experiment, verdict) if verdict else None
+    publisher.publish(experiment, run, corpus, output, manual_review=manual)
+    review = read(output / "examples/saved_path/review.json")
+    assert review["semantic_verdict"] == expected
+    assert review["review_record_supplied"] is (manual is not None)
+    assert review["learner_readiness_certified"] is False
+    assert read(output / "summary.json")["manual_semantic_verdict_counts"] == {expected: 1}
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["unknown_path", "duplicate_path", "stale_artifact", "extra_raw_field", "passed_verdict"],
+)
+def test_manual_review_scope_and_hashes_fail_closed(tmp_path, monkeypatch, mutation):
+    run, corpus, experiment, output = finalized(tmp_path, monkeypatch)
+    manual = manual_receipt(tmp_path, experiment)
+    value = read(manual)
+    row = value["reviews"][0]
+    if mutation == "unknown_path":
+        row["path_id"] = "never_executed_path"
+    elif mutation == "duplicate_path":
+        value["reviews"].append(row.copy())
+    elif mutation == "stale_artifact":
+        row["reviewed_artifact_sha256"]["oracle.sql"] = "0" * 64
+    elif mutation == "extra_raw_field":
+        row["full_source_history"] = "private source contents"
+    else:
+        row["verdict"] = "passed"
+    write(manual, value)
+    with pytest.raises(ValueError):
+        publisher.publish(experiment, run, corpus, output, manual_review=manual)
+    assert not output.exists()

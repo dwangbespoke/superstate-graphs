@@ -1,0 +1,353 @@
+{
+  "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+  "independent_query_executed": true,
+  "independent_result": {
+    "columns": [
+      "order_id",
+      "order_date",
+      "order_source",
+      "total_items",
+      "total_revenue",
+      "order_to_ship_days",
+      "ship_to_delivery_days",
+      "total_fulfillment_days",
+      "is_on_time",
+      "fulfillment_tier"
+    ],
+    "rows": [
+      [
+        "ORD001",
+        "2024-01-15",
+        "WEB",
+        3,
+        {
+          "decimal": "150.00"
+        },
+        1,
+        2,
+        3,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD002",
+        "2024-01-20",
+        "MOBILE",
+        4,
+        {
+          "decimal": "275.50"
+        },
+        1,
+        4,
+        5,
+        true,
+        "GOOD"
+      ],
+      [
+        "ORD004",
+        "2024-02-10",
+        "STORE",
+        4,
+        {
+          "decimal": "420.00"
+        },
+        1,
+        1,
+        2,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD006",
+        "2024-03-01",
+        "MOBILE",
+        5,
+        {
+          "decimal": "350.00"
+        },
+        null,
+        null,
+        9,
+        false,
+        "SLOW"
+      ],
+      [
+        "ORD007",
+        "2024-03-05",
+        "WEB",
+        2,
+        {
+          "decimal": "125.00"
+        },
+        1,
+        2,
+        3,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD009",
+        "2024-03-15",
+        "WEB",
+        2,
+        {
+          "decimal": "299.99"
+        },
+        1,
+        9,
+        10,
+        false,
+        "SLOW"
+      ],
+      [
+        "ORD010",
+        "2024-04-01",
+        "MOBILE",
+        4,
+        {
+          "decimal": "175.00"
+        },
+        1,
+        1,
+        2,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD012",
+        "2024-04-15",
+        "STORE",
+        2,
+        {
+          "decimal": "445.00"
+        },
+        1,
+        1,
+        2,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD013",
+        "2024-05-01",
+        "WEB",
+        3,
+        {
+          "decimal": "210.00"
+        },
+        1,
+        2,
+        3,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD014",
+        "2024-05-10",
+        "MOBILE",
+        2,
+        {
+          "decimal": "330.00"
+        },
+        1,
+        7,
+        8,
+        false,
+        "SLOW"
+      ],
+      [
+        "ORD015",
+        "2024-05-15",
+        "WEB",
+        3,
+        {
+          "decimal": "165.00"
+        },
+        1,
+        1,
+        2,
+        true,
+        "EXCELLENT"
+      ]
+    ]
+  },
+  "learner_evaluated": false,
+  "manual_semantic_verdict": "failed",
+  "nonempty_result": true,
+  "output_schema_matches": true,
+  "queries_agree": true,
+  "reference_query_executed": true,
+  "reference_result": {
+    "columns": [
+      "order_id",
+      "order_date",
+      "order_source",
+      "total_items",
+      "total_revenue",
+      "order_to_ship_days",
+      "ship_to_delivery_days",
+      "total_fulfillment_days",
+      "is_on_time",
+      "fulfillment_tier"
+    ],
+    "rows": [
+      [
+        "ORD001",
+        "2024-01-15",
+        "WEB",
+        3,
+        {
+          "decimal": "150.00"
+        },
+        1,
+        2,
+        3,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD002",
+        "2024-01-20",
+        "MOBILE",
+        4,
+        {
+          "decimal": "275.50"
+        },
+        1,
+        4,
+        5,
+        true,
+        "GOOD"
+      ],
+      [
+        "ORD004",
+        "2024-02-10",
+        "STORE",
+        4,
+        {
+          "decimal": "420.00"
+        },
+        1,
+        1,
+        2,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD006",
+        "2024-03-01",
+        "MOBILE",
+        5,
+        {
+          "decimal": "350.00"
+        },
+        null,
+        null,
+        9,
+        false,
+        "SLOW"
+      ],
+      [
+        "ORD007",
+        "2024-03-05",
+        "WEB",
+        2,
+        {
+          "decimal": "125.00"
+        },
+        1,
+        2,
+        3,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD009",
+        "2024-03-15",
+        "WEB",
+        2,
+        {
+          "decimal": "299.99"
+        },
+        1,
+        9,
+        10,
+        false,
+        "SLOW"
+      ],
+      [
+        "ORD010",
+        "2024-04-01",
+        "MOBILE",
+        4,
+        {
+          "decimal": "175.00"
+        },
+        1,
+        1,
+        2,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD012",
+        "2024-04-15",
+        "STORE",
+        2,
+        {
+          "decimal": "445.00"
+        },
+        1,
+        1,
+        2,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD013",
+        "2024-05-01",
+        "WEB",
+        3,
+        {
+          "decimal": "210.00"
+        },
+        1,
+        2,
+        3,
+        true,
+        "EXCELLENT"
+      ],
+      [
+        "ORD014",
+        "2024-05-10",
+        "MOBILE",
+        2,
+        {
+          "decimal": "330.00"
+        },
+        1,
+        7,
+        8,
+        false,
+        "SLOW"
+      ],
+      [
+        "ORD015",
+        "2024-05-15",
+        "WEB",
+        3,
+        {
+          "decimal": "165.00"
+        },
+        1,
+        1,
+        2,
+        true,
+        "EXCELLENT"
+      ]
+    ]
+  },
+  "status": "locally_executed_consistent",
+  "synthetic_fixture": true,
+  "universal_graph_contract_certified": false
+}

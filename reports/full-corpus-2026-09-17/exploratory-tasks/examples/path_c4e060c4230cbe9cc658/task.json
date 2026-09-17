@@ -1,0 +1,27 @@
+{
+  "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+  "format": "published-exploratory-witness-tasks-v1",
+  "learner_readiness_certified": false,
+  "manual_semantic_verdict": "failed",
+  "ordered_output": true,
+  "output_columns": [
+    "order_id",
+    "order_date",
+    "order_source",
+    "total_items",
+    "total_revenue",
+    "order_to_ship_days",
+    "ship_to_delivery_days",
+    "total_fulfillment_days",
+    "is_on_time",
+    "fulfillment_tier"
+  ],
+  "path_id": "path_c4e060c4230cbe9cc658",
+  "path_transition_ids": [
+    "E_1901c1138853",
+    "E_f1c64ef4904a"
+  ],
+  "status": "task",
+  "synthetic_fixture": true,
+  "title": "POS Order Fulfillment Analysis with Data Quality Handling"
+}

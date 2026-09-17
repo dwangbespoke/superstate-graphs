@@ -1,0 +1,238 @@
+{
+  "attempt_status_counts": {
+    "consistency_failed": 1,
+    "execution_failed": 3,
+    "independent_review_not_supported": 8,
+    "locally_executed_consistent": 2,
+    "unsupported": 2
+  },
+  "attempted_path_count": 16,
+  "attempts": [
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "faithful",
+      "locally_executed_consistent": false,
+      "path_id": "path_0206be1787df8b3a1890",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "9fa2046c2b661d0a87483ffaae16ad633c494ac881c161b482435fc962ef4527",
+      "status": "execution_failed"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "faithful",
+      "locally_executed_consistent": false,
+      "path_id": "path_0788c0148d2793f7966a",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "01aaa0c2af757f3381f2e079b01f1c464101caffe468664ddd35ec11bc56d060",
+      "status": "execution_failed"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "faithful",
+      "locally_executed_consistent": false,
+      "path_id": "path_185c9bfdb65671f7dadc",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "2e3c2e91c6761d987d5fc841851ef0d35be78056ed8cb28896c143abada7f1ce",
+      "status": "execution_failed"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "unsupported",
+      "locally_executed_consistent": false,
+      "path_id": "path_2cde21eecca0246dbcdf",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "25c6b7882030baaa8b1069ac7b5e59f0bcbbec8754a7b8acf8f723951e88869f",
+      "status": "independent_review_not_supported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "unsupported",
+      "locally_executed_consistent": false,
+      "path_id": "path_401f45c741b339373b12",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "25934fa1f05ff4e75124f4c70ee2d455d3619a0b2450b437a6a1ef700a30c4f1",
+      "status": "independent_review_not_supported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "unsupported",
+      "locally_executed_consistent": false,
+      "path_id": "path_6c8b8e08004c5930c749",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "b628c9ff44fcb9cd0abfd11a785c5852000e8a0e19f3bb1a702c2c65be340a66",
+      "status": "independent_review_not_supported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "unsupported",
+      "locally_executed_consistent": false,
+      "path_id": "path_80db13dc23d40982c2d9",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "073789970400889c3bb3107572d3f6259a4ffc2d2b237dbd06a19310cf6d0f13",
+      "status": "independent_review_not_supported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "unsupported",
+      "locally_executed_consistent": false,
+      "path_id": "path_9062afd954f3abc0f48f",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "48b5e4f5e711c2d96cd7e8cb13ab9be7a220c97a0ad2d7b5ab4adb2d34cb075c",
+      "status": "independent_review_not_supported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": true,
+      "independent_review_verdict": "faithful",
+      "locally_executed_consistent": false,
+      "path_id": "path_9094bc7e475264a4b660",
+      "queries_agree": false,
+      "reference_query_executed": true,
+      "result_sha256": "db1b6202dc3bfed894b87ab1732130a46af7c3ec952fb0a9114f06cb480b44bc",
+      "status": "consistency_failed"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": true,
+      "independent_review_verdict": "faithful",
+      "locally_executed_consistent": true,
+      "path_id": "path_a264cce3ccec364d078e",
+      "queries_agree": true,
+      "reference_query_executed": true,
+      "result_sha256": "b6bc1a51dab89f204297127968d0bc212f677be4ee29efebb8f88072aacf34de",
+      "status": "locally_executed_consistent"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "unsupported",
+      "locally_executed_consistent": false,
+      "path_id": "path_a720a1c9978d21328465",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "2ed5a51cd7cad81a1f5e61b5b9ad638ac7d9abf59e3ad3b264ad365f402ca263",
+      "status": "independent_review_not_supported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": null,
+      "locally_executed_consistent": false,
+      "path_id": "path_a7dd34c498502b17cbc6",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "20d985b6673c8999202b7c783acfc32bfcf4cb55aad5bb840e50e633b109825d",
+      "status": "unsupported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "unclear",
+      "locally_executed_consistent": false,
+      "path_id": "path_b5c4a6717930e4d87a8e",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "4fe9812c01815efac12e22efbc4c8533905de3fadf01ca8a85312e0ad3877a6c",
+      "status": "independent_review_not_supported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": true,
+      "independent_review_verdict": "faithful",
+      "locally_executed_consistent": true,
+      "path_id": "path_c4e060c4230cbe9cc658",
+      "queries_agree": true,
+      "reference_query_executed": true,
+      "result_sha256": "6a9d6220d5dc8c7a6a12fa9dc1ed1b370d1b69ede1f66e1cc04666084a9800bd",
+      "status": "locally_executed_consistent"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": "unsupported",
+      "locally_executed_consistent": false,
+      "path_id": "path_f8eaddb6a8ff51dd0b2e",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "fe6d4a004070ae3b5befc160f133de6b40f3096dbb03aee0badfa22c764fd51f",
+      "status": "independent_review_not_supported"
+    },
+    {
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "independent_query_executed": false,
+      "independent_review_verdict": null,
+      "locally_executed_consistent": false,
+      "path_id": "path_f96bb12ca1b8be6b0284",
+      "queries_agree": false,
+      "reference_query_executed": false,
+      "result_sha256": "430dee8052ecff4ddc2fd38a258aa39808a065d6e7505903ed67c80aa3c8281d",
+      "status": "unsupported"
+    }
+  ],
+  "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+  "examples": [
+    {
+      "directory": "examples/path_a264cce3ccec364d078e",
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "learner_readiness_certified": false,
+      "manual_semantic_verdict": "failed",
+      "path_id": "path_a264cce3ccec364d078e"
+    },
+    {
+      "directory": "examples/path_c4e060c4230cbe9cc658",
+      "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+      "learner_readiness_certified": false,
+      "manual_semantic_verdict": "failed",
+      "path_id": "path_c4e060c4230cbe9cc658"
+    }
+  ],
+  "format": "published-exploratory-witness-tasks-v1",
+  "identity": {
+    "constructor_sha256": "f841fc7d8503d9dafa99d52805d8e94da598dfc6ddd173bb992b673cdd66e44a",
+    "plan_sha256": "5d86073d88e69b4c7df504f82c3480805684bc68368ae5c2e69999ab9a2dad37",
+    "public_model": {
+      "model": "Qwen/Qwen3.5-122B-A10B-FP8",
+      "revision": "a099dee70ccfcd8d5dda56aaa0b60cb8ecadabc9"
+    },
+    "script_sha256": "b211df78f05031eccf20653da6ef154be229e1e430d353620b3933a3c6c6f4ad",
+    "target": 3
+  },
+  "learner_readiness_certified": false,
+  "limitations": [
+    "Witness-specific exploratory tasks, not sampled-supported graph paths.",
+    "Unknown applicability, including citation-invalidated judgments, remains unresolved; raw and validated verdicts are retained separately.",
+    "No validated or raw proposed counterexample is admitted. Particular observed witnesses may support a concrete task even when reusable source applicability is unestablished.",
+    "A successful receipt means a strict independent faithfulness review and two separately prompted SQL solutions executed and agreed on a synthetic fixture.",
+    "It does not prove reusable or universal edges, execution of arbitrary graph paths, learner success, or post-training lift.",
+    "Original graph, audit, completion, and executable-example results remain unchanged."
+  ],
+  "locally_executed_consistent_count": 2,
+  "manual_review_supplied": true,
+  "manual_semantic_verdict_counts": {
+    "failed": 2
+  },
+  "maximum_path_attempts": 24,
+  "primary_graph_and_counts_unchanged": true,
+  "privacy_review_note": "Allowlisted publication and automated credential/transcript-marker scans are not a semantic privacy guarantee. Inspect generated instructions, titles, SQL literals, expected values, and synthetic fixture cells for copied private/source material before public distribution.",
+  "requested_examples": 3,
+  "selected_path_count": 16,
+  "status": "exploratory_paths_exhausted",
+  "target_reached": false,
+  "target_semantics": "Original stopping target counts local query agreement, regardless of later manual semantic failures."
+}

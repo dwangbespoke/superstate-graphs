@@ -94,12 +94,22 @@ contradicted feasibility judgments and one was unsupported. No primary executabl
 example was produced. The [eligible-edge and task review](docs/FINAL_EDGE_AND_TASK_REVIEW.md)
 documents operation/witness mismatches and errors in the reviewers themselves.
 
+A separately labeled witness-specific experiment then exhausted 16 additional
+paths. Two examples produced matching executed SQL outputs, but **both failed
+manual semantic review**: shared oracle errors, incomplete learner instructions,
+and removal of the selected path's local operations. They are published only as
+[failed research cases](reports/full-corpus-2026-09-17/exploratory-tasks/README.md),
+with [arithmetic and verifier-control findings](docs/EXPLORATORY_TASK_REVIEW.md).
+No learner-ready training task or downstream lift is established by this run.
+
 - [Full report](reports/full-corpus-2026-09-17/README.md) and [interactive graph](reports/full-corpus-2026-09-17/report.html)
 - [Complete downloadable graph, assignments, witnesses, and variance artifacts](reports/full-corpus-2026-09-17/artifacts/README.md)
 - [Independent assignment census verification](reports/full-corpus-2026-09-17/assignment_verification.json)
 - [Independent variance and bootstrap verification](reports/full-corpus-2026-09-17/state_variance_verification.json)
 - [Independent frozen-comparison verification](reports/full-corpus-2026-09-17/frozen_comparison_verification.json)
 - [Independent full-export verification](reports/full-corpus-2026-09-17/export_verification.json)
+- [Independent supplementary-export verification](reports/full-corpus-2026-09-17/exploratory_export_verification.json)
+- [Verified model-server shutdown](reports/full-corpus-2026-09-17/serving_shutdown.json)
 
 ## Reproduction
 

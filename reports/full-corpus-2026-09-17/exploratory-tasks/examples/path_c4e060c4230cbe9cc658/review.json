@@ -1,0 +1,28 @@
+{
+  "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+  "findings": [
+    "FAILED RESEARCH CASE — NOT LEARNER-READY. Frozen faithful and locally_executed_consistent labels are retained; this separate coding-agent review found specification and path-fidelity defects.",
+    "Independent Python calendar and quantity arithmetic reproduces all 11 saved rows under the hidden oracle rules. That agreement does not repair the learner instruction, which omits the 10 required column names/order, on-time cutoff, and fulfillment-tier thresholds.",
+    "ORD006 has no shipped_at date. The instruction says such orders should be excluded from on-time calculations, but both saved SQL solutions classify it false; replacing that classification with NULL is rejected by the original verifier.",
+    "The unchanged original verifier accepts the saved oracle and rejects both an empty same-schema query and a query that includes negative quantities. However, it accepts queries omitting status trimming or the entire invalid-status exclusion, because invalid statuses occur only on undelivered rows and whitespace appears only on valid statuses.",
+    "The concrete selected witnesses install dbt dependencies and execute models with mixed successes and errors. The single SELECT removes dependency installation and partial-execution diagnosis rather than demonstrating those composed local operations.",
+    "Privacy inspection of the proposed publishable instruction, both SQL files, expected rows, and both actual fixture tables found generic synthetic identifiers and no apparent credentials, personal contact data, local user paths, or raw transcripts. This coding-agent inspection is scoped, not a privacy guarantee."
+  ],
+  "format": "published-exploratory-task-manual-review-v1",
+  "interpretation": "Manual review is scoped additional evidence. Local SQL agreement, an LLM faithfulness verdict, and no_defect_identified do not establish semantic validity or benchmark readiness.",
+  "learner_readiness_certified": false,
+  "original_query_agreement_outcome_preserved": true,
+  "path_id": "path_c4e060c4230cbe9cc658",
+  "review_method": "Post-formation coding-agent inspection of learner instructions, actual read-only DuckDB fixture tables, both SQL solutions, saved expected results, and concrete source transitions; independent Python calendar/quantity arithmetic and unchanged original-verifier positive/negative controls. External database access disabled. Original task artifacts verified unchanged.",
+  "review_record_supplied": true,
+  "reviewed_artifact_sha256": {
+    "expected_result.json": "958e552c0e0d8232a0590647a363d413b395d98edede7e87a2190bbdc25027d1",
+    "fixture.duckdb": "eab9412c7eaf79ba2e2a034c1d37a43dc2b911c323380346506061bf92ab39b3",
+    "independent.sql": "07730bb39bd0049c78a6f6d2fdc27cbdcb7b580321c5210faf43f2c61965a3d4",
+    "instruction.md": "27b50a080689dd56d99ad471b94ec5d29502ff1f1ea1f6b44b3b6f235ae42243",
+    "oracle.sql": "6f4ded323d7dcd045321632cb7316caaa6d5a6f1823af25cfd739b4b415dc922"
+  },
+  "reviewed_at_utc": "2026-09-17T19:40:21.022044+00:00",
+  "reviewer_kind": "coding_agent",
+  "semantic_verdict": "failed"
+}

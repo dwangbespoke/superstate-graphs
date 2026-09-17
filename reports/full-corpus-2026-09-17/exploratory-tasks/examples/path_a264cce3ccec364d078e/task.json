@@ -1,0 +1,30 @@
+{
+  "evidence_label": "witness_specific_exploratory_not_sampled_supported",
+  "format": "published-exploratory-witness-tasks-v1",
+  "learner_readiness_certified": false,
+  "manual_semantic_verdict": "failed",
+  "ordered_output": true,
+  "output_columns": [
+    "week_start",
+    "week_number",
+    "order_count",
+    "unique_customers",
+    "total_revenue",
+    "avg_order_value",
+    "prev_week_revenue",
+    "revenue_change",
+    "revenue_growth_pct",
+    "growth_status",
+    "rolling_4wk_avg_revenue",
+    "cumulative_revenue",
+    "is_best_week"
+  ],
+  "path_id": "path_a264cce3ccec364d078e",
+  "path_transition_ids": [
+    "E_945befbdb7a9",
+    "E_fed5351a5c1e"
+  ],
+  "status": "task",
+  "synthetic_fixture": true,
+  "title": "Weekly Sales Growth with Sunday-Based Weeks"
+}

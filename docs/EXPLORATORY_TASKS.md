@@ -115,6 +115,50 @@ Sources are read-only; an existing output directory is never overwritten. Zero
 successful examples still produces an honest safe summary, including every
 attempt's status count. No raw failure messages are published.
 
+### Optional semantic-review receipt
+
+Add `--manual-review /absolute/path/to/manual-review.json` to the publication
+command when a separate manual review is available. This does not change the
+fixed experiment's query-agreement statuses, success counts, or stopping target.
+The package adds `review.json` and an explicit warning to each example's README,
+records semantic verdict counts separately, and binds the review source in the
+manifest. A failed review is labeled **FAILED RESEARCH CASE — NOT LEARNER-READY**.
+Its original queries and expected results remain available as research evidence,
+including the documented defects. A missing review is `not_reviewed`, never a
+pass. `no_defect_identified` refers only to the supplied review's scope and is
+not benchmark validation or a learner-readiness certificate.
+
+The strict input schema is:
+
+```json
+{
+  "format": "exploratory-task-manual-review-v1",
+  "reviews": [{
+    "path_id": "an_actual_exported_example_id",
+    "verdict": "failed",
+    "findings": ["Concise, source-safe account of a checked semantic defect."],
+    "review_method": "Describe the arithmetic, instruction, or verifier checks performed.",
+    "reviewer_kind": "coding_agent",
+    "reviewed_at_utc": "2026-09-17T19:30:00+00:00",
+    "reviewed_artifact_sha256": {
+      "instruction.md": "actual_sha256",
+      "fixture.duckdb": "actual_sha256",
+      "oracle.sql": "actual_sha256",
+      "independent.sql": "actual_sha256",
+      "expected_result.json": "actual_sha256"
+    }
+  }]
+}
+```
+
+This is a schema illustration, not an experimental result. All fields shown are
+required; extra fields are rejected. Verdicts are `failed`, `unresolved`, or
+`no_defect_identified`; reviewer kinds are `coding_agent` or `human`. Findings
+must be nonempty, source-safe strings. The publisher rejects duplicate or
+unexported path IDs and stale hashes for any of the five bound task artifacts.
+It records the supplied review rather than inferring semantic validity from SQL
+agreement. Human review and coding-agent review remain explicitly distinguished.
+
 Before publicly distributing the package, inspect generated instructions,
 titles, SQL literals, expected outputs, and synthetic fixture cells for private
 or copied source material. Automated scans cannot prove semantic privacy; the
@@ -130,8 +174,10 @@ edge/witness IDs, safe selection/summary receipts, and file hashes. Allowlist ta
 metadata and inspect generated text for source transcripts or credentials before
 publication. Regenerate example README links as relative paths.
 
-Give a learner only `instruction.md` and `fixture.duckdb`; keep the SQL oracles and
-expected result hidden. Published examples must retain their exploratory evidence
+Before any learner use, inspect the semantic-review status; failed research cases
+are not learner-ready. Learner inputs, if a task is later made suitable, are only
+`instruction.md` and `fixture.duckdb`; keep SQL oracles and expected results hidden.
+Published examples must retain their exploratory evidence
 label and raw-versus-validated audit provenance. Do not pass them through the
 primary exporter, weaken its supported-edge checks, or insert them into the
 original `executable_task_summary.json`.
