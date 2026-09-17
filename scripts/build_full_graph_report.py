@@ -17,7 +17,7 @@ import math
 import os
 import re
 import tempfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -427,13 +427,19 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
     comparison = read("heldout_comparison.json")
     variance = read("state_reward_variance.json")
     audit = read("independent_audit_summary.json")
+    audit_results = read("independent_audit_results.json")
+    audit_jobs = read("independent_audit_jobs.json")
+    seed_candidate = read("seed_candidate.json")
+    optimized_candidate = read("optimized_candidate.json")
     tasks = read("task_draft_summary.json")
     executable = read("executable_task_summary.json")
     graph = read("graph.json")
     graph_source = "graph.json" if graph else None
     if not graph:
-        for name in ("optimized_candidate.json", "seed_candidate.json"):
-            candidate = read(name)
+        for name, candidate in (
+            ("optimized_candidate.json", optimized_candidate),
+            ("seed_candidate.json", seed_candidate),
+        ):
             if candidate:
                 try:
                     decoded = {
@@ -526,6 +532,79 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
     )
     if heldout is not None and expected_candidate_hash is not None and not heldout_matches:
         warnings.append("Frozen held-out report does not match the selected GEPA candidate.")
+    selected_candidate = optimized_candidate
+    if (
+        selected_candidate is None
+        and best_idx is not None
+        and best_idx < len((result or {}).get("candidates", []))
+    ):
+        selected_candidate = result["candidates"][best_idx]
+
+    def specification_summary(candidate: dict | None) -> dict:
+        summary = {
+            "available": candidate is not None,
+            "candidate_hash": None,
+            "states": None,
+            "edges": None,
+        }
+        if candidate is not None:
+            summary["candidate_hash"] = hashlib.sha256(
+                json.dumps(
+                    candidate, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                ).encode()
+            ).hexdigest()
+            try:
+                summary.update(
+                    states=len(json.loads(candidate["state_spec"])["states"]),
+                    edges=len(json.loads(candidate["edge_spec"])["edges"]),
+                )
+            except (KeyError, TypeError, json.JSONDecodeError):
+                pass
+        return summary
+
+    audit_recorded = numeric((audit or {}).get("completed_checks"))
+    audit_failed = numeric((audit or {}).get("failed_requests"))
+    audit_planned = numeric((audit or {}).get("planned_checks"))
+    audit_non_error = (
+        audit_recorded - audit_failed
+        if audit_recorded is not None
+        and audit_failed is not None
+        and 0 <= audit_failed <= audit_recorded
+        else None
+    )
+    audit_missing = (
+        audit_planned - audit_recorded
+        if audit_planned is not None
+        and audit_recorded is not None
+        and 0 <= audit_recorded <= audit_planned
+        else None
+    )
+    audit_execution_by_kind = {}
+    job_index = {job.get("audit_id"): job for job in (audit_jobs or [])}
+    per_edge_errors = Counter()
+    detailed_audits_available = isinstance(audit_results, list)
+    for kind, counts in (audit or {}).get("by_kind", {}).items():
+        errors = (
+            sum(
+                row.get("execution_status") == "error"
+                for row in (audit_results or [])
+                if row.get("kind") == kind
+            )
+            if detailed_audits_available
+            else (0 if audit_failed == 0 else None)
+        )
+        unknown = numeric(counts.get("unknown", 0))
+        audit_execution_by_kind[safe_text(kind)] = {
+            "request_errors": errors,
+            "non_error_unknown": unknown - errors
+            if unknown is not None and errors is not None and 0 <= errors <= unknown
+            else None,
+            "not_run": numeric(counts.get("not_run", 0)),
+        }
+    for row in audit_results or []:
+        job = job_index.get(row.get("audit_id"), {})
+        if row.get("execution_status") == "error" and job.get("edge_id") is not None:
+            per_edge_errors[job["edge_id"]] += 1
     comparison_validated = False
     if comparison is not None:
         seed = ((result or {}).get("candidates") or [None])[0]
@@ -601,6 +680,13 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
     edges = []
     for edge in graph.get("edges", []):
         witnesses = edge.get("witnesses", [])
+        verdicts = number_map(edge.get("audit", {}).get("verdicts", {}))
+        edge_errors = (
+            per_edge_errors[edge["id"]]
+            if detailed_audits_available and isinstance(audit_jobs, list)
+            else (0 if audit_failed == 0 else None)
+        )
+        unknown = verdicts.get("unknown", 0)
         edges.append(
             {
                 **{
@@ -611,9 +697,26 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
                 "distinct_task_count": numeric(edge.get("distinct_task_count")),
                 "sampled_traversable": edge.get("traversable") is True,
                 "evidence_status": safe_text(
-                    edge.get("evidence_status", "Optimized specification; not yet audited")
+                    edge.get(
+                        "evidence_status",
+                        "Initial seed specification; not yet audited"
+                        if graph_source == "seed_candidate.json"
+                        else "Selected optimized specification; not yet audited"
+                        if graph_source == "optimized_candidate.json"
+                        else "Observed graph contract; audit status unavailable",
+                    )
                 ),
-                "source_audit_verdicts": number_map(edge.get("audit", {}).get("verdicts", {})),
+                "source_audit_verdicts": verdicts,
+                "source_member_count": numeric(edge.get("audit", {}).get("source_member_count")),
+                "source_histories_with_audit_records": len(
+                    edge.get("audit", {}).get("independent_sampled_source_ids", [])
+                )
+                if "independent_sampled_source_ids" in edge.get("audit", {})
+                else None,
+                "source_audit_request_errors": edge_errors,
+                "source_audit_non_error_unknown": unknown - edge_errors
+                if unknown is not None and edge_errors is not None and 0 <= edge_errors <= unknown
+                else None,
                 "universal_contract_certified": False,
                 "witness_reference_subset": [
                     {
@@ -855,10 +958,37 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
             else None,
             "witness_export_policy": "At most three references per edge, explicitly a subset; full local witness ledger remains unchanged",
         },
+        "graph_stages": {
+            "initial_seed": specification_summary(seed_candidate),
+            "selected_frozen_specification": specification_summary(selected_candidate),
+            "displayed_graph_source": graph_source,
+            "displayed_graph_scope": "All-corpus witnessed graph after frozen evaluation"
+            if graph_source == "graph.json"
+            else "Selected optimized specification before all-corpus reconstruction"
+            if graph_source == "optimized_candidate.json"
+            else "Initial seed specification; optimization has not finalized"
+            if graph_source == "seed_candidate.json"
+            else "No graph available",
+            "routing_stage_count": len(graph["routing_stages"])
+            if isinstance(graph.get("routing_stages"), list)
+            else None,
+            "final_edges_reconstructed": "optimized_edge_spec" in graph
+            if graph_source == "graph.json"
+            else None,
+            "pre_reconstruction_edge_count": len(graph["optimized_edge_spec"])
+            if isinstance(graph.get("optimized_edge_spec"), list)
+            else None,
+            "frozen_test_applies_to": "Selected frozen specification only; not the later reconstructed witnessed graph",
+        },
         "independent_audits": {
             "planned": numeric((audit or {}).get("planned_checks")),
             "completed": numeric((audit or {}).get("completed_checks")),
             "failed_requests": numeric((audit or {}).get("failed_requests")),
+            "result_records_including_request_errors": audit_recorded,
+            "checks_without_request_errors": audit_non_error,
+            "checks_without_result_records": audit_missing,
+            "by_kind_execution": audit_execution_by_kind,
+            "scope": "Sampled LLM judgments over the final all-corpus graph; unknown verdicts include failed requests unless separated below",
             "by_kind": {
                 safe_text(k): number_map(v) for k, v in (audit or {}).get("by_kind", {}).items()
             },
@@ -950,7 +1080,18 @@ def markdown_report(report: dict) -> str:
                     "Edges eligible under sampled applicability checks",
                     g["sampled_traversable_edges"],
                 ),
-                ("Independent checks completed", report["independent_audits"]["completed"]),
+                (
+                    "Audit result records (including request errors)",
+                    report["independent_audits"]["result_records_including_request_errors"],
+                ),
+                (
+                    "Audit checks without request errors",
+                    report["independent_audits"]["checks_without_request_errors"],
+                ),
+                (
+                    "Planned audit checks without result records",
+                    report["independent_audits"]["checks_without_result_records"],
+                ),
                 (
                     "Independent audit failed requests",
                     report["independent_audits"]["failed_requests"],
@@ -1026,6 +1167,43 @@ def markdown_report(report: dict) -> str:
             "No identity-verified paired held-out comparison is available in this snapshot.",
             "",
         ]
+    stages = report["graph_stages"]
+    lines += [
+        "## Graph construction stages",
+        "",
+        "| Stage | States | Edges | Evaluation scope |",
+        "|---|---:|---:|---|",
+    ]
+    for label, counts, scope in (
+        ("Initial seed specification", stages["initial_seed"], "Initialization before GEPA"),
+        (
+            "Selected frozen specification",
+            stages["selected_frozen_specification"],
+            "GEPA selection and frozen held-out scores",
+        ),
+        (
+            "Final reconstructed witnessed graph",
+            {
+                "states": g["node_count"] if g["artifact"] == "graph.json" else None,
+                "edges": g["edge_count"] if g["artifact"] == "graph.json" else None,
+            },
+            "Full-corpus assignment, reconstructed contracts, and sampled independent audits",
+        ),
+    ):
+        lines.append(
+            "| "
+            + " | ".join(md(value) for value in (label, counts["states"], counts["edges"], scope))
+            + " |"
+        )
+    lines += [
+        "",
+        stages["frozen_test_applies_to"] + ". "
+        "Observed endpoint-pair edges receive newly proposed contracts after assignment; "
+        "they are not the same edge specification scored by GEPA.",
+        "",
+        "Displayed graph: " + md(stages["displayed_graph_scope"]) + ".",
+        "",
+    ]
     lines += [
         f"Available graph source: `{g['artifact'] or 'none'}`. Assignment source: `{a['artifact'] or 'none'}`.",
         "",
@@ -1056,17 +1234,18 @@ def markdown_report(report: dict) -> str:
         "",
         "## Independent audits",
         "",
-        "| Check type | Supported | Contradicted | Unknown | Not run |",
-        "|---|---:|---:|---:|---:|",
+        "| Check type | Supported | Contradicted | Unknown (including errors) | Request errors | Non-error unknown | Not run |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for kind, counts in report["independent_audits"]["by_kind"].items():
         lines.append(
             "| "
             + " | ".join(
                 [md(kind)]
+                + [md(counts.get(k, 0)) for k in ("supported", "contradicted", "unknown")]
                 + [
-                    md(counts.get(k, 0))
-                    for k in ("supported", "contradicted", "unknown", "not_run")
+                    md(report["independent_audits"]["by_kind_execution"][kind][k])
+                    for k in ("request_errors", "non_error_unknown", "not_run")
                 ]
             )
             + " |"
@@ -1392,6 +1571,7 @@ def html_report(report: dict) -> str:
         return html.escape(fmt(value), quote=True)
 
     graph = report["graph"]
+    stages = report["graph_stages"]
     cards = [
         ("Task families", report["corpus"]["tasks"]),
         ("Rollouts", report["corpus"]["rollouts"]),
@@ -1421,12 +1601,18 @@ def html_report(report: dict) -> str:
     edge_rows = []
     for edge in graph["edges"]:
         refs = "; ".join(w.get("transition_id", "") for w in edge["witness_reference_subset"])
+        verdicts = "; ".join(
+            f"{key}: {fmt(edge['source_audit_verdicts'].get(key, 0))}"
+            for key in ("supported", "contradicted", "unknown", "not_run")
+        )
         edge_rows.append(
             f'<tr data-source="{esc(edge["source"])}" data-target="{esc(edge["target"])}" data-sampled="{1 if edge["sampled_traversable"] else 0}">'
             + f"<td>{esc(edge['id'])}<br><b>{esc(edge['source'])} → {esc(edge['target'])}</b></td>"
             + f"<td>{esc(edge['operation'])}<small>Effect: {esc(edge['effect'])}</small><small>Bindings: {esc(edge['bindings'])}</small></td>"
             + f"<td>{esc(edge['witness_count'])}<small>Tasks: {esc(edge['distinct_task_count'])}</small></td>"
-            + f"<td>{'Sampled support' if edge['sampled_traversable'] else 'Not eligible'}<small>{esc(edge['evidence_status'])}</small></td>"
+            + f"<td>{'Sampled support' if edge['sampled_traversable'] else 'Not eligible'}<small>{esc(edge['evidence_status'])}</small>"
+            + f"<small>{esc(verdicts)}</small><small>Request errors: {esc(edge['source_audit_request_errors'])}; non-error unknown: {esc(edge['source_audit_non_error_unknown'])}.</small>"
+            + f"<small>Source histories with result records (including errors): {esc(edge['source_histories_with_audit_records'])} of {esc(edge['source_member_count'])} members.</small></td>"
             + f"<td>{esc(refs)}<small>Reference subset: at most 3. Not the full witness ledger.</small></td></tr>"
         )
     pending = ", ".join(k for k, v in report["completion_checks"].items() if not v) or "None"
@@ -1437,8 +1623,33 @@ def html_report(report: dict) -> str:
         for d in report["task_drafts"]["selected_examples"]
     )
     audits = "".join(
-        f"<li>{esc(kind)}: {esc(', '.join(f'{k}: {v}' for k, v in counts.items()))}</li>"
+        f"<li>{esc(kind)}: {esc(', '.join(f'{k}: {v}' for k, v in counts.items()))}. "
+        f"Request errors: {esc(report['independent_audits']['by_kind_execution'][kind]['request_errors'])}; "
+        f"non-error unknown: {esc(report['independent_audits']['by_kind_execution'][kind]['non_error_unknown'])}.</li>"
         for kind, counts in report["independent_audits"]["by_kind"].items()
+    )
+    stage_rows = "".join(
+        "<tr>" + "".join("<td>" + esc(value) + "</td>" for value in row) + "</tr>"
+        for row in (
+            (
+                "Initial seed specification",
+                stages["initial_seed"]["states"],
+                stages["initial_seed"]["edges"],
+                "Initialization before GEPA",
+            ),
+            (
+                "Selected frozen specification",
+                stages["selected_frozen_specification"]["states"],
+                stages["selected_frozen_specification"]["edges"],
+                "GEPA selection and frozen held-out scores",
+            ),
+            (
+                "Final reconstructed witnessed graph",
+                graph["node_count"] if graph["artifact"] == "graph.json" else None,
+                graph["edge_count"] if graph["artifact"] == "graph.json" else None,
+                "Full-corpus assignment, reconstructed contracts, and sampled independent audits",
+            ),
+        )
     )
     execution_rows = "".join(
         f"<tr><td>{esc(task['title'])}</td>"
@@ -1539,8 +1750,10 @@ def html_report(report: dict) -> str:
 <section><h2>Optimization and frozen evaluation</h2><p>Observed proposals: <b>{esc(optimization["proposals_observed"])}</b>.
 Accepted revisions: <b>{esc(optimization["accepted_revisions"])}</b>. Initial Pareto mean: <b>{esc(optimization["initial_pareto_score"])}</b>.
 Best Pareto mean: <b>{esc(optimization["best_pareto_score"])}</b>. Frozen test mean: <b>{esc(report["frozen_test"]["mean_score"])}</b>.</p>{comparison_html}
+<h3>Graph construction stages</h3><table><thead><tr><th>Stage</th><th>States</th><th>Edges</th><th>Evaluation scope</th></tr></thead><tbody>{stage_rows}</tbody></table>
+<p>{esc(stages["frozen_test_applies_to"])}. Observed endpoint-pair edges receive newly proposed contracts after assignment; they are not the edge specification scored by GEPA.</p>
 <p>Assignment records: {esc(report["assignments"]["recorded"])}; missing history IDs: {esc(report["assignments"]["missing_ids"])}; explicitly unassigned: {esc(report["assignments"]["unassigned"])}.
-Available graph: {esc(graph["artifact"])}.</p><p>Observed transitions: {esc(graph["observed_transitions"])}; unassigned transitions: {esc(graph["unassigned_transitions"])}.</p></section>
+Available graph: {esc(graph["artifact"])}. Scope: {esc(stages["displayed_graph_scope"])}.</p><p>Observed transitions: {esc(graph["observed_transitions"])}; unassigned transitions: {esc(graph["unassigned_transitions"])}.</p></section>
 <section><h2>Directed adjacency matrix</h2><p>All source/destination state pairs are represented. Blank cells mean zero recorded witnesses; color uses a logarithmic witness-count scale. A sampled-eligible edge is not universally certified.</p>
 <div class="matrix-tools"><label>Edges <select id="matrix-mode"><option value="all">All observed edges</option><option value="eligible">Sampled-traversable only</option></select></label><label>Zoom <input id="matrix-zoom" type="range" min="1" max="4" value="1" step="0.25"></label><button id="matrix-clear" type="button">Clear state/pair focus</button></div>
 <p><span class="matrix-legend"></span>More observed witnesses → darker. Hover any cell for exact counts; click an axis state or cell to filter the tables.</p><p id="matrix-focus" class="muted">Focus: all states and pairs</p><p id="matrix-detail" aria-live="polite">No cell selected.</p><div class="matrix-viewport">{adjacency_matrix(graph)}</div></section>
@@ -1550,7 +1763,7 @@ Available graph: {esc(graph["artifact"])}.</p><p>Observed transitions: {esc(grap
 <section><h2>Directed edges</h2><p>Observed witnesses and sampled applicability are separate evidence. No edge is universally certified.</p>
 <input type="search" data-table="edges" aria-label="Search edges" placeholder="Search endpoints, operation, effect, or evidence status"><p id="edges-count" class="muted"></p>
 <div class="scroll"><table id="edges"><thead><tr><th>Edge</th><th>Operation contract</th><th>Witnesses</th><th>Evidence</th><th>Witness reference subset</th></tr></thead><tbody>{"".join(edge_rows)}</tbody></table></div></section>
-<section><h2>Independent checks</h2><p>Planned: {esc(report["independent_audits"]["planned"])}; completed: {esc(report["independent_audits"]["completed"])}; failed requests: {esc(report["independent_audits"]["failed_requests"])}.</p><ul>{audits}</ul>
+<section><h2>Independent checks</h2><p>Planned: {esc(report["independent_audits"]["planned"])}; result records (including request errors): {esc(report["independent_audits"]["result_records_including_request_errors"])}; checks without request errors: {esc(report["independent_audits"]["checks_without_request_errors"])}; failed requests: {esc(report["independent_audits"]["failed_requests"])}; planned checks without result records: {esc(report["independent_audits"]["checks_without_result_records"])}.</p><p>Unknown verdicts include request errors. Non-error unknowns are separate from missing result records and remain inconclusive semantic judgments.</p><ul>{audits}</ul>
 <p>Audit model: {esc(models["independent_audit"]["name"] or None)}. Router revision: {esc(models["router"]["revision"] or None)}. Teacher revision: {esc(models["teacher"]["revision"] or None)}.</p>
 <h2>Selected task specifications</h2><table><thead><tr><th>Draft</th><th>Feasibility review</th><th>Executed</th><th>Benchmark validated</th></tr></thead><tbody>{draft_rows}</tbody></table>
 <p>These reviewed specification drafts are separate from the executed synthetic fixtures below. Draft generation errors: {esc(report["task_drafts"]["generation_error_count"])}.</p>

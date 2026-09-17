@@ -734,3 +734,172 @@ def test_usage_separates_invalid_output_responses_from_transport_failures(tmp_pa
         content = (output / filename).read_text()
         assert "Recorded transport failures in retained successful request chains: 1" in content
         assert "RAW_" not in content
+
+
+def test_report_distinguishes_frozen_specification_from_reconstructed_graph(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    state = {
+        "id": "A",
+        "name": "Observed situation",
+        "description": "Local facts",
+        "exclusions": [],
+    }
+    seed = {
+        "state_spec": json.dumps({"states": [state], "router_instructions": "Route"}),
+        "edge_spec": json.dumps({"edges": []}),
+    }
+    selected = {
+        "state_spec": seed["state_spec"],
+        "edge_spec": json.dumps(
+            {
+                "edges": [
+                    {
+                        "id": f"selected{i}",
+                        "source": "A",
+                        "target": "A",
+                        "operation": "Inspect",
+                        "effect": "Facts",
+                        "bindings": "Rename",
+                    }
+                    for i in range(2)
+                ]
+            }
+        ),
+    }
+    write(run, "seed_candidate.json", seed)
+    write(run, "optimized_candidate.json", selected)
+    write(
+        run,
+        "gepa_result.json",
+        {"candidates": [seed, selected], "val_aggregate_scores": [0.4, 0.8]},
+    )
+    heldout = json.loads((run / "heldout_test.json").read_text())
+    heldout["candidate_hash"] = hashlib.sha256(
+        json.dumps(selected, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    write(run, "heldout_test.json", heldout)
+    graph = json.loads((run / "graph.json").read_text())
+    graph["nodes"].append({**state, "id": "B"})
+    graph["routing_stages"] = [selected]
+    graph["optimized_edge_spec"] = json.loads(selected["edge_spec"])["edges"]
+    write(run, "graph.json", graph)
+    report = report_module.build_report(run, corpus, output)
+    assert report["status"] == "complete"
+    stages = report["graph_stages"]
+    assert stages["initial_seed"]["edges"] == 0
+    assert stages["selected_frozen_specification"]["states"] == 1
+    assert stages["selected_frozen_specification"]["edges"] == 2
+    assert report["graph"]["node_count"] == 2 and report["graph"]["edge_count"] == 1
+    assert stages["final_edges_reconstructed"] is True
+    assert stages["pre_reconstruction_edge_count"] == 2
+    for name in ("README.md", "report.html"):
+        text = (output / name).read_text()
+        assert "Selected frozen specification" in text
+        assert "Final reconstructed witnessed graph" in text
+        assert "not the later reconstructed witnessed graph" in text
+
+
+def test_seed_edges_are_not_labeled_optimized(tmp_path):
+    run = tmp_path / "run"
+    write(
+        run,
+        "seed_candidate.json",
+        {
+            "state_spec": json.dumps(
+                {
+                    "states": [
+                        {"id": "A", "name": "Seed", "description": "Facts", "exclusions": []}
+                    ],
+                    "router_instructions": "Route",
+                }
+            ),
+            "edge_spec": json.dumps(
+                {
+                    "edges": [
+                        {
+                            "id": "E",
+                            "source": "A",
+                            "target": "A",
+                            "operation": "Inspect",
+                            "effect": "Facts",
+                            "bindings": "Rename",
+                        }
+                    ]
+                }
+            ),
+        },
+    )
+    report = report_module.collect_report(run, tmp_path / "corpus")
+    assert report["graph"]["artifact"] == "seed_candidate.json"
+    assert (
+        report["graph"]["edges"][0]["evidence_status"]
+        == "Initial seed specification; not yet audited"
+    )
+    assert not report["graph_stages"]["selected_frozen_specification"]["available"]
+
+
+def test_audit_reporting_separates_missing_failures_and_non_error_unknowns(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    verdicts = {"supported": 1, "unknown": 3, "not_run": 1}
+    write(
+        run,
+        "independent_audit_summary.json",
+        {
+            "planned_checks": 5,
+            "completed_checks": 4,
+            "failed_requests": 1,
+            "by_kind": {"edge_source_applicability": verdicts},
+        },
+    )
+    write(
+        run,
+        "independent_audit_jobs.json",
+        [
+            {
+                "audit_id": f"audit{i}",
+                "kind": "edge_source_applicability",
+                "edge_id": "E",
+                "history_ids": [f"r:h{i:04d}"],
+            }
+            for i in range(5)
+        ],
+    )
+    write(
+        run,
+        "independent_audit_results.json",
+        [
+            {
+                "audit_id": f"audit{i}",
+                "kind": "edge_source_applicability",
+                "verdict": "supported" if i == 0 else "unknown",
+                "execution_status": "error" if i == 1 else "completed",
+                "private": "RAW_AUDIT_DETAILS_SECRET",
+            }
+            for i in range(4)
+        ],
+    )
+    graph = json.loads((run / "graph.json").read_text())
+    graph["edges"][0]["audit"] = {
+        "verdicts": verdicts,
+        "source_member_count": 6,
+        "independent_sampled_source_ids": [f"r:h{i:04d}" for i in range(4)],
+    }
+    write(run, "graph.json", graph)
+    report = report_module.build_report(run, corpus, output)
+    audit = report["independent_audits"]
+    assert audit["result_records_including_request_errors"] == 4
+    assert audit["checks_without_request_errors"] == 3
+    assert audit["checks_without_result_records"] == 1
+    assert audit["by_kind_execution"]["edge_source_applicability"] == {
+        "request_errors": 1,
+        "non_error_unknown": 2,
+        "not_run": 1,
+    }
+    edge = report["graph"]["edges"][0]
+    assert edge["source_histories_with_audit_records"] == 4
+    assert edge["source_member_count"] == 6
+    assert edge["source_audit_request_errors"] == 1
+    assert edge["source_audit_non_error_unknown"] == 2
+    for name in ("README.md", "report.html", "report.json"):
+        assert "RAW_" not in (output / name).read_text()
+    assert "non-error unknown: 2" in (output / "report.html").read_text()

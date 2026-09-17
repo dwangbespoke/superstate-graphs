@@ -441,6 +441,7 @@ def export_artifacts(
                 raise ValueError("Duplicate transition ID in source corpus")
             expected_transitions[transition["transition_id"]] = transition
     witnesses, edges = [], []
+    public_edges = {edge["id"]: edge for edge in report["graph"]["edges"]}
     for edge in graph["edges"]:
         if edge["source"] not in states or edge["target"] not in states:
             raise ValueError("Export contains a dangling edge")
@@ -491,6 +492,11 @@ def export_artifacts(
             ),
         )
         audit["universal_contract_certified"] = False
+        audit["request_errors"] = public_edges[edge["id"]]["source_audit_request_errors"]
+        audit["non_error_unknown"] = public_edges[edge["id"]]["source_audit_non_error_unknown"]
+        audit["sampling_interpretation"] = (
+            "Sampled source IDs and untraversed_sources_tested include result records for failed requests; verdicts and request_errors distinguish support, semantic uncertainty, and failures."
+        )
         edges.append(
             {
                 **_contract(edge),
@@ -821,6 +827,8 @@ def export_artifacts(
             "source_artifact_sha256": source_hashes,
             "formation_uses_terminal_rewards": False,
             "graph_scope": "All-corpus transductive completion after frozen held-out evaluation",
+            "graph_stages": report["graph_stages"],
+            "edge_construction_scope": "Final observed endpoint-pair contracts are reconstructed after frozen evaluation; selected_candidate.json preserves the edge specification evaluated by GEPA",
             "retention_scope": "Previously evaluated training histories per candidate",
             "universal_contract_certified": False,
             "exported_executable_tasks": task_receipts,
