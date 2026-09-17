@@ -131,7 +131,7 @@ def optimize(tmp_path, proposals=2):
             max_metric_calls=100,
             run_dir=str(tmp_path / "gepa"),
             seed=17,
-            cache_evaluation=True,
+            cache_evaluation=False,
             raise_on_exception=True,
         )
     return result, adapter, model, train
@@ -161,3 +161,14 @@ def test_pinned_gepa_runs_custom_sampler_selector_and_coverage_acceptance(tmp_pa
         tasks = {next(row["task_id"] for row in train if row["id"] == rid) for rid in ids}
         assert len(ids) == len(tasks) == 2
     assert all("pareto-task-" not in json.dumps(call) for call in model.reflection_inputs)
+    # Train and validation ListDataLoader indices overlap. Every candidate must
+    # nevertheless be evaluated on the actual Pareto examples; GEPA's shared
+    # integer-keyed evaluation cache would silently reuse training rows here.
+    evaluated = [json.loads(path.read_text())
+                 for path in (tmp_path / "runtime/evaluations").rglob("*.json")]
+    pareto_evaluated = {(row["candidate_hash"], row["rollout_id"])
+                        for row in evaluated if row["split"] == "pareto"}
+    assert pareto_evaluated == {
+        (digest(candidate), f"pareto-{i}")
+        for candidate in result.candidates for i in range(2)
+    }

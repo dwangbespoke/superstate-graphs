@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import pytest
 
+from superstate_graphs import graph_task_examples
 from superstate_graphs.graph_task_examples import (
     compare_query_results,
     construct_executable_example,
@@ -108,7 +109,7 @@ def test_unordered_result_comparison_preserves_duplicate_multiplicity_and_types(
                                      ordered=True)
 
 
-def test_generator_and_blinded_solver_are_schema_constrained_and_execute(tmp_path):
+def test_generator_and_blinded_solver_are_schema_constrained_and_execute(tmp_path, monkeypatch):
     class FakeModel:
         runtime = {"model": "fake-model", "revision": "r1", "api_key": "NEVER_PERSIST_SECRET"}
         calls = 0
@@ -164,3 +165,10 @@ def test_generator_and_blinded_solver_are_schema_constrained_and_execute(tmp_pat
     changed_prefix = asyncio.run(construct_executable_example(path, prefixes.__getitem__, model, tmp_path))
     assert changed_prefix["request_key"] != revised["request_key"]
     assert model.calls == 8
+    original_policy = graph_task_examples.qwen_generation_policy
+    monkeypatch.setattr(graph_task_examples, "qwen_generation_policy",
+                        lambda **kwargs: {**original_policy(**kwargs), "top_k": 21})
+    changed_policy = asyncio.run(construct_executable_example(path, prefixes.__getitem__, model, tmp_path))
+    assert changed_policy["request_key"] != changed_prefix["request_key"]
+    assert changed_policy["cache_reused"] is False
+    assert model.calls == 10

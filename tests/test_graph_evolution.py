@@ -491,3 +491,30 @@ def test_teacher_change_invalidates_judgments_without_rerouting(tmp_path: Path):
     assert first._cache_provenance(candidate, run, judge=True) != second._cache_provenance(
         candidate, run, judge=True
     )
+
+
+def test_noop_parent_is_rejected_even_with_stale_crossover_hash(tmp_path: Path):
+    adapter, state, proposal = _retention_case(
+        tmp_path, _supported_result("r1"), _supported_result("r1")
+    )
+    proposal.candidate = state.program_candidates[0]
+    proposal.subsample_scores_after = proposal.subsample_scores_before
+    adapter.second_parents[digest(proposal.candidate)] = 1
+    criterion = CoverageAcceptance(adapter)
+    assert not criterion.should_accept(proposal, state)
+    assert "identical" in criterion.reason
+    assert not adapter.calls
+    assert not adapter.second_parents
+
+
+def test_pending_crossover_metadata_is_not_restored_as_graph_identity(tmp_path: Path):
+    with asyncio.Runner() as runner:
+        adapter = GraphGEPAAdapter(GraphRuntime(FakeLLM(), tmp_path), runner, [rollout()], [])
+        candidate = candidate_from_graph(graph())
+        adapter.second_parents[digest(candidate)] = 4
+        adapter.seen[digest(candidate)].add("r1")
+        saved = adapter.get_adapter_state()
+        assert "second_parents" not in saved
+        adapter.set_adapter_state({**saved, "second_parents": {digest(candidate): 4}})
+        assert not adapter.second_parents
+        assert adapter.seen[digest(candidate)] == {"r1"}

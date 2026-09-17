@@ -21,6 +21,7 @@ from gepa.core.adapter import EvaluationBatch
 from gepa.strategies.candidate_selector import ParetoCandidateSelector
 
 from .full_corpus import render_history, render_step
+from .graph_llm import qwen_generation_policy
 from .graph_schemas import (
     GRAPH_SCHEMA,
     HISTORY_SUFFIX,
@@ -60,6 +61,10 @@ eventual success, expected reward, task identity, trajectory position, or a list
 of commands alone. Preserve distinctions that change local operation applicability.
 Avoid generic catch-all states such as 'working', 'other', or 'needs next step'.
 Definitions should explain membership positively and include meaningful exclusions.
+Exclusions are conditions that would make a history NOT belong to the state;
+never put a defining fact or an unresolved issue shared by members in exclusions.
+For example, an unverified-build state may exclude 'verification already passed',
+but must not exclude 'verification has not yet been performed'.
 These are AGENT KNOWLEDGE/DECISION SITUATIONS, not a SQL/dbt data model dependency
 graph. A table such as stg_orders or mart_revenue is an entity, never itself a
 superstate. For example, 'join multiplicity remains unverified after schema
@@ -291,7 +296,7 @@ class GraphRuntime:
         if "model" not in public_model:
             public_model["model"] = getattr(self.llm, "model", type(self.llm).__qualname__)
         provenance = {
-            "format": "full-prefix-runtime-v5-evidence-first-reasoning-boundary",
+            "format": "full-prefix-runtime-v6-bounded-sampled-reasoning",
             "model": public_model,
             "transcript_sha256": hashlib.sha256(rollout["transcript"].encode()).hexdigest(),
             "history_end_offsets_sha256": digest(rollout["history_end_offsets"]),
@@ -300,7 +305,10 @@ class GraphRuntime:
             "router_system_sha256": digest(ROUTER_SYSTEM),
             "history_suffix_sha256": digest(HISTORY_SUFFIX),
             "focal_prompt_sha256": digest(FOCAL_ROUTING_REMINDER),
-            "router_decode": {"max_tokens": 2048, "thinking": True, "temperature": 0.0, "seed": 17},
+            "router_decode": {
+                "max_tokens": 2048, "thinking": True, "seed": 17,
+                **qwen_generation_policy(thinking=True, max_tokens=2048),
+            },
         }
         if judge:
             teacher_settings = getattr(self.teacher_llm, "runtime", {})
@@ -318,8 +326,9 @@ class GraphRuntime:
                         "max_tokens": 16384,
                         "repair_max_tokens": 24576,
                         "thinking": True,
-                        "temperature": 0.0,
                         "seed": 17,
+                        **qwen_generation_policy(thinking=True, max_tokens=16384),
+                        "repair_policy": qwen_generation_policy(thinking=True, max_tokens=24576),
                     },
                     "scoring": {
                         "history": 0.25,
@@ -665,6 +674,10 @@ async def discover_seed(runtime: GraphRuntime, train: list[dict], output: Path) 
         "does not establish its existence or correctness.\n"
         "Describe source and target as concise reusable local situations: established facts, "
         "available resources, unresolved issue, or concrete blocker. The source uses only the "
+        "source prefix. Exclusions are conditions that would make a history NOT belong; "
+        "do not put the state's own defining facts or unresolved issues in exclusions. "
+        "For an unverified state, 'verification passed' can exclude membership, but "
+        "'verification not performed' must not be an exclusion. The source uses only the "
         "full source history. The target must incorporate the focal tool observation below; "
         "it may retain an unresolved issue when an operation fails. Describe the action actually "
         "attempted and its actual observed effect, not the action that would have solved the task.\n"
@@ -1008,6 +1021,9 @@ class GraphGEPAAdapter:
     def propose(
         self, candidate: dict[str, str], reflective_dataset: dict, components_to_update: list[str]
     ) -> dict[str, str]:
+        # Crossover metadata belongs to this proposal attempt, not permanently
+        # to graph content. A later no-op can reproduce an earlier child's hash.
+        self.second_parents.clear()
         self.proposals += 1
         records = next(iter(reflective_dataset.values()))
         other = self._merge_partner()
@@ -1108,7 +1124,6 @@ class GraphGEPAAdapter:
         return {
             "seen": {k: sorted(v) for k, v in self.seen.items()},
             "proposals": self.proposals,
-            "second_parents": dict(self.second_parents),
             "tried_merges": sorted(self.tried_merges),
             "retention_failures": self.retention_failures,
         }
@@ -1116,7 +1131,9 @@ class GraphGEPAAdapter:
     def set_adapter_state(self, value: dict) -> None:
         self.seen = defaultdict(set, {k: set(v) for k, v in value.get("seen", {}).items()})
         self.proposals = value.get("proposals", 0)
-        self.second_parents = value.get("second_parents", {})
+        # Checkpoints are iteration boundaries: there is no pending proposal to
+        # restore. Accepted crossover ancestry lives in GEPA's candidate state.
+        self.second_parents = {}
         self.tried_merges = {tuple(p) for p in value.get("tried_merges", [])}
         self.retention_failures = value.get("retention_failures", [])
 
@@ -1161,10 +1178,17 @@ class CoverageAcceptance:
         adapter = self.adapter
         child = proposal.candidate
         child_hash = digest(child)
-        other = adapter.second_parents.get(child_hash)
+        other = adapter.second_parents.pop(child_hash, None)
         parents = list(proposal.parent_program_ids)
         if other is not None and other not in parents:
             parents.append(other)
+        if any(child == state.program_candidates[i] for i in parents):
+            self.reason = "Proposal is identical to a parent"
+            return False
+        # Store the actual parent list on the proposal before screening; retries
+        # of this same proposal retain ancestry without stale hash-based state.
+        proposal.parent_program_ids = parents
+        if len(parents) > 1:
             a, b = (state.prog_candidate_val_subscores[i] for i in parents[:2])
             pools = [
                 [i for i in a if a[i] > b[i]],

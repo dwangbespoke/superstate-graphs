@@ -92,7 +92,7 @@ evaluator reports evidence and proposed distinctions for reflection; rewards do
 not enter this process. All full Pareto rollouts are evaluated for each accepted
 candidate. The final candidate maximizes mean Pareto score.
 
-The run allows up to 100 proposal attempts, with a three-hour optimization
+The run allows up to 100 proposal attempts, with a two-hour optimization
 deadline checked between iterations so time remains for exhaustive deployment
 and analysis. Actual attempts, accepted candidates, stopping reason, inference
 counts, and score changes must be reported from artifacts; a configured ceiling
@@ -155,7 +155,10 @@ parents in GEPA's ancestry. If no pair exists, the step remains reflection.
 
 ## Exhaustive final graph and held-out interpretation
 
-First, the chosen optimized specification receives its frozen test evaluation.
+First, the chosen optimized specification and the initial seed receive frozen
+evaluations on the same test rollouts. Their paired score differences are summarized
+by original task, with a task-cluster bootstrap interval; neither test feedback
+nor test scores affect prompt updates or candidate selection.
 Then every one of the 37,532 corpus histories is routed. Residual uncovered
 situations can receive explicit additional definitions in a separately labeled
 **all-corpus, transductive completion stage**. Frozen earlier routing stages retain
@@ -210,8 +213,13 @@ uv run python -m superstate_graphs.full_graph \
   --runtime results/runtime/graph-two.json \
   --runtime results/runtime/graph-three.json \
   --runtime results/runtime/graph-four.json \
+  --runtime results/runtime/graph-five.json \
+  --runtime results/runtime/graph-six.json \
+  --runtime results/runtime/graph-seven.json \
+  --runtime results/runtime/graph-eight.json \
   --teacher-runtime results/runtime/graph-teacher.json \
-  --proposals 100 --minibatch 6 --optimization-hours 3
+  --teacher-runtime results/runtime/graph-teacher-two.json \
+  --proposals 100 --minibatch 6 --optimization-hours 2
 ```
 
 Successful model responses, per-candidate assignments/evaluations, GEPA

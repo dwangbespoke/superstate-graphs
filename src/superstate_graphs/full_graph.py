@@ -10,7 +10,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import importlib.metadata
+import inspect
 import json
+import math
 import random
 import statistics
 import time
@@ -43,7 +46,7 @@ from .graph_evolution import (
     validate_spec,
     write_json,
 )
-from .graph_llm import GraphLLMPool
+from .graph_llm import GraphLLMPool, qwen_generation_policy
 from .graph_schemas import EDGE_CONTRACT_SCHEMA, GRAPH_SCHEMA, HISTORY_SUFFIX, LOCAL_STATE_SCHEMA
 
 
@@ -80,6 +83,81 @@ class DeadlineStopper:
         return time.time() >= self.deadline
 
 
+def prepare_optimizer_identity(
+    runtime: GraphRuntime,
+    candidate: dict[str, str],
+    train: list[dict],
+    pareto: list[dict],
+    directory: Path,
+    *,
+    minibatch: int,
+    random_seed: int,
+) -> dict:
+    """Fail closed before GEPA restores scores from a different experiment.
+
+    GEPA's serialized population already contains validation scores and cannot
+    rely on GraphRuntime's lower-level cache fingerprints to invalidate them.
+    Budget increases are permitted; data, inference, evaluation, and algorithm
+    changes require a separately archived/new optimizer run.
+    """
+    from . import graph_evolution, graph_schemas
+
+    gepa_root = Path(inspect.getfile(gepa)).parent
+    identity = {
+        "format": "optimizer-identity-v1",
+        "seed_candidate_sha256": digest(candidate),
+        "ordered_examples": {
+            split: [
+                {
+                    "rollout_id": rollout["id"],
+                    "provenance_sha256": digest(
+                        runtime._cache_provenance(candidate, rollout, judge=True)
+                    ),
+                }
+                for rollout in examples
+            ]
+            for split, examples in (("train", train), ("pareto", pareto))
+        },
+        "sampler": {"minibatch": minibatch, "random_seed": random_seed},
+        "algorithm": {
+            "graph_evolution_sha256": hashlib.sha256(
+                Path(graph_evolution.__file__).read_bytes()
+            ).hexdigest(),
+            "schemas_sha256": hashlib.sha256(Path(graph_schemas.__file__).read_bytes()).hexdigest(),
+            "sampler_sha256": digest(inspect.getsource(DistinctTaskSampler)),
+            "gepa_version": importlib.metadata.version("gepa"),
+            "gepa_sources": {
+                name: hashlib.sha256((gepa_root / name).read_bytes()).hexdigest()
+                for name in (
+                    "api.py", "core/engine.py", "core/state.py",
+                    "proposer/reflective_mutation/reflective_mutation.py",
+                    "strategies/candidate_selector.py",
+                )
+            },
+            "module_selector": "all",
+            "skip_perfect_score": False,
+            "use_builtin_merge": False,
+            "gepa_evaluation_cache": False,
+            "runtime_evaluation_cache": "content-and-model-fingerprinted",
+        },
+    }
+    path = directory / "optimizer_identity.json"
+    if path.exists():
+        if json.loads(path.read_text()) != identity:
+            raise ValueError(
+                "Optimizer identity mismatch: existing GEPA scores belong to different "
+                "data, models, evaluator, seed, or algorithm. Archive the old optimizer run "
+                "explicitly or use a new output directory."
+            )
+    else:
+        if (directory / "gepa" / "gepa_state.bin").exists():
+            raise ValueError(
+                "Existing GEPA checkpoint has no optimizer identity; refusing unverified resume"
+            )
+        write_json(path, identity)
+    return identity
+
+
 def summarize_evaluations(results: list[dict]) -> dict:
     metrics = ["history_coverage", "transition_coverage", "coherence", "outgoing_applicability"]
     per_task = defaultdict(list)
@@ -99,6 +177,179 @@ def summarize_evaluations(results: list[dict]) -> dict:
         },
         "evidence_type": "frozen LLM semantic proxy; no environment execution",
     }
+
+
+async def evaluate_heldout_comparison(
+    runtime: GraphRuntime,
+    seed_candidate: dict[str, str],
+    selected_candidate: dict[str, str],
+    test: list[dict],
+    directory: Path,
+    *,
+    bootstrap_draws: int = 10_000,
+    random_seed: int = 20260917,
+) -> dict:
+    """Compare two already-fixed graphs on exactly the same untouched rollouts.
+
+    This function is called after selection and before all-corpus completion.
+    Its scores and textual feedback never enter reflection or candidate selection.
+    The bootstrap resamples original tasks, keeping the paired graph measurements
+    and all rollouts of each sampled task together.
+    """
+    if not test or bootstrap_draws < 1:
+        raise ValueError("Heldout comparison requires test rollouts and positive bootstrap draws")
+    expected = {rollout["id"]: rollout for rollout in test}
+    if len(expected) != len(test) or any(rollout.get("split") != "test" for rollout in test):
+        raise ValueError("Heldout comparison requires unique rollout IDs exclusively from test")
+    components = (
+        "score", "history_coverage", "transition_coverage", "coherence",
+        "outgoing_applicability", "complexity",
+    )
+
+    def component(row: dict, name: str) -> float:
+        value = row.get("score") if name == "score" else row.get("metrics", {}).get(name)
+        if isinstance(value, bool) or not isinstance(value, (float, int)) or not math.isfinite(value):
+            raise ValueError(f"Heldout comparison requires a finite {name} in every rollout")
+        return float(value)
+
+    def validate_rows(rows: Any, candidate: dict[str, str]) -> dict[str, dict]:
+        if not isinstance(rows, list) or len(rows) != len(test):
+            raise ValueError("Heldout evaluation does not contain the exact common rollout set")
+        indexed = {}
+        for row in rows:
+            if not isinstance(row, dict) or row.get("rollout_id") not in expected:
+                raise ValueError("Heldout evaluation contains an unknown rollout")
+            rid = row["rollout_id"]
+            original = expected[rid]
+            if rid in indexed or row.get("task_id") != original["task_id"] or row.get("split") != "test":
+                raise ValueError("Heldout evaluation has duplicate or mismatched rollout/task identities")
+            if row.get("candidate_hash") != digest(candidate):
+                raise ValueError("Heldout rollout was evaluated with a different candidate")
+            if row.get("cache_provenance") != runtime._cache_provenance(candidate, original, judge=True):
+                raise ValueError("Heldout rollout provenance does not match the frozen comparison")
+            for name in components:
+                component(row, name)
+            indexed[rid] = row
+        if set(indexed) != set(expected):
+            raise ValueError("Heldout evaluation does not contain the exact common rollout set")
+        return indexed
+
+    async def frozen_evaluation(
+        candidate: dict[str, str], path: Path, reuse: dict | None = None
+    ) -> dict:
+        validate_spec(candidate)
+        identity = digest({
+            "candidate": candidate,
+            "inputs": [runtime._cache_provenance(candidate, rollout, judge=True) for rollout in test],
+        })
+        if path.exists():
+            saved = json.loads(path.read_text())
+            if saved.get("evaluation_identity") == identity:
+                if saved.get("candidate_hash") != digest(candidate):
+                    raise ValueError("Heldout checkpoint candidate does not match its identity")
+                validate_rows(saved.get("rollouts"), candidate)
+                return saved
+            archive = directory / "superseded_test_evaluations"
+            archive.mkdir(exist_ok=True)
+            path.rename(archive / f"{path.stem}.{digest(saved)}.json")
+        rows = reuse["rollouts"] if reuse is not None else await runtime.batch(candidate, test, judge=True)
+        validate_rows(rows, candidate)
+        payload = {
+            "candidate_hash": digest(candidate), "evaluation_identity": identity,
+            "summary": summarize_evaluations(rows), "rollouts": rows,
+            "reused_selected_evaluation": reuse is not None,
+        }
+        write_json(path, payload)
+        return payload
+
+    directory.mkdir(parents=True, exist_ok=True)
+    selected = await frozen_evaluation(selected_candidate, directory / "heldout_test.json")
+    baseline = await frozen_evaluation(
+        seed_candidate, directory / "baseline_heldout.json",
+        reuse=selected if seed_candidate == selected_candidate else None,
+    )
+    selected_rows = validate_rows(selected["rollouts"], selected_candidate)
+    baseline_rows = validate_rows(baseline["rollouts"], seed_candidate)
+    by_task = defaultdict(list)
+    for rid, original in expected.items():
+        by_task[original["task_id"]].append(rid)
+    tasks = sorted(by_task)
+    per_task = {}
+    for task in tasks:
+        ids = by_task[task]
+        measurements = {}
+        for name in components:
+            seed_mean = statistics.mean(component(baseline_rows[rid], name) for rid in ids)
+            selected_mean = statistics.mean(component(selected_rows[rid], name) for rid in ids)
+            measurements[name] = {
+                "seed_mean": seed_mean, "selected_mean": selected_mean,
+                "difference": selected_mean - seed_mean,
+            }
+        per_task[task] = {"rollouts": len(ids), "components": measurements}
+
+    draws = {name: [] for name in components}
+    if len(tasks) >= 2:
+        rng = random.Random(random_seed)
+        for _ in range(bootstrap_draws):
+            sampled_tasks = rng.choices(tasks, k=len(tasks))
+            for name in components:
+                draws[name].append(statistics.mean(
+                    per_task[task]["components"][name]["difference"] for task in sampled_tasks
+                ))
+
+    def percentile(values: list[float], q: float) -> float:
+        ordered = sorted(values)
+        position = q * (len(ordered) - 1)
+        low = math.floor(position)
+        fraction = position - low
+        return ordered[low] * (1 - fraction) + ordered[min(low + 1, len(ordered) - 1)] * fraction
+
+    aggregate = {}
+    for name in components:
+        seed_mean = statistics.mean(component(row, name) for row in baseline_rows.values())
+        selected_mean = statistics.mean(component(row, name) for row in selected_rows.values())
+        seed_task_mean = statistics.mean(per_task[task]["components"][name]["seed_mean"] for task in tasks)
+        selected_task_mean = statistics.mean(per_task[task]["components"][name]["selected_mean"] for task in tasks)
+        aggregate[name] = {
+            "seed_mean": seed_mean, "selected_mean": selected_mean,
+            "mean_difference": selected_mean - seed_mean,
+            "seed_task_balanced_mean": seed_task_mean,
+            "selected_task_balanced_mean": selected_task_mean,
+            "task_balanced_difference": selected_task_mean - seed_task_mean,
+            "paired_task_bootstrap_95ci": (
+                [percentile(draws[name], 0.025), percentile(draws[name], 0.975)]
+                if draws[name] else None
+            ),
+            "favorable_direction": "lower" if name == "complexity" else "higher",
+        }
+    report = {
+        "format": "frozen-heldout-seed-selected-v1",
+        "seed_candidate_hash": digest(seed_candidate),
+        "selected_candidate_hash": digest(selected_candidate),
+        "seed_evaluation_identity": baseline["evaluation_identity"],
+        "selected_evaluation_identity": selected["evaluation_identity"],
+        "selected_equals_seed": seed_candidate == selected_candidate,
+        "rollouts": len(test), "original_tasks": len(tasks),
+        "common_rollout_ids": sorted(expected), "components": aggregate, "per_task": per_task,
+        "bootstrap": {
+            "method": "paired original-task cluster percentile bootstrap",
+            "estimand": "equal-task mean of selected-minus-seed paired rollout differences",
+            "confidence": 0.95, "draws": bootstrap_draws if len(tasks) >= 2 else 0,
+            "seed": random_seed, "resampling_units": len(tasks),
+            "equal_rollout_counts_per_task": len({len(ids) for ids in by_task.values()}) == 1,
+        },
+        "evidence_type": "heldout frozen LLM semantic proxy; no environment or learner execution",
+        "optimization_uses_test_feedback": False,
+        "before_transductive_completion": True,
+        "limitations": [
+            "Intervals condition on the fixed seed, selected graph, and one cached model evaluation.",
+            "They do not include model-generation or optimizer-selection uncertainty.",
+            "Original tasks are resampled as clusters; semantic overlap between tasks may remain.",
+            "Measured graph-proxy changes do not establish learner improvement or universal edge validity.",
+        ],
+    }
+    write_json(directory / "heldout_comparison.json", report)
+    return report
 
 
 async def exhaustive_assign(
@@ -167,6 +418,13 @@ def _completion_provenance(
         "teacher_model": {
             k: v for k, v in getattr(runtime.teacher_llm, "runtime", {}).items()
             if k in ("model", "revision", "model_revision", "tokenizer_revision")
+        },
+        "generation": {
+            role: {
+                "thinking": True, "max_tokens": budget, "seed": 17,
+                **qwen_generation_policy(thinking=True, max_tokens=budget),
+            }
+            for role, budget in (("local_proposal", 8192), ("synthesis", 24576), ("router", 2048))
         },
         "corpus_hash": digest(
             [
@@ -586,6 +844,8 @@ async def analyze_and_construct(
                     "judge_version": JUDGE_VERSION,
                     "max_tokens": 8192,
                     "thinking": True,
+                    "generation_policy": qwen_generation_policy(thinking=True, max_tokens=8192),
+                    "seed": 17,
                     "schema": AUDIT_SCHEMA,
                 }
             )
@@ -732,6 +992,11 @@ async def analyze_and_construct(
                 "review": "independent-feasibility-v2-thinking",
                 "thinking": True,
                 "max_tokens": 8192,
+                "draft_generation_policy": qwen_generation_policy(
+                    thinking=True, max_tokens=8192, temperature=0.2
+                ),
+                "review_generation_policy": qwen_generation_policy(thinking=True, max_tokens=8192),
+                "seed": 17,
                 "draft_schema": TASK_DRAFT_SCHEMA,
                 "review_schema": FEASIBILITY_SCHEMA,
             }
@@ -941,7 +1206,7 @@ def main() -> None:
     parser.add_argument("--teacher-runtime", type=Path, action="append")
     parser.add_argument("--proposals", type=int, default=100)
     parser.add_argument("--minibatch", type=int, default=6)
-    parser.add_argument("--optimization-hours", type=float, default=3.0)
+    parser.add_argument("--optimization-hours", type=float, default=2.0)
     parser.add_argument("--seed", type=int, default=17)
     parser.add_argument("--stage", choices=["all", "discover", "optimize", "finish"], default="all")
     args = parser.parse_args()
@@ -993,6 +1258,10 @@ def main() -> None:
                     return
                 if not candidate_path.exists():
                     adapter = GraphGEPAAdapter(runtime, runner, train, pareto, args.seed)
+                    prepare_optimizer_identity(
+                        runtime, seed, train, pareto, directory,
+                        minibatch=args.minibatch, random_seed=args.seed,
+                    )
                     result = gepa.optimize(
                         seed_candidate=seed,
                         trainset=train,
@@ -1012,7 +1281,10 @@ def main() -> None:
                         max_metric_calls=25000,
                         run_dir=str(directory / "gepa"),
                         seed=args.seed,
-                        cache_evaluation=True,
+                        # GEPA shares integer example IDs across ListDataLoader
+                        # train/validation sets. Its shared cache would mix them.
+                        # GraphRuntime already caches exact, namespaced inputs.
+                        cache_evaluation=False,
                         raise_on_exception=True,
                     )
                     write_json(directory / "gepa_result.json", result.to_dict())
@@ -1028,30 +1300,8 @@ def main() -> None:
                 if args.stage == "optimize":
                     return
             candidate = json.loads(candidate_path.read_text())
-            test_path = directory / "heldout_test.json"
-            test_identity = digest(
-                {
-                    "candidate": candidate,
-                    "inputs": [runtime._cache_provenance(candidate, r, judge=True) for r in test],
-                }
-            )
-            if test_path.exists():
-                existing_test = json.loads(test_path.read_text())
-                if existing_test.get("evaluation_identity") != test_identity:
-                    archive = directory / "superseded_test_evaluations"
-                    archive.mkdir(exist_ok=True)
-                    test_path.rename(archive / f"{digest(existing_test)}.json")
-            if not test_path.exists():
-                test_results = runner.run(runtime.batch(candidate, test, judge=True))
-                write_json(
-                    test_path,
-                    {
-                        "candidate_hash": digest(candidate),
-                        "evaluation_identity": test_identity,
-                        "summary": summarize_evaluations(test_results),
-                        "rollouts": test_results,
-                    },
-                )
+            seed = json.loads((directory / "seed_candidate.json").read_text())
+            runner.run(evaluate_heldout_comparison(runtime, seed, candidate, test, directory))
             assignments = runner.run(
                 exhaustive_assign(
                     runtime, candidate, rollouts, directory / "optimized_assignments_all.json"

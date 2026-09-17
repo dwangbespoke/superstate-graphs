@@ -28,6 +28,7 @@ from typing import Any, Callable, Mapping, Sequence
 import duckdb
 
 from .graph_analysis import SOURCE_DATA_SUFFIX, task_draft_messages
+from .graph_llm import qwen_generation_policy
 from .graph_schemas import SHORT, TEXT, TEXTS, obj
 
 
@@ -377,7 +378,12 @@ async def construct_executable_example(path: Mapping[str, Any],
                   "public_model": public_model, "thinking": thinking,
                   "generator_max_tokens": 16384 if thinking else 12000,
                   "reviewer_max_tokens": 8192,
-                  "generator_temperature": .2, "reviewer_temperature": 0,
+                  "generator_generation_policy": qwen_generation_policy(
+                      thinking=thinking, max_tokens=16384 if thinking else 12000,
+                      temperature=.2),
+                  "reviewer_generation_policy": qwen_generation_policy(
+                      thinking=thinking, max_tokens=8192),
+                  "seed": 17,
                   "timeout_seconds": timeout_seconds}
     request_key = hashlib.sha256(_json(provenance).encode()).hexdigest()
     completed_path = output / "result.json"

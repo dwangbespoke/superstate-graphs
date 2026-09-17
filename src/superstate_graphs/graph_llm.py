@@ -42,6 +42,33 @@ def parse_json_object(content: str) -> dict[str, Any]:
     return result
 
 
+def qwen_generation_policy(
+    *, thinking: bool, max_tokens: int, temperature: float | None = None,
+    thinking_token_budget: int | None = None, top_p: float | None = None,
+    top_k: int | None = None, presence_penalty: float | None = None,
+) -> dict[str, Any]:
+    """Resolve the recorded Qwen decode policy without changing input context.
+
+    Thinking uses Qwen's precise-task sampling preset and a separate reasoning
+    allowance, leaving output room for the required JSON. Explicit values win.
+    Non-thinking requests retain greedy decoding unless explicitly overridden.
+    """
+    result: dict[str, Any] = {
+        "temperature": (0.6 if thinking else 0.0) if temperature is None else temperature,
+    }
+    options = {
+        "thinking_token_budget": thinking_token_budget,
+        "top_p": top_p, "top_k": top_k, "presence_penalty": presence_penalty,
+    }
+    if thinking:
+        defaults = {"thinking_token_budget": min(4096, max_tokens // 2),
+                    "top_p": 0.95, "top_k": 20, "presence_penalty": 0.0}
+        options = {name: defaults[name] if value is None else value
+                   for name, value in options.items()}
+    result.update({name: value for name, value in options.items() if value is not None})
+    return result
+
+
 class GraphLLM:
     """Async OpenAI-compatible client with durable caching and bounded retries.
 
@@ -124,8 +151,12 @@ class GraphLLM:
         *,
         schema: dict[str, Any] | None = None,
         max_tokens: int = 2048,
-        temperature: float = 0.0,
+        temperature: float | None = None,
         thinking: bool = False,
+        thinking_token_budget: int | None = None,
+        top_p: float | None = None,
+        top_k: int | None = None,
+        presence_penalty: float | None = None,
         seed: int = 17,
         cache_namespace: str = "graph-v1",
     ) -> dict[str, Any]:
@@ -137,6 +168,16 @@ class GraphLLM:
         """
         if not messages or max_tokens <= 0:
             raise ValueError("Nonempty messages and positive max_tokens are required")
+        policy = qwen_generation_policy(
+            thinking=thinking, max_tokens=max_tokens, temperature=temperature,
+            thinking_token_budget=thinking_token_budget, top_p=top_p, top_k=top_k,
+            presence_penalty=presence_penalty,
+        )
+        thinking_token_budget = policy.get("thinking_token_budget")
+        if thinking_token_budget is not None and (
+            not thinking or thinking_token_budget < 0 or thinking_token_budget >= max_tokens
+        ):
+            raise ValueError("A thinking budget requires thinking=True and room for final output")
         response_format: dict[str, Any] = {"type": "json_object"}
         if schema is not None:
             response_format = {
@@ -146,12 +187,18 @@ class GraphLLM:
         request = {
             "model": self.runtime["model"],
             "messages": messages,
-            "temperature": temperature,
+            "temperature": policy["temperature"],
             "max_tokens": max_tokens,
             "seed": seed,
             "response_format": response_format,
             "extra_body": {"chat_template_kwargs": {"enable_thinking": thinking}},
         }
+        for name in ("top_p", "presence_penalty"):
+            if name in policy:
+                request[name] = policy[name]
+        for name in ("top_k", "thinking_token_budget"):
+            if name in policy:
+                request["extra_body"][name] = policy[name]
         fingerprint = {
             "namespace": cache_namespace,
             "model_revision": self.runtime.get("revision"),
@@ -181,6 +228,7 @@ class GraphLLM:
         actual_request = dict(request)
         replica_index = 0
         transient_failures = 0
+        attempt_outcomes = []
         for attempt in range(self.attempts):
             started = time.time()
             serving_client = self._replicas[replica_index % len(self._replicas)]
@@ -194,6 +242,11 @@ class GraphLLM:
                 for field in ("prompt_tokens", "completion_tokens"):
                     self.stats[field] += usage.get(field, 0)
                 choice = response.choices[0]
+                attempt_outcomes.append({
+                    "attempt": attempt + 1, "max_tokens": actual_request["max_tokens"],
+                    "finish_reason": choice.finish_reason, "usage": usage,
+                    "elapsed_seconds": time.time() - started,
+                })
                 if choice.finish_reason != "stop":
                     if choice.finish_reason == "length":
                         actual_request["max_tokens"] = min(
@@ -225,6 +278,11 @@ class GraphLLM:
                     "actual_max_tokens": actual_request["max_tokens"],
                     "attempt": attempt + 1,
                     "transient_failures": transient_failures,
+                    "attempt_outcomes": attempt_outcomes,
+                    "decoding": {
+                        name: request.get(name) for name in
+                        ("temperature", "top_p", "presence_penalty", "seed")
+                    } | request["extra_body"],
                     "elapsed_seconds": time.time() - started,
                     "finished_at_epoch": time.time(),
                 }

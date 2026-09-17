@@ -9,7 +9,9 @@ import pytest
 import httpx
 from openai import APIConnectionError, BadRequestError
 
-from superstate_graphs.graph_llm import GraphLLM, GraphLLMPool, InvalidModelJSON, parse_json_object
+from superstate_graphs.graph_llm import (
+    GraphLLM, GraphLLMPool, InvalidModelJSON, parse_json_object, qwen_generation_policy,
+)
 
 
 def response(content, finish_reason="stop"):
@@ -60,6 +62,34 @@ def test_full_input_and_model_revision_determine_cache(tmp_path):
             client.runtime["revision"] = "new-revision"
             await client.complete_json(first)
             assert call.await_count == 3
+    asyncio.run(run())
+
+
+def test_thinking_policy_is_bounded_recorded_and_part_of_cache(tmp_path):
+    async def run():
+        async with make_client(tmp_path) as client:
+            call = AsyncMock(return_value=response('{"state":"a"}'))
+            client._client.chat.completions.create = call
+            messages = [{"role": "user", "content": "complete original history"}]
+            await client.complete_json(messages, thinking=True, max_tokens=2048)
+            request = call.call_args.kwargs
+            assert request["messages"] == messages
+            assert request["temperature"] == 0.6
+            assert request["top_p"] == 0.95
+            assert request["extra_body"]["top_k"] == 20
+            assert request["extra_body"]["thinking_token_budget"] == 1024
+            await client.complete_json(messages, thinking=True, max_tokens=2048)
+            assert call.await_count == 1
+            await client.complete_json(messages, thinking=True, max_tokens=2048,
+                                       thinking_token_budget=512, temperature=0.2)
+            assert call.await_count == 2
+            assert call.call_args.kwargs["temperature"] == 0.2
+            assert call.call_args.kwargs["extra_body"]["thinking_token_budget"] == 512
+            records = [json.loads(p.read_text()) for p in (tmp_path / "cache").glob("*/*.json")]
+            assert {r["decoding"]["thinking_token_budget"] for r in records} == {512, 1024}
+            assert all(r["attempt_outcomes"][0]["finish_reason"] == "stop" for r in records)
+    assert qwen_generation_policy(thinking=False, max_tokens=128) == {"temperature": 0.0}
+    assert qwen_generation_policy(thinking=True, max_tokens=16384)["thinking_token_budget"] == 4096
     asyncio.run(run())
 
 
