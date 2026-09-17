@@ -1,0 +1,49 @@
+{
+  "format": "independent-full-assignment-verification-v1",
+  "verified_at_utc": "2026-09-17T18:01:37.075436+00:00",
+  "status": "zero_null_completion_verified",
+  "counts": {
+    "histories": 37532,
+    "transitions": 36502,
+    "rollouts": 1030,
+    "tasks": 103
+  },
+  "unassigned": 0,
+  "prefix_hashes_verified": 37532,
+  "initial_unassigned": 75,
+  "newly_classified": 75,
+  "retained_initial_assignments": 37457,
+  "states": 39,
+  "routing_stages": 3,
+  "observed_endpoint_pairs": 550,
+  "history_counts_by_split": {
+    "pareto": 5432,
+    "test": 4948,
+    "train": 27152
+  },
+  "checks": {
+    "immutable_corpus_hashes": true,
+    "exact_history_and_rollout_census": true,
+    "all_prefix_hashes": true,
+    "all_transition_boundaries": true,
+    "retention_of_previously_classified_rows": true,
+    "fallback_stage_membership": true,
+    "checkpoint_provenance_and_equality": true
+  },
+  "source_artifact_sha256": {
+    "corpus/manifest.json": "680eccc9ca6bb6238600dee73495df2a144a86b37145f6c0bbd27a7e4f6d4350",
+    "corpus/rollouts.jsonl": "80d5f8e4e807fc9699531568f3fbddc1a0ff66b9ba7ad7da671d32bd34f8c2fd",
+    "corpus/histories.jsonl": "e5df9a993b86c4f42e7fe0712f7f17046cb05aa80205de048ee177e1fdb75113",
+    "corpus/transitions.jsonl": "5ff9d185934cfea2dd10c7ff93f3523c04dc25756eac459054ac646cd1496736",
+    "corpus/splits.json": "bcbfe90c8854ed43acfa9e3d043786d4dd9a06309b39d0552c452333be3b4ada",
+    "run/assignments_all.json": "b23264bd1327c57df4a31e9730bf60b6790a4c43aa8a1481812876e39571339e",
+    "run/optimized_assignments_all.json": "18e340c526831a7127981d2085057b2326a6eb99c959449d9f383b507a2748d7",
+    "run/optimized_candidate.json": "07801e951d8c42653736989e545bce28e6f24797481d0eda3149c5962e7775c5",
+    "run/completion_checkpoint.json": "d78791e95f3bee5701ef3f1903f3dec753dfe2bb891bb1e8deea17d1bf40b363",
+    "run/run_contract.json": "747c24947936531581193164338ed6405896bc26b821ce2a30c19e881b04da50"
+  },
+  "verification_script_sha256": "b9346e1e53400b8bba7d4a09e1e9ffee9d43e57b60b8df88dc482a07a5194bbc",
+  "scope": "Complete accounting and prefix identity; does not certify semantic membership quality, reusable edge contracts, or executable paths",
+  "model_calls": 0,
+  "formation_modified": false
+}

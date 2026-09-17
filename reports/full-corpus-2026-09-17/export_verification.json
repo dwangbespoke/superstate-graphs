@@ -1,0 +1,72 @@
+{
+  "all_exported_ids_match_immutable_corpus": true,
+  "all_memberships_and_witnesses_losslessly_join": true,
+  "all_recorded_source_fingerprints_verified": true,
+  "candidate_archive": {
+    "best_idx": 2,
+    "candidate_count": 4,
+    "change_scope": "edge_only",
+    "parents_and_scores_match_original": true,
+    "routing_stages": 3,
+    "seed_hash": "93bb6bcf3e8420f84932ed1a7885d4930392941adc17569f8cdcd1b0acbdd256",
+    "selected_hash": "a24da5e97a2156d80947ed79268f433d5456d587b00a97d338cd804bc85390f3"
+  },
+  "checked_export_file_count_excluding_manifest": 19,
+  "checked_source_file_count": 23,
+  "counts": {
+    "empty_nodes": 3,
+    "exported_primary_executable_tasks": 0,
+    "histories": 37532,
+    "nodes": 39,
+    "observed_edges": 550,
+    "occupied_nodes": 36,
+    "rollouts": 1030,
+    "sampled_supported_edges": 1,
+    "tasks": 103,
+    "witnesses": 36502
+  },
+  "export_manifest_sha256": "a79465d026a6e8828733405f757d8fdb4fbc17f073296c91ed45028399bbcb41",
+  "format": "independent-complete-graph-export-verification-v1",
+  "gzip_counts": {
+    "assignments": 37532,
+    "edges": 550,
+    "nodes": 39,
+    "rollouts": 1030,
+    "witnesses": 36502
+  },
+  "limitations": [
+    "Verifies serialization, counts, identity joins, provenance, and descriptive moments; does not certify semantic membership or edge applicability.",
+    "Variance interval values are checked against the separately verified original files, not resampled here.",
+    "One sampled-supported edge is not a universal contract or proof of an executable two-edge path.",
+    "Supplementary exploratory attempts are excluded; no primary executable task success is claimed."
+  ],
+  "manifest_compressed_uncompressed_hashes_and_record_counts_verified": true,
+  "primary_executable_task_status": "supported_paths_exhausted",
+  "primary_task_target_reached": false,
+  "sampled_supported_edge_ids": [
+    "E_5c940e5731a3"
+  ],
+  "status": "verified",
+  "variance": {
+    "export_sha256": {
+      "state_reward_variance.json": "d4c73c6d3933dcf1fe6d4b39e3973f8bd6cf3328fd0073c9581c61efcf519bbc",
+      "state_reward_variance_by_split.json": "b2677ae0ada1c6aa46a0082170e30875b5087790684958c876bee727aba9af97"
+    },
+    "independently_recomputed_moment_scalars": 2340,
+    "manual_reward_exclusion_moments_included": true,
+    "occupied_state_rows_by_split": {
+      "all": 36,
+      "pareto": 30,
+      "test": 29,
+      "train": 35
+    },
+    "published_fields_and_intervals_exactly_match_original": true,
+    "source_sha256": {
+      "state_reward_variance.json": "5e8243569083fa0e21c72d3e113fc1199aac335a4a59aad6877aaaf20e0d1e7d",
+      "state_reward_variance_by_split.json": "3f37619f55d2d3e6ec9ed790bef229f4a6dd346064b8628063599d7a3a08f35f"
+    }
+  },
+  "verification_implementation": "Standalone Python stdlib assertions; no exporter/production-analysis imports, no inference, no source or export mutation",
+  "verified_at_utc": "2026-09-17T19:33:00.794998+00:00",
+  "verifier_sha256": "a57132ef695a1ae042716b5225d41922c9f80e18f0019e832cb8e2c9932cae55"
+}

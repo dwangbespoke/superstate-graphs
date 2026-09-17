@@ -67,6 +67,40 @@ purposive post-formation inspection, not an accuracy estimate. The
 validity from semantic reliability in the independent LLM audits. All-corpus
 completion and reconstructed contracts are separate from this frozen test comparison.
 
+## Complete corpus graph and independent audits
+
+All **37,532 histories** are assigned, with **zero unassigned histories**. The
+completed codebook has **39 definitions, 36 occupied states**, and **550 observed
+directed edge groups** preserving all **36,502 transition witnesses**. Completion
+added 11 definitions for the 75 initially unassigned histories; previous non-null
+assignments were retained. Outcome moments and task-bootstrap intervals for every
+occupied state were independently recomputed.
+
+All **1,776 independent audit checks** finished without request-failure records.
+The frozen citation-validated judgments contain **132 supported, 480 contradicted,
+and 1,164 unknown** verdicts. Citation errors downgraded 1,119 definitive model
+judgments. These are evaluator outcomes, not calibrated semantic accuracy.
+
+Only **one of 550 observed edge groups** meets the frozen sampled-support rule.
+It is a non-self edge, so this filtered graph supplies no two-edge path. Complete
+assignment coverage therefore does **not** establish a reliable compositional
+superstate graph. The observed graph, strict supported subset, and diagnostic
+failures remain separate artifacts. See the [final audit diagnostics](docs/FULL_CORPUS_AUDIT_RESULTS.md)
+for raw-versus-validated counts and the [qualitative reviews](docs/INDEPENDENT_AUDIT_REVIEW.md)
+for examples of evaluator and membership limitations.
+
+The primary constructor examined 24 candidate paths: 23 drafts received
+contradicted feasibility judgments and one was unsupported. No primary executable
+example was produced. The [eligible-edge and task review](docs/FINAL_EDGE_AND_TASK_REVIEW.md)
+documents operation/witness mismatches and errors in the reviewers themselves.
+
+- [Full report](reports/full-corpus-2026-09-17/README.md) and [interactive graph](reports/full-corpus-2026-09-17/report.html)
+- [Complete downloadable graph, assignments, witnesses, and variance artifacts](reports/full-corpus-2026-09-17/artifacts/README.md)
+- [Independent assignment census verification](reports/full-corpus-2026-09-17/assignment_verification.json)
+- [Independent variance and bootstrap verification](reports/full-corpus-2026-09-17/state_variance_verification.json)
+- [Independent frozen-comparison verification](reports/full-corpus-2026-09-17/frozen_comparison_verification.json)
+- [Independent full-export verification](reports/full-corpus-2026-09-17/export_verification.json)
+
 ## Reproduction
 
 Python 3.12 and an authenticated Modal account are required for inference.

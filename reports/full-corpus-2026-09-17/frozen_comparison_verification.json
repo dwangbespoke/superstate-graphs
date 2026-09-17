@@ -1,0 +1,73 @@
+{
+  "format": "independent-frozen-comparison-verification-v1",
+  "verified_at_utc": "2026-09-17T17:23:47.687764+00:00",
+  "status": "passed",
+  "rollouts": 150,
+  "original_task_clusters": 15,
+  "histories": 4948,
+  "numeric_comparisons": 1528,
+  "maximum_absolute_error": 2.220446049250313e-16,
+  "checks": {
+    "immutable_corpus_hashes_and_exact_test_split": true,
+    "candidate_indices_and_hashes": true,
+    "cache_provenance_against_actual_corpus_and_installed_frozen_rules": true,
+    "ordered_evaluation_identity": true,
+    "row_score_and_coverage_recomputed": true,
+    "aggregate_and_task_means_recomputed": true,
+    "paired_task_bootstrap_all_components_recomputed": true
+  },
+  "seed_selected_change_scope": "edge_only",
+  "routing_assignment_records_identical": true,
+  "model_provenance": {
+    "router": {
+      "model": "Qwen/Qwen3.5-35B-A3B-FP8",
+      "revision": "9d1823d2dee688a6b25e77009dc727688c44936e"
+    },
+    "teacher": {
+      "model": "Qwen/Qwen3.5-122B-A10B-FP8",
+      "revision": "a099dee70ccfcd8d5dda56aaa0b60cb8ecadabc9"
+    }
+  },
+  "score": {
+    "seed_mean": 0.42490582962093604,
+    "selected_mean": 0.44287158442188557,
+    "task_balanced_difference": 0.01796575480094953,
+    "paired_task_bootstrap_95ci": [
+      0.00550934529655017,
+      0.030196519574251308
+    ]
+  },
+  "bootstrap": {
+    "method": "paired original-task cluster percentile bootstrap",
+    "estimand": "equal-task mean of selected-minus-seed paired rollout differences",
+    "confidence": 0.95,
+    "draws": 10000,
+    "seed": 20260917,
+    "resampling_units": 15
+  },
+  "source_sha256": {
+    "heldout_comparison.json": "6a69c76e025414857f9c36d3d0ac4b89ecc62471ba48e0b4a3ca6851bf0c53b1",
+    "heldout_test.json": "5e34f141ea417ac88829106232cc07a7c9fc779680ab1bc6cbdd130ca75cf091",
+    "baseline_heldout.json": "90b32dee476042258fc97524893d1569670fe481cfa4a5407fd1759f1d1442a3",
+    "seed_candidate.json": "bd0210fa20a9a759f760f8b0f0859ed704567612f009844eaca738bd7a0b6235",
+    "optimized_candidate.json": "07801e951d8c42653736989e545bce28e6f24797481d0eda3149c5962e7775c5",
+    "gepa_result.json": "072811f54ffaac6ff785c468c7b1999f1f465b42d42885fabf8a99a4341c1be7",
+    "run_contract.json": "747c24947936531581193164338ed6405896bc26b821ce2a30c19e881b04da50"
+  },
+  "corpus_sha256": {
+    "rollouts.jsonl": "80d5f8e4e807fc9699531568f3fbddc1a0ff66b9ba7ad7da671d32bd34f8c2fd",
+    "splits.json": "bcbfe90c8854ed43acfa9e3d043786d4dd9a06309b39d0552c452333be3b4ada",
+    "manifest.json": "680eccc9ca6bb6238600dee73495df2a144a86b37145f6c0bbd27a7e4f6d4350"
+  },
+  "verification_script_sha256": "cd39d773da85a91fabc58751e7fd19232a199702396419e94650afe6d344f7f6",
+  "limitations": [
+    "LLM semantic proxies, not population accuracy or learner lift.",
+    "Task-cluster intervals condition on fixed graphs and their single cached evaluations; model-generation and optimizer-selection uncertainty are excluded.",
+    "Semantic overlap between original task clusters can remain.",
+    "Identical routing can have different membership judgments because the evaluator sees each full graph, including its edges.",
+    "The no-test-feedback and pre-completion flags are recorded declarations; this artifact check does not independently establish historical process order."
+  ],
+  "formation_modified": false,
+  "model_calls": 0,
+  "final_export_run": false
+}

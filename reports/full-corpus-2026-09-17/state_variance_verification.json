@@ -1,0 +1,52 @@
+{
+  "format": "independent-state-variance-verification-v1",
+  "verified_at_utc": "2026-09-17T18:23:57.754320+00:00",
+  "status": "passed",
+  "scopes": {
+    "all": {
+      "histories": 37532,
+      "occupied_states": 36,
+      "moment_and_membership_validation": true
+    },
+    "pareto": {
+      "histories": 5432,
+      "occupied_states": 30,
+      "moment_and_membership_validation": true
+    },
+    "test": {
+      "histories": 4948,
+      "occupied_states": 29,
+      "moment_and_membership_validation": true
+    },
+    "train": {
+      "histories": 27152,
+      "occupied_states": 35,
+      "moment_and_membership_validation": true
+    }
+  },
+  "history_trajectory_and_equal_task_moments_recomputed": true,
+  "manual_excluded_sensitivity_recomputed": true,
+  "bessel_correction_and_task_decomposition_recomputed": true,
+  "task_cluster_intervals_recomputed": 732,
+  "intervals_without_sufficient_task_clusters": 48,
+  "additional_numeric_checks": 3708,
+  "max_absolute_error": 1.1102230246251565e-16,
+  "source_artifact_sha256": {
+    "corpus/manifest.json": "680eccc9ca6bb6238600dee73495df2a144a86b37145f6c0bbd27a7e4f6d4350",
+    "corpus/histories.jsonl": "e5df9a993b86c4f42e7fe0712f7f17046cb05aa80205de048ee177e1fdb75113",
+    "run/assignments_all.json": "b23264bd1327c57df4a31e9730bf60b6790a4c43aa8a1481812876e39571339e",
+    "run/state_reward_variance.json": "5e8243569083fa0e21c72d3e113fc1199aac335a4a59aad6877aaaf20e0d1e7d",
+    "run/state_reward_variance_by_split.json": "3f37619f55d2d3e6ec9ed790bef229f4a6dd346064b8628063599d7a3a08f35f"
+  },
+  "verification_script_sha256": "c1796aa0fd0488538f961ed0c3f3abfe409cfc23c6e2ee086269fbe412e5207a",
+  "verification_dependency_sha256": {
+    "export_full_graph_artifacts.py": "fcceea338e715319476fd36780c95c381fc74dea892513d2b026b1418c21b556",
+    "build_full_graph_report.py": "96b91ec0d3dbec5571e94f15276c083dc195db397108721d2b0bdf20cf8733d0"
+  },
+  "limitations": [
+    "Descriptive terminal outcomes of visiting trajectories; not identical-history continuation variance or causal difficulty.",
+    "Task-cluster bootstrap conditions on learned assignments and recorded outcomes; graph selection and policy uncertainty are excluded."
+  ],
+  "model_calls": 0,
+  "formation_modified": false
+}
