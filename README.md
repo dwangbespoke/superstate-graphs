@@ -38,6 +38,31 @@ and optional graph reconciliation; it is not a claim to have invented GEPA.
 - [Related work](docs/RELATED_WORK.md)
 - [Documented reflection-evidence repair](docs/REFLECTION_EVIDENCE_CORRECTION.md)
 
+## Frozen specification evaluation
+
+GEPA produced 17 proposals within the time-bounded run; three revisions entered
+its archive alongside the seed. No crossover proposal occurred. The selected
+candidate has 28 states and 34 edges. Its state specification is unchanged from
+the seed; selection changed only the edge specification. Held-out routing
+assignments are also identical. Differences in membership or coherence scores
+therefore reflect separate full-graph judge responses, not revised assignments.
+
+The frozen comparison uses the same 150 held-out rollouts from 15 original tasks:
+
+| LLM proxy metric | Seed | Selected |
+|---|---:|---:|
+| Fixed composite score | 0.4249 | 0.4429 |
+| Supported transition fraction | 12.35% | 14.46% |
+
+The composite difference is **+0.0180**, with a paired original-task bootstrap
+95% interval of **[+0.0055, +0.0302]**. This interval conditions on the fixed
+specifications and one cached set of LLM judgments; it excludes generation and
+optimization uncertainty. The gain is a graph-proxy result. It does not establish
+an improved state partition, universal applicability, or learner improvement.
+The [qualitative review](docs/FROZEN_GRAPH_REVIEW.md) records redundant additions
+and concrete contract conflicts. All-corpus completion and reconstructed contracts
+are separate from this frozen test comparison.
+
 ## Reproduction
 
 Python 3.12 and an authenticated Modal account are required for inference.
@@ -71,6 +96,9 @@ and local work products are ignored by Git.
 
 ```bash
 uv run pytest -q
+uv run python scripts/verify_frozen_graph_comparison.py \
+  --run results/full_graph/run_v1 --corpus results/full_graph/corpus \
+  --output results/full_graph/run_v1/verification/frozen_heldout_verification.json
 uv run python scripts/build_full_graph_report.py
 uv run python scripts/export_full_graph_artifacts.py --include-tasks
 ```
