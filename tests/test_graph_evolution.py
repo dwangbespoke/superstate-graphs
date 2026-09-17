@@ -13,7 +13,7 @@ import pytest
 from gepa.core.adapter import EvaluationBatch
 from gepa.proposer.base import CandidateProposal
 
-from superstate_graphs.full_corpus import index_messages, render_history
+from superstate_graphs.full_corpus import index_messages, render_history, render_step
 from superstate_graphs.graph_evolution import (
     CoverageAcceptance,
     GraphGEPAAdapter,
@@ -406,7 +406,9 @@ def test_corrupted_evaluation_cache_is_rejected(tmp_path: Path):
 
 def test_reflection_has_actual_action_observation_and_rejects_pareto_evidence(tmp_path: Path):
     run = rollout()
-    runtime = GraphRuntime(FakeLLM(), tmp_path)
+    assessment = verdict()
+    assessment["feedback"][0]["kind"] = "transition"
+    runtime = GraphRuntime(FakeLLM([assessment]), tmp_path)
     with asyncio.Runner() as runner:
         adapter = GraphGEPAAdapter(runtime, runner, [run], [])
         candidate = candidate_from_graph(graph())
@@ -419,6 +421,70 @@ def test_reflection_has_actual_action_observation_and_rejects_pareto_evidence(tm
         evaluated.outputs[0]["split"] = "pareto"
         with pytest.raises(ValueError, match="Pareto/test"):
             adapter.make_reflective_dataset(candidate, evaluated, ["state_spec"])
+
+
+@pytest.mark.parametrize(
+    ("kind", "step", "expected_transition"),
+    [
+        ("membership", 0, None), ("membership", 1, 0), ("membership", 2, 1),
+        ("transition", 0, 0), ("transition", 1, 1),
+        ("edge", 0, None), ("edge", 1, 0),
+        ("redundancy", 0, None), ("redundancy", 2, 1),
+    ],
+)
+def test_reflection_evidence_respects_history_boundary(kind, step, expected_transition):
+    run = rollout()
+    adapter = object.__new__(GraphGEPAAdapter)
+    adapter.train = {run["id"]: run}
+    result = {
+        "split": "train", "rollout_id": run["id"], "metrics": {},
+        "feedback": [{"kind": kind, "step": step}],
+    }
+    record = adapter.make_reflective_dataset(
+        candidate_from_graph(graph()), SimpleNamespace(outputs=[result]), ["state_spec"]
+    )["state_spec"][0]
+    evidence = record["evidence_groups"][0]
+    assert evidence["feedback_kind"] == kind and evidence["feedback_step"] == step
+    assert evidence["history_id"] == f"r1:h{step:04d}"
+    assert evidence["transition_step"] == expected_transition
+    if expected_transition is None:
+        assert evidence["status"] == "initial_query_only"
+        assert evidence["group"] is None
+        assert record["query"] == run["query"]
+    else:
+        assert evidence["status"] == "attached"
+        assert evidence["group"] == render_step(run, expected_transition)
+        if kind != "transition":
+            assert evidence["group"] in render_history(run, step)
+            if step == 1:
+                assert "ACTION_TWO" not in evidence["group"]
+                assert "OBSERVATION_TWO" not in evidence["group"]
+
+
+@pytest.mark.parametrize(
+    ("kind", "step"),
+    [
+        ("membership", -1), ("membership", 3), ("transition", -1), ("transition", 2),
+        ("edge", 3), ("redundancy", 3), ("membership", "1"), ("membership", True),
+        ("membership", 1.5), ("membership", None), ("unknown", 1),
+    ],
+)
+def test_reflection_invalid_feedback_indices_are_recorded_without_clamping(kind, step):
+    run = rollout()
+    adapter = object.__new__(GraphGEPAAdapter)
+    adapter.train = {run["id"]: run}
+    result = {
+        "split": "train", "rollout_id": run["id"], "metrics": {},
+        "feedback": [{"kind": kind, "step": step}],
+    }
+    record = adapter.make_reflective_dataset(
+        candidate_from_graph(graph()), SimpleNamespace(outputs=[result]), ["state_spec"]
+    )["state_spec"][0]
+    evidence = record["evidence_groups"][0]
+    assert evidence["status"] == "invalid_feedback_reference"
+    assert evidence["group"] is None
+    assert evidence["feedback_step"] == step
+    assert "history_id" not in evidence and "transition_step" not in evidence
 
 
 def test_historical_retrieval_is_training_only_complete_and_reports_omissions(tmp_path: Path):

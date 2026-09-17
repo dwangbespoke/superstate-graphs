@@ -164,6 +164,17 @@ it was not selected from proposal or heldout outcomes. The fixed evaluator, scor
 minibatch/crossover screens, and Pareto selection were unchanged. No empirical
 comparison or superiority over the earlier design is claimed.
 
+At the boundary between proposals 0007 and 0008, a training-only diagnostic
+identified and corrected reflection's evidence attachment: a membership critique
+of history `h_k` now receives the producing group `k−1`, rather than the following
+group `k`; `h_0` receives only the query. Transition critiques retain group `k`.
+Router inputs, judge, score, splits, and acceptance remain unchanged. Prior
+candidates and their valid scores are retained; continuation requires explicitly
+archived pre-change source, checkpoint, and optimizer identity with a documented
+migration. The [correction record](REFLECTION_EVIDENCE_CORRECTION.md) gives exact
+source hashes, training witnesses, and boundary tests. This is a disclosed
+implementation repair, not evidence of improved optimization performance.
+
 ## Exhaustive final graph and held-out interpretation
 
 First, the chosen optimized specification and the initial seed receive frozen

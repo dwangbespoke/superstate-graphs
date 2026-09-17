@@ -939,9 +939,37 @@ class GraphGEPAAdapter:
             feedback = result.get("feedback", [])
             relevant = []
             for failure in feedback[:8]:
-                step = max(0, min(len(rollout["steps"]) - 1, int(failure.get("step", 0))))
-                if rollout["steps"]:
-                    relevant.append({"step": step, "group": render_step(rollout, step)})
+                kind, step = failure.get("kind"), failure.get("step")
+                evidence = {"feedback_kind": kind, "feedback_step": step, "group": None}
+                # Membership, outgoing-edge, and redundancy critiques concern
+                # the source history h_k. Only transition critiques can inspect
+                # the NEXT group, which is transition k (h_k -> h_{k+1}).
+                limit = len(rollout["steps"]) if kind == "transition" else rollout["history_count"]
+                if (
+                    kind not in {"membership", "transition", "edge", "redundancy"}
+                    or type(step) is not int
+                    or not 0 <= step < limit
+                ):
+                    evidence.update(
+                        status="invalid_feedback_reference",
+                        problem="No evidence attached: unsupported kind or out-of-range/noninteger index.",
+                    )
+                else:
+                    evidence.update(
+                        history_id=f"{rollout['id']}:h{step:04d}",
+                        history_step=step,
+                        index_basis="transition" if kind == "transition" else "source_history",
+                    )
+                    transition_step = step if kind == "transition" else step - 1
+                    if transition_step < 0:
+                        evidence.update(status="initial_query_only", transition_step=None)
+                    else:
+                        evidence.update(
+                            status="attached",
+                            transition_step=transition_step,
+                            group=render_step(rollout, transition_step),
+                        )
+                relevant.append(evidence)
             records.append(
                 {
                     "rollout_id": rollout["id"],
