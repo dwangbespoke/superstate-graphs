@@ -95,6 +95,32 @@ task-generation quality.
 
 ## Publication boundary
 
+Only after the supplementary experiment has finalized, create a separate,
+allowlisted package without model calls:
+
+```sh
+.venv/bin/python scripts/publish_exploratory_task_examples.py \
+  --experiment results/full_graph/run_v1_exploratory_tasks_v1 \
+  --run results/full_graph/run_v1 \
+  --corpus results/full_graph/corpus \
+  --output reports/full-corpus-2026-09-17/exploratory-tasks
+```
+
+The publisher recomputes the selection against the original source hashes,
+verifies the finalized attempt ledger and implementation/model identity, and
+checks result and artifact receipts. Successful tasks must retain consistent
+faithfulness-review and local-execution records. It scans both file bytes and
+decoded database cells for recognizable credentials or transcript framing.
+Sources are read-only; an existing output directory is never overwritten. Zero
+successful examples still produces an honest safe summary, including every
+attempt's status count. No raw failure messages are published.
+
+Before publicly distributing the package, inspect generated instructions,
+titles, SQL literals, expected outputs, and synthetic fixture cells for private
+or copied source material. Automated scans cannot prove semantic privacy; the
+manifest records this limitation and a privacy-review requirement. This local
+export does not claim that such human inspection has happened.
+
 Do not copy the supplementary directory wholesale into a public report. Model
 caches, generator responses, source evidence, raw reviews, and runtime files are
 private research artifacts. A separate allowlisted supplementary package can
