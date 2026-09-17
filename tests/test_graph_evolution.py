@@ -166,6 +166,107 @@ def test_router_classifies_every_full_prefix_without_future_or_edges(tmp_path: P
     assert "OBSERVATION_TWO" in llm.calls[2]["messages"][1]["content"]
 
 
+class ScheduledPrefixLLM(FakeLLM):
+    """Force out-of-order completion and reject incomplete/altered inputs."""
+
+    def __init__(self, runs):
+        super().__init__()
+        self.expected = {
+            routing_history(run, step): (run["id"], step)
+            for run in runs for step in range(run["history_count"])
+        }
+        self.active = defaultdict(int)
+        self.peak = defaultdict(int)
+        self.finished = defaultdict(list)
+        self.shards = []
+        self.judgments = 0
+
+    def shard(self, key):
+        self.shards.append(key)
+        return self
+
+    async def complete_json(self, messages, **kwargs):
+        if "frozen evaluator" in messages[0]["content"]:
+            self.judgments += 1
+            return await super().complete_json(messages, **kwargs)
+        rid, step = self.expected[messages[1]["content"]]
+        if step:
+            assert 0 in self.finished[rid], "The shared first prefix must finish warming"
+        self.calls.append({"messages": messages, **kwargs})
+        self.active[rid] += 1
+        self.peak[rid] = max(self.peak[rid], self.active[rid])
+        try:
+            await asyncio.sleep(0.005 if step % 4 == 1 else 0)
+            self.finished[rid].append(step)
+            return {"evidence": f"Complete prefix {step}", "state_id": "B" if step else "A"}
+        finally:
+            self.active[rid] -= 1
+
+
+def test_parallel_prefix_window_preserves_full_input_order_affinity_and_cache(tmp_path):
+    messages = [{"role": "user", "content": "QUERY", "sequence_number": 1}]
+    for step in range(8):
+        messages.extend([
+            {"role": "assistant", "content": f"ACTION_{step}", "sequence_number": 2 * step + 2},
+            {"role": "tool", "content": f"OBSERVATION_{step}", "sequence_number": 2 * step + 3},
+        ])
+    run = {"id": "long", "task_id": "task", "split": "train", **index_messages(messages)}
+    llm = ScheduledPrefixLLM([run])
+    runtime = GraphRuntime(llm, tmp_path)
+    candidate = candidate_from_graph(graph())
+    assigned = asyncio.run(runtime.route_rollout(candidate, run, prefix_concurrency=4))
+    assert llm.peak["long"] == 4
+    assert llm.finished["long"][0] == 0
+    assert llm.finished["long"] != list(range(9))
+    assert [row["step"] for row in assigned] == list(range(9))
+    assert [row["evidence"] for row in assigned] == [f"Complete prefix {step}" for step in range(9)]
+    assert len(llm.calls) == 9
+    assert llm.shards == ["long"]
+    assert {call["messages"][1]["content"] for call in llm.calls} == set(llm.expected)
+    assert asyncio.run(runtime.route_rollout(candidate, run, prefix_concurrency=1)) == assigned
+    assert len(llm.calls) == 9  # Scheduling does not alter semantic cache identity.
+
+
+@pytest.mark.parametrize("judge", [False, True])
+@pytest.mark.parametrize("count, expected_peak", [(32, 2), (33, 1)])
+def test_batch_parallelizes_small_batches_and_keeps_large_batches_serial(
+    tmp_path, judge, count, expected_peak
+):
+    runs = [rollout(rid=f"r{i}", suffix=f"-{i}") for i in range(count)]
+    llm = ScheduledPrefixLLM(runs)
+    results = asyncio.run(
+        GraphRuntime(llm, tmp_path).batch(candidate_from_graph(graph()), runs, judge=judge)
+    )
+    assert len(results) == count
+    assert set(llm.peak.values()) == {expected_peak}
+    assert all(len(steps) == 3 for steps in llm.finished.values())
+    assert llm.judgments == (count if judge else 0)
+    for run, result in zip(runs, results):
+        assignments = result["assignments"] if judge else result
+        assert [row["history_id"] for row in assignments] == [
+            f"{run['id']}:h{step:04d}" for step in range(3)
+        ]
+
+
+def test_parallel_prefix_failure_cancels_siblings_and_writes_no_assignment_cache(tmp_path):
+    class FailingLLM(ScheduledPrefixLLM):
+        async def complete_json(self, messages, **kwargs):
+            _, step = self.expected[messages[1]["content"]]
+            if step == 2:
+                await asyncio.sleep(0)
+                raise ValueError("deliberate failure")
+            return await super().complete_json(messages, **kwargs)
+
+    run = rollout()
+    llm = FailingLLM([run])
+    with pytest.raises(ExceptionGroup, match="TaskGroup"):
+        asyncio.run(GraphRuntime(llm, tmp_path).route_rollout(
+            candidate_from_graph(graph()), run, prefix_concurrency=4
+        ))
+    assert all(value == 0 for value in llm.active.values())
+    assert not list((tmp_path / "assignments").rglob("*.json"))
+
+
 def test_routing_and_judging_use_same_rollout_shard(tmp_path: Path):
     class Pool:
         def __init__(self):

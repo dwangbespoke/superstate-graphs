@@ -442,7 +442,11 @@ class GraphRuntime:
         if not isinstance(result.get("score"), (int, float)) or not math.isfinite(result["score"]):
             raise ValueError("Evaluation cache has a nonfinite score")
 
-    async def route_rollout(self, candidate: dict[str, str], rollout: dict) -> list[dict]:
+    async def route_rollout(
+        self, candidate: dict[str, str], rollout: dict, *, prefix_concurrency: int = 1
+    ) -> list[dict]:
+        if type(prefix_concurrency) is not int or prefix_concurrency < 1:
+            raise ValueError("Prefix concurrency must be a positive integer")
         graph = validate_spec(candidate)
         state_hash = digest(candidate["state_spec"])
         provenance = self._cache_provenance(candidate, rollout, judge=False)
@@ -465,11 +469,9 @@ class GraphRuntime:
             "required": ["evidence", "state_id"],
             "additionalProperties": False,
         }
-        assignments = []
         llm = self._rollout_llm(rollout["id"])
-        # Sequential prefixes within a rollout maximize shared-prefix KV reuse.
-        # Distinct rollouts run concurrently. Every request contains the FULL prefix.
-        for step in range(rollout["history_count"]):
+
+        async def route_prefix(step: int) -> dict:
             response = await llm.complete_json(
                 [
                     {"role": "system", "content": system},
@@ -486,14 +488,32 @@ class GraphRuntime:
                 or not isinstance(response.get("evidence"), str)
             ):
                 raise ValueError("Router returned an invented state ID")
-            assignments.append(
-                {
-                    "history_id": f"{rollout['id']}:h{step:04d}",
-                    "step": step,
-                    "state_id": response["state_id"],
-                    "evidence": response.get("evidence", ""),
-                }
-            )
+            return {
+                "history_id": f"{rollout['id']}:h{step:04d}",
+                "step": step,
+                "state_id": response["state_id"],
+                "evidence": response.get("evidence", ""),
+            }
+
+        # Warm the shared query/specification before parallel prefixes. Each
+        # request still contains its FULL history and uses the same rollout shard.
+        assignments = [{} for _ in range(rollout["history_count"])]
+        if assignments:
+            assignments[0] = await route_prefix(0)
+        remaining_steps = iter(range(1, len(assignments)))
+
+        async def worker() -> None:
+            for step in remaining_steps:
+                assignments[step] = await route_prefix(step)
+
+        if prefix_concurrency == 1:
+            await worker()
+        else:
+            # Fixed workers provide a sliding window, not an unbounded task per
+            # prefix. TaskGroup cancels sibling requests if one request fails.
+            async with asyncio.TaskGroup() as group:
+                for _ in range(min(prefix_concurrency, max(0, len(assignments) - 1))):
+                    group.create_task(worker())
         write_json(path, {"cache_provenance": provenance, "assignments": assignments})
         event(
             self.directory,
@@ -505,7 +525,9 @@ class GraphRuntime:
         )
         return assignments
 
-    async def evaluate_rollout(self, candidate: dict[str, str], rollout: dict) -> dict:
+    async def evaluate_rollout(
+        self, candidate: dict[str, str], rollout: dict, *, prefix_concurrency: int = 1
+    ) -> dict:
         graph = validate_spec(candidate)
         provenance = self._cache_provenance(candidate, rollout, judge=True)
         path = self.directory / "evaluations" / digest(provenance) / f"{rollout['id']}.json"
@@ -513,7 +535,9 @@ class GraphRuntime:
             result = json.loads(path.read_text())
             self._validate_evaluation(result, graph, rollout, candidate, provenance)
             return result
-        assignments = await self.route_rollout(candidate, rollout)
+        assignments = await self.route_rollout(
+            candidate, rollout, prefix_concurrency=prefix_concurrency
+        )
         pairs: dict[tuple[str, str], list[str]] = defaultdict(list)
         for edge in graph["edges"]:
             pairs[edge["source"], edge["target"]].append(edge["id"])
@@ -619,11 +643,14 @@ class GraphRuntime:
 
     async def batch(self, candidate: dict[str, str], rollouts: list[dict], *, judge: bool) -> list:
         semaphore = asyncio.Semaphore(self.rollout_concurrency)
+        # Small GEPA minibatches otherwise use at most one GPU request per
+        # rollout. Large batches already saturate the pool and favor KV reuse.
+        prefix_concurrency = 4 if len(rollouts) <= 32 else 1
 
         async def one(rollout: dict) -> Any:
             async with semaphore:
                 method = self.evaluate_rollout if judge else self.route_rollout
-                return await method(candidate, rollout)
+                return await method(candidate, rollout, prefix_concurrency=prefix_concurrency)
 
         return await asyncio.gather(*(one(r) for r in rollouts))
 

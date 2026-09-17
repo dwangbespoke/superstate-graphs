@@ -88,10 +88,15 @@ async with GraphLLM(concurrency=32) as llm:
     )
 ```
 
-Place the stable routing specification first. Schedule each rollout's prefixes
-in increasing length to make its already processed prefix available to the
-server cache; process independent rollouts concurrently. Prefix caching is a
-compute optimization and does not change the supplied history.
+Place the stable routing specification first. The runtime routes independent
+rollouts concurrently and keeps each rollout on the same replica. Batches of
+at most 32 rollouts warm the first prefix, then use four workers per rollout to
+avoid leaving GPUs idle during small GEPA minibatches. Workers take the next
+prefix in increasing order; results are stored in prefix order even when calls
+finish out of order. Larger batches process each rollout's prefixes serially to
+favor cache reuse. Every request supplies its complete history. The endpoint's
+32-request semaphore still bounds active router calls; scheduling does not alter
+prompts, model settings, scores, or semantic cache keys.
 
 The client supports non-thinking mode, but the production router uses
 `thinking=True` after non-thinking failed concrete endpoint-grounding checks.
