@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts/build_full_graph_report.py"
@@ -321,3 +322,232 @@ def test_malformed_optional_artifact_is_reported_without_leaking_contents(tmp_pa
     assert report["status"] == "partial"
     assert report["warnings"]
     assert "RAW_PRIVATE_BROKEN_ARTIFACT_SECRET" not in (output / "report.json").read_text()
+
+
+def execution_fixture(run, *, status="target_reached", reported_count=1):
+    write(
+        run,
+        "executable_task_summary.json",
+        {
+            "status": status,
+            "requested_examples": 1 if status == "target_reached" else 3,
+            "target_reached": status == "target_reached",
+            "locally_executed_consistent_count": reported_count,
+            "attempts": [
+                {"status": "construction_error", "error": "RAW_REQUEST_ERROR_SECRET"},
+                {"status": "locally_executed_consistent"},
+            ],
+            "attempt_status_counts": {"construction_error": 1, "locally_executed_consistent": 1},
+            "learner_evaluated": False,
+            "official_benchmark_verifier": False,
+            "selected_examples": [
+                {
+                    "path_id": "executed_path",
+                    "title": "Executed synthetic example",
+                    "status": "locally_executed_consistent",
+                    "output_dir": "/PRIVATE/LOCAL/PATH",
+                    "learner_evaluated": False,
+                    "original_benchmark_reproduced": False,
+                    "local_validation": {
+                        "reference_query_executed": True,
+                        "independent_query_executed": True,
+                        "queries_agree": True,
+                        "reference_result": "RAW_QUERY_RESULT_SECRET",
+                    },
+                }
+            ],
+        },
+    )
+
+
+def test_executed_task_receipts_and_models_are_separate_from_drafts(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    execution_fixture(run)
+    contract = json.loads((run / "run_contract.json").read_text())
+    contract.update(
+        teacher_model="Qwen/teacher", teacher_revision="teacher-pin", teacher_reasoning=True
+    )
+    write(run, "run_contract.json", contract)
+    audit = json.loads((run / "independent_audit_summary.json").read_text())
+    audit["failed_requests"] = 2
+    audit["independence"]["public_model"] = {
+        "model": "Qwen/audit",
+        "revision": "audit-pin",
+        "api_key": "RAW_MODEL_SECRET",
+    }
+    write(run, "independent_audit_summary.json", audit)
+    report = report_module.build_report(run, corpus, output)
+    assert report["status"] == "complete"
+    assert report["task_drafts"]["executed_task_count"] == 0
+    assert report["executable_tasks"]["receipt_supported_consistent_count"] == 1
+    assert report["executable_tasks"]["target_reached"] is True
+    assert report["executable_tasks"]["construction_error_count"] == 1
+    assert report["executable_tasks"]["failed_requests"] is None
+    assert report["independent_audits"]["failed_requests"] == 2
+    assert report["model_provenance"]["teacher"]["name"] == "Qwen/teacher"
+    assert report["model_provenance"]["router"]["name"] == "Qwen/test"
+    assert report["model_provenance"]["independent_audit"]["revision"] == "audit-pin"
+    for name in ("README.md", "report.html", "report.json"):
+        public = (output / name).read_text()
+        assert "RAW_" not in public and "/PRIVATE/LOCAL/PATH" not in public
+        assert "Executed synthetic example" in public
+
+
+def test_executed_stage_exhaustion_is_complete_but_unreached_and_bad_receipts_are_partial(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    execution_fixture(run, status="supported_paths_exhausted")
+    report = report_module.build_report(run, corpus, output)
+    assert report["status"] == "complete"
+    assert report["executable_tasks"]["target_reached"] is False
+    assert any("exhausted" in warning for warning in report["warnings"])
+    execution_fixture(run, reported_count=2)
+    report = report_module.collect_report(run, corpus)
+    assert report["status"] == "partial"
+    assert not report["completion_checks"]["executable_receipts_consistent"]
+    execution_fixture(run, status="running")
+    report = report_module.collect_report(run, corpus)
+    assert not report["completion_checks"]["executable_stage_finalized"]
+
+
+def test_matrix_represents_every_state_pair_and_aggregates_exact_witness_counts():
+    ids = ["A", "B<script>bad</script>", "C"]
+    graph = {
+        "nodes": [{"id": sid, "name": sid} for sid in ids],
+        "edges": [
+            {"source": ids[0], "target": ids[1], "witness_count": 3, "sampled_traversable": True},
+            {"source": ids[0], "target": ids[1], "witness_count": 2, "sampled_traversable": False},
+            {"source": ids[1], "target": ids[2], "witness_count": 7, "sampled_traversable": False},
+        ],
+    }
+    rendered = report_module.adjacency_matrix(graph)
+    root = ET.fromstring(rendered)
+    assert root.attrib["data-n"] == "3"
+    assert "<script>bad" not in rendered
+    cells = {
+        (element.attrib["data-i"], element.attrib["data-j"]): element.attrib
+        for element in root.iter()
+        if element.attrib.get("class") == "matrix-cell"
+    }
+    assert len(cells) == 2  # All nine pairs exist on the grid; zeroes use the blank background.
+    assert cells["0", "1"]["data-all"] == "5"
+    assert cells["0", "1"]["data-eligible"] == "3"
+    assert cells["0", "1"]["data-edges"] == "2"
+    assert cells["1", "2"]["data-all"] == "7"
+    assert cells["1", "2"]["data-eligible"] == "0"
+    labels = [
+        element.attrib for element in root.iter() if element.attrib.get("class") == "matrix-node"
+    ]
+    assert len(labels) == 6
+    assert {label["data-node"] for label in labels} == set(ids)
+    background = next(
+        element for element in root.iter() if element.attrib.get("class") == "matrix-background"
+    )
+    assert background.attrib["width"] == background.attrib["height"] == "42"
+
+
+def test_matrix_interactions_use_fixed_safe_javascript_and_filterable_rows(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    report_module.build_report(run, corpus, output)
+    page = (output / "report.html").read_text()
+    for identifier in (
+        "matrix-mode",
+        "matrix-zoom",
+        "matrix-clear",
+        "matrix-focus",
+        "matrix-detail",
+    ):
+        assert f'id="{identifier}"' in page
+    assert 'data-source="A" data-target="A" data-sampled="0"' in page
+    assert 'data-node="A"' in page
+    assert "row.hidden = !show" in page
+    assert "getScreenCTM" in page and "focusPair" in page
+    assert "innerHTML" not in page and "fetch(" not in page
+
+
+def add_comparison(run):
+    result = json.loads((run / "gepa_result.json").read_text())
+    seed_hash = hashlib.sha256(
+        json.dumps(
+            result["candidates"][0], ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()
+    ).hexdigest()
+    heldout = json.loads((run / "heldout_test.json").read_text())
+    heldout.update(
+        evaluation_identity="selected-eval",
+        rollouts=[{"rollout_id": "r", "feedback": "RAW_HELDOUT_SECRET"}],
+    )
+    write(run, "heldout_test.json", heldout)
+    write(
+        run,
+        "baseline_heldout.json",
+        {
+            "candidate_hash": seed_hash,
+            "evaluation_identity": "seed-eval",
+            "rollouts": [{"rollout_id": "r", "transcript": "RAW_BASELINE_SECRET"}],
+        },
+    )
+    comparison = {
+        "format": "frozen-heldout-seed-selected-v1",
+        "seed_candidate_hash": seed_hash,
+        "selected_candidate_hash": heldout["candidate_hash"],
+        "seed_evaluation_identity": "seed-eval",
+        "selected_evaluation_identity": "selected-eval",
+        "rollouts": 1,
+        "original_tasks": 1,
+        "common_rollout_ids": ["r"],
+        "before_transductive_completion": True,
+        "optimization_uses_test_feedback": False,
+        "components": {
+            "score": {
+                "seed_mean": 0.4,
+                "selected_mean": 0.7,
+                "mean_difference": 0.3,
+                "task_balanced_difference": 0.3,
+                "paired_task_bootstrap_95ci": [0.1, 0.5],
+                "private": "RAW_COMPONENT_SECRET",
+            }
+        },
+        "bootstrap": {"draws": 10000, "resampling_units": 1, "private": "RAW_BOOTSTRAP_SECRET"},
+        "per_task": {
+            "task": {
+                "rollouts": 1,
+                "components": {
+                    "score": {
+                        "seed_mean": 0.4,
+                        "selected_mean": 0.7,
+                        "difference": 0.3,
+                        "private": "RAW_TASK_SECRET",
+                    }
+                },
+            }
+        },
+        "private": "RAW_COMPARISON_SECRET",
+    }
+    write(run, "heldout_comparison.json", comparison)
+    return comparison
+
+
+def test_paired_heldout_report_verifies_identity_and_omits_inference_evidence(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    add_comparison(run)
+    report = report_module.build_report(run, corpus, output)
+    assert report["status"] == "complete"
+    comparison = report["heldout_comparison"]
+    assert comparison["identities_and_census_verified"]
+    assert comparison["components"]["score"]["paired_task_bootstrap_95ci"] == [0.1, 0.5]
+    for name in ("README.md", "report.html", "report.json"):
+        content = (output / name).read_text()
+        assert "RAW_" not in content
+    assert "0.1000 to 0.5000" in (output / "report.html").read_text()
+    assert "10,000" in (output / "README.md").read_text()
+
+
+def test_stale_or_different_rollout_comparison_is_not_presented_as_verified(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    comparison = add_comparison(run)
+    comparison["common_rollout_ids"] = ["wrong"]
+    write(run, "heldout_comparison.json", comparison)
+    report = report_module.build_report(run, corpus, output)
+    assert report["status"] == "partial"
+    assert not report["heldout_comparison"]["identities_and_census_verified"]
+    assert "0.1000 to 0.5000" not in (output / "report.html").read_text()
