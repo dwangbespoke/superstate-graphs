@@ -8,6 +8,8 @@ See [the full-corpus method](docs/FULL_CORPUS_METHOD.md) for split definitions,
 optimization, coverage retention, independent checks, and variance estimation;
 see [model serving](docs/MODEL_SERVING.md) for bounded Qwen inference on Modal.
 Run outputs and measured results are recorded separately from this design.
+The [report and publication handoff](docs/FULL_CORPUS_METHOD.md#report-and-publication-handoff)
+describes the complete graph export, executable fixtures, and exact census checks.
 
 ```bash
 uv sync --extra dev

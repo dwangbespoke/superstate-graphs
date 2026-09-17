@@ -143,14 +143,25 @@ def fixture(tmp_path):
         run,
         "state_reward_variance.json",
         {
+            "histories": 6,
+            "assigned_histories": 6,
+            "missing_assignment_count": 0,
+            "unassigned_count": 0,
             "states": [
                 {
                     "state_id": "A",
-                    "trajectory_deduplicated": {"mean": 0.5, "population_variance": 0.25},
-                    "history_weighted": {"mean": 0.4, "population_variance": 0.24},
-                    "task_balanced": {"mean": 0.45, "population_variance": 0.2475},
+                    "member_histories": 6,
+                    "distinct_visiting_rollouts": 1,
+                    "distinct_visiting_tasks": 1,
+                    "trajectory_deduplicated": {
+                        "weight": 1,
+                        "mean": 0.5,
+                        "population_variance": 0.25,
+                    },
+                    "history_weighted": {"weight": 6, "mean": 0.4, "population_variance": 0.24},
+                    "task_balanced": {"weight": 1, "mean": 0.45, "population_variance": 0.2475},
                 }
-            ]
+            ],
         },
     )
     write(
@@ -322,6 +333,32 @@ def test_malformed_optional_artifact_is_reported_without_leaking_contents(tmp_pa
     assert report["status"] == "partial"
     assert report["warnings"]
     assert "RAW_PRIVATE_BROKEN_ARTIFACT_SECRET" not in (output / "report.json").read_text()
+
+
+def test_variance_must_cover_every_occupied_state_with_exact_membership_counts(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    variance = json.loads((run / "state_reward_variance.json").read_text())
+    variance["states"][0]["member_histories"] = 5
+    write(run, "state_reward_variance.json", variance)
+    report = report_module.collect_report(run, corpus)
+    assert report["status"] == "partial"
+    assert not report["completion_checks"]["reward_variance_census"]
+    variance["states"] = []
+    write(run, "state_reward_variance.json", variance)
+    assert not report_module.collect_report(run, corpus)["completion_checks"][
+        "reward_variance_census"
+    ]
+
+
+def test_recorded_transition_without_an_edge_is_not_a_complete_graph(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    graph = json.loads((run / "graph.json").read_text())
+    graph["unassigned_transitions"] = [graph["edges"][0]["witnesses"].pop()]
+    write(run, "graph.json", graph)
+    report = report_module.collect_report(run, corpus)
+    assert report["completion_checks"]["transition_census"]
+    assert not report["completion_checks"]["all_transitions_have_edges"]
+    assert report["status"] == "partial"
 
 
 def execution_fixture(run, *, status="target_reached", reported_count=1):

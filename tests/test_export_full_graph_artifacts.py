@@ -186,21 +186,42 @@ def fixture(tmp_path):
         {
             "histories": 6,
             "assigned_histories": 6,
+            "missing_assignment_count": 0,
+            "unassigned_count": 0,
             "states": [
                 {
                     "state_id": "S",
                     "member_histories": 6,
                     "distinct_visiting_rollouts": 2,
                     "distinct_visiting_tasks": 2,
-                    "history_weighted": moment,
+                    "history_weighted": {**moment, "weight": 6},
                     "trajectory_deduplicated": moment,
                     "task_balanced": moment,
+                    "per_task": [
+                        {
+                            "task_id": f"task{i}",
+                            "rewarded_rollouts": 1,
+                            "mean": i,
+                            "population_variance": 0,
+                        }
+                        for i in range(2)
+                    ],
                     "sensitivity_excluding_manual_rewards": {
+                        "history_weighted": {"weight": 3, "mean": 0, "population_variance": 0},
+                        "task_balanced": {"weight": 1, "mean": 0, "population_variance": 0},
+                        "per_task": [
+                            {
+                                "task_id": "task0",
+                                "rewarded_rollouts": 1,
+                                "mean": 0,
+                                "population_variance": 0,
+                            }
+                        ],
                         "trajectory_deduplicated": {
                             "weight": 1,
                             "mean": 0,
                             "population_variance": 0,
-                        }
+                        },
                     },
                     "private_evidence": "RAW_VARIANCE_SECRET",
                 }
@@ -308,6 +329,35 @@ def test_wrong_witness_endpoint_or_assignment_metadata_prevents_export(tmp_path)
         exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
 
 
+@pytest.mark.parametrize("moment", ["history_weighted", "trajectory_deduplicated", "task_balanced"])
+def test_variance_moments_are_recomputed_from_immutable_outcomes(tmp_path, moment):
+    run, corpus, output = fixture(tmp_path)
+    variance = exporter.read_json(run / "state_reward_variance.json")
+    variance["states"][0][moment]["mean"] = 0.7
+    write(run, "state_reward_variance.json", variance)
+    with pytest.raises(ValueError, match="variance moment mismatch"):
+        exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    assert not output.exists()
+
+
+def test_manual_grade_sensitivity_and_per_task_census_are_verified(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    variance = exporter.read_json(run / "state_reward_variance.json")
+    variance["states"][0]["sensitivity_excluding_manual_rewards"]["trajectory_deduplicated"][
+        "weight"
+    ] = 2
+    write(run, "state_reward_variance.json", variance)
+    with pytest.raises(ValueError, match="variance moment mismatch"):
+        exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    variance["states"][0]["sensitivity_excluding_manual_rewards"]["trajectory_deduplicated"][
+        "weight"
+    ] = 1
+    variance["states"][0]["per_task"].pop()
+    write(run, "state_reward_variance.json", variance)
+    with pytest.raises(ValueError, match="per-task rows"):
+        exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+
+
 def add_task(run):
     root = run / "executable_tasks/path_1"
     root.mkdir(parents=True)
@@ -322,8 +372,26 @@ def add_task(run):
         {
             "status": "task",
             "path_id": "path_1",
+            "path_transition_ids": ["E"],
             "ordered_output": False,
             "source_history": "RAW_TASK_SOURCE_SECRET",
+        },
+    )
+    write(
+        root,
+        "source_path.json",
+        {
+            "path_id": "path_1",
+            "state_ids": ["S", "S"],
+            "transitions": [
+                {
+                    "transition_id": "E",
+                    "source_history_id": "r0:h0000",
+                    "target_history_id": "r0:h0001",
+                    "private": "RAW_PATH_SECRET",
+                }
+            ],
+            "private": "RAW_PATH_CONTEXT_SECRET",
         },
     )
     write(
@@ -380,11 +448,17 @@ def test_optional_task_export_uses_receipt_hashes_and_only_allowed_files(tmp_pat
         "expected_result.json",
         "local_validation.json",
         "task.json",
+        "source_path.json",
         "README.md",
     }
     assert "RAW_" not in (target / "task.json").read_text()
     assert "RAW_" not in (target / "local_validation.json").read_text()
     assert exporter.read_json(target / "task.json")["ordered_output"] is False
+    assert exporter.read_json(target / "task.json")["path_transition_ids"] == ["E"]
+    path = exporter.read_json(target / "source_path.json")
+    assert path["graph_edge_ids"] == ["E"]
+    assert path["witnesses"][0]["transition_id"] == "r0:t0000"
+    assert "RAW_" not in (target / "source_path.json").read_text()
 
 
 def test_optional_tasks_require_matching_execution_receipts(tmp_path):
@@ -394,6 +468,60 @@ def test_optional_tasks_require_matching_execution_receipts(tmp_path):
     with pytest.raises(ValueError, match="hash mismatch"):
         exporter.export_artifacts(run, corpus, output, include_tasks=True, expected_counts=COUNTS)
     assert not output.exists()
+
+
+def test_executed_task_requires_graph_path_witness_even_with_matching_file_receipt(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    source = add_task(run)
+    path = exporter.read_json(source / "source_path.json")
+    path["transitions"][0]["target_history_id"] = "r1:h0001"
+    write(source, "source_path.json", path)
+    receipt = exporter.read_json(source / "result.json")
+    receipt["artifact_sha256"]["source_path.json"] = hashlib.sha256(
+        (source / "source_path.json").read_bytes()
+    ).hexdigest()
+    write(source, "result.json", receipt)
+    with pytest.raises(ValueError, match="path witness"):
+        exporter.export_artifacts(run, corpus, output, include_tasks=True, expected_counts=COUNTS)
+    assert not output.exists()
+
+
+def test_exported_real_synthetic_fixture_remains_executable_with_standalone_verifier(tmp_path):
+    from superstate_graphs.graph_task_examples import run_local_validation, verify_submission
+
+    run, corpus, output = fixture(tmp_path)
+    source = add_task(run)
+    spec = {
+        "status": "task",
+        "path_id": "path_1",
+        "path_transition_ids": ["E"],
+        "title": "Unit-test fixture",
+        "learner_instruction": "Return the sum as total.",
+        "output_columns": ["total"],
+        "ordered_output": False,
+        "tables": [
+            {"name": "numbers", "columns": [{"name": "n", "type": "INTEGER"}], "rows": [[10], [20]]}
+        ],
+        "reference_sql": "SELECT SUM(n) AS total FROM numbers",
+    }
+    independent = "SELECT SUM(n * 1) AS total FROM numbers"
+    validation = run_local_validation(spec, independent, source)
+    assert validation["status"] == "locally_executed_consistent"
+    write(source, "task.json", spec)
+    (source / "oracle.sql").write_text(spec["reference_sql"])
+    (source / "independent.sql").write_text(independent)
+    hashes = {
+        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in source.iterdir()
+        if path.name != "result.json"
+    }
+    write(
+        source, "result.json", {"status": "locally_executed_consistent", "artifact_sha256": hashes}
+    )
+    exporter.export_artifacts(run, corpus, output, include_tasks=True, expected_counts=COUNTS)
+    task = output / "executable_tasks/path_1"
+    assert verify_submission(task, spec["reference_sql"])["status"] == "passed"
+    assert verify_submission(task, "SELECT 0 AS total")["status"] != "passed"
 
 
 def test_paired_comparison_export_keeps_all_ids_and_aggregates_without_inference_rows(tmp_path):

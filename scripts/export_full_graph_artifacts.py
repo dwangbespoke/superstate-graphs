@@ -13,6 +13,7 @@ import gzip
 import hashlib
 import importlib.util
 import json
+import math
 import re
 import shutil
 import tempfile
@@ -200,6 +201,103 @@ def _variance(value: dict) -> dict:
     return result
 
 
+def validate_variance_moments(value: dict, histories: dict, assignments: dict) -> None:
+    """Recompute descriptive moments from immutable outcomes; no model calls or bootstrap reruns."""
+    groups = defaultdict(list)
+    for hid, history in histories.items():
+        groups[assignments[hid]["state_id"]].append(history)
+
+    def check(actual: Any, expected: float | None, label: str) -> None:
+        if expected is None:
+            valid = actual is None
+        else:
+            valid = (
+                not isinstance(actual, bool)
+                and isinstance(actual, (int, float))
+                and math.isfinite(actual)
+                and math.isclose(actual, expected, abs_tol=1e-10, rel_tol=1e-10)
+            )
+        if not valid:
+            raise ValueError(f"Reward variance moment mismatch: {label}")
+
+    def verify(row: dict, members: list[dict], *, exclude_manual: bool) -> None:
+        by_rollout = {}
+        for history in members:
+            rid = history["rollout_id"]
+            reward = history["reward"]
+            identity = (history["task_id"], reward, history["reward_provenance"].get("kind", ""))
+            if rid in by_rollout and by_rollout[rid] != identity:
+                raise ValueError("One rollout has inconsistent terminal reward metadata")
+            by_rollout[rid] = identity
+        valid = {}
+        for rid, (task, reward, kind) in by_rollout.items():
+            if exclude_manual and str(kind).startswith("manual"):
+                continue
+            if reward is None:
+                continue
+            if (
+                isinstance(reward, bool)
+                or not isinstance(reward, (int, float))
+                or not math.isfinite(reward)
+            ):
+                raise ValueError("Corpus contains an invalid terminal reward")
+            valid[rid] = (task, reward)
+        by_task = defaultdict(list)
+        for task, reward in valid.values():
+            by_task[task].append(reward)
+        values = {
+            "history_weighted": [
+                (valid[h["rollout_id"]][1], 1.0) for h in members if h["rollout_id"] in valid
+            ],
+            "trajectory_deduplicated": [(reward, 1.0) for _, reward in valid.values()],
+            "task_balanced": [
+                (reward, 1.0 / len(rewards)) for rewards in by_task.values() for reward in rewards
+            ],
+        }
+        for key, weighted in values.items():
+            weight = math.fsum(w for _, w in weighted)
+            mean = math.fsum(reward * w for reward, w in weighted) / weight if weight else None
+            variance = (
+                max(
+                    0.0,
+                    math.fsum(w * reward * reward for reward, w in weighted) / weight - mean * mean,
+                )
+                if weight
+                else None
+            )
+            actual = row.get(key, {})
+            label = f"{row.get('state_id', 'manual-excluded')}/{key}"
+            for field, expected in (
+                ("weight", weight),
+                ("mean", mean),
+                ("population_variance", variance),
+            ):
+                check(actual.get(field), expected, f"{label}/{field}")
+        task_ids = [task.get("task_id") for task in row.get("per_task", [])]
+        if len(task_ids) != len(set(task_ids)) or set(task_ids) != set(by_task):
+            raise ValueError("Variance per-task rows do not cover all rewarded visiting tasks")
+        for task in row.get("per_task", []):
+            rewards = by_task.get(task.get("task_id"), [])
+            if not rewards:
+                raise ValueError("Variance per-task row has no rewarded visiting rollouts")
+            mean = math.fsum(rewards) / len(rewards)
+            check(task.get("rewarded_rollouts"), len(rewards), "per_task/rewarded_rollouts")
+            check(task.get("mean"), mean, "per_task/mean")
+            check(
+                task.get("population_variance"),
+                max(0.0, math.fsum(v * v for v in rewards) / len(rewards) - mean * mean),
+                "per_task/population_variance",
+            )
+
+    for row in value["states"]:
+        members = groups[row["state_id"]]
+        verify(row, members, exclude_manual=False)
+        sensitivity = row.get("sensitivity_excluding_manual_rewards")
+        if not isinstance(sensitivity, dict):
+            raise ValueError("Reward variance is missing manual-grade sensitivity analysis")
+        verify(sensitivity, members, exclude_manual=True)
+
+
 def export_artifacts(
     run_dir: Path,
     corpus_dir: Path,
@@ -284,6 +382,10 @@ def export_artifacts(
     if {row["task_id"] for row in history_index.values()} != set(task_membership):
         raise ValueError("History task identities differ from complete split membership")
     states = {_state(node)["id"]: _state(node) for node in graph["nodes"]}
+    if len(states) != len(graph["nodes"]) or len({edge["id"] for edge in graph["edges"]}) != len(
+        graph["edges"]
+    ):
+        raise ValueError("Final graph must have unique state and edge identifiers")
     classified, members = [], defaultdict(list)
     for hid, history in sorted(history_index.items()):
         assignment = assignments[hid]
@@ -328,6 +430,8 @@ def export_artifacts(
         }
         for sid in sorted(states)
     ]
+    variance = load("state_reward_variance.json")
+    validate_variance_moments(variance, history_index, assignments)
 
     expected_transitions = {}
     with (corpus_dir / "transitions.jsonl").open() as stream:
@@ -472,13 +576,26 @@ def export_artifacts(
         save_json("selected_candidate.json", selected)
         save_json("routing_stages.json", stages)
         save_json("splits.json", split_export)
-        save_json("state_reward_variance.json", _variance(load("state_reward_variance.json")))
+        save_json("state_reward_variance.json", _variance(variance))
         if (run_dir / "state_reward_variance_by_split.json").exists():
+            split_variance = load("state_reward_variance_by_split.json")
+            if set(split_variance) != {history["split"] for history in history_index.values()}:
+                raise ValueError("Split variance does not cover the corpus splits")
+            for split, value in split_variance.items():
+                subset = {
+                    hid: history
+                    for hid, history in history_index.items()
+                    if history["split"] == split
+                }
+                subset_assignments = {hid: assignments[hid] for hid in subset}
+                if not report_builder().variance_census_verified(value, subset_assignments):
+                    raise ValueError("Split variance membership census is incomplete")
+                validate_variance_moments(value, subset, subset_assignments)
             save_json(
                 "state_reward_variance_by_split.json",
                 {
                     split: _variance(value)
-                    for split, value in load("state_reward_variance_by_split.json").items()
+                    for split, value in split_variance.items()
                     if split in ("train", "pareto", "test")
                 },
             )
@@ -525,6 +642,7 @@ def export_artifacts(
                     "expected_result.json",
                     "local_validation.json",
                     "task.json",
+                    "source_path.json",
                 )
                 raw_files = {}
                 for name in source_names:
@@ -545,6 +663,68 @@ def export_artifacts(
                 ):
                     save_bytes(base + name, raw_files[name])
                 task_spec = json.loads(raw_files["task.json"])
+                source_path = json.loads(raw_files["source_path.json"])
+                path_steps = source_path.get("transitions", [])
+                path_edge_ids = [step.get("transition_id") for step in path_steps]
+                edge_lookup = {edge["id"]: edge for edge in edges}
+                if (
+                    not path_steps
+                    or task_spec.get("path_id") != path_id
+                    or source_path.get("path_id") != path_id
+                    or task_spec.get("path_transition_ids") != path_edge_ids
+                    or any(eid not in edge_lookup for eid in path_edge_ids)
+                ):
+                    raise ValueError(
+                        "Executable task path does not match final graph edge identifiers"
+                    )
+                path_state_ids = [edge_lookup[path_edge_ids[0]]["source"]]
+                path_witnesses = []
+                witness_lookup = {
+                    (w["edge_id"], w["source_history_id"], w["target_history_id"]): w
+                    for w in witnesses
+                }
+                for edge_id, step in zip(path_edge_ids, path_steps):
+                    edge = edge_lookup[edge_id]
+                    if edge["source"] != path_state_ids[-1] or not edge["traversable"]:
+                        raise ValueError(
+                            "Executable task uses a disconnected or ineligible graph path"
+                        )
+                    path_state_ids.append(edge["target"])
+                    key = edge_id, step.get("source_history_id"), step.get("target_history_id")
+                    witness = witness_lookup.get(key)
+                    if witness is None:
+                        raise ValueError(
+                            "Executable task path witness is absent from the full graph ledger"
+                        )
+                    path_witnesses.append(
+                        select(
+                            witness,
+                            (
+                                "edge_id",
+                                "transition_id",
+                                "source_history_id",
+                                "target_history_id",
+                                "rollout_id",
+                                "task_id",
+                            ),
+                        )
+                    )
+                if source_path.get("state_ids") != path_state_ids:
+                    raise ValueError(
+                        "Executable task state path disagrees with graph edge endpoints"
+                    )
+                save_json(
+                    base + "source_path.json",
+                    {
+                        "path_id": path_id,
+                        "state_ids": path_state_ids,
+                        "graph_edge_ids": path_edge_ids,
+                        "witnesses": path_witnesses,
+                        "cross_task": len({w["task_id"] for w in path_witnesses}) > 1,
+                        "evidence_type": "Recorded transition witnesses; composed source histories were not executed",
+                        "universal_contract_certified": False,
+                    },
+                )
                 save_json(
                     base + "task.json",
                     select(
@@ -556,6 +736,10 @@ def export_artifacts(
                             "path_id",
                             "ordered_output",
                             "synthetic_fixture",
+                            "output_columns",
+                            "path_transition_ids",
+                            "preserved_challenges",
+                            "adaptations",
                         ),
                     ),
                 )
@@ -587,6 +771,7 @@ def export_artifacts(
                     {
                         "path_id": path_id,
                         "status": "locally_executed_consistent",
+                        "graph_edge_ids": path_edge_ids,
                         "learner_evaluated": False,
                         "original_benchmark_reproduced": False,
                     }

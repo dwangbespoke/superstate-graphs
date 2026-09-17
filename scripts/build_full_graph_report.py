@@ -163,6 +163,49 @@ def public_heldout_comparison(value: dict) -> dict:
     }
 
 
+def variance_census_verified(value: dict | None, assignments: dict | None) -> bool:
+    """Require a statistics row for every occupied state and its exact membership counts."""
+    if value is None or assignments is None:
+        return False
+    rows = value.get("states", [])
+    groups = defaultdict(list)
+    for assignment in assignments.values():
+        if assignment.get("state_id") is not None:
+            groups[assignment["state_id"]].append(assignment)
+    ids = [row.get("state_id") for row in rows]
+    if (
+        len(ids) != len(set(ids))
+        or set(ids) != set(groups)
+        or value.get("histories") != len(assignments)
+        or value.get("assigned_histories") != sum(map(len, groups.values()))
+        or value.get("missing_assignment_count") != 0
+        or value.get("unassigned_count") != 0
+    ):
+        return False
+    for row in rows:
+        members = groups[row["state_id"]]
+        if (
+            row.get("member_histories") != len(members)
+            or row.get("distinct_visiting_rollouts")
+            != len({member.get("rollout_id") for member in members})
+            or row.get("distinct_visiting_tasks")
+            != len({member.get("task_id") for member in members})
+        ):
+            return False
+        for key in ("history_weighted", "trajectory_deduplicated", "task_balanced"):
+            moment = row.get(key, {})
+            weight = numeric(moment.get("weight"))
+            if weight is None or weight < 0:
+                return False
+            if weight > 0 and (
+                numeric(moment.get("mean")) is None
+                or numeric(moment.get("population_variance")) is None
+                or moment["population_variance"] < 0
+            ):
+                return False
+    return True
+
+
 def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
     warnings: list[str] = []
     receipts: dict[str, str] = {}
@@ -435,12 +478,18 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
         "final_graph": graph_source == "graph.json",
         "final_assignments": assignment_source == "assignments_all.json",
         "reward_variance": variance is not None,
+        "reward_variance_census": variance_census_verified(variance, assignments),
         "independent_audits": audit is not None,
         "task_drafts": tasks is not None,
         "completion_record": completion is not None and completion.get("status") == "complete",
         "exact_history_census": exact and nulls == 0 and not unknown_states,
         "transition_census": transition_census,
+        "all_transitions_have_edges": graph_source == "graph.json" and unassigned_transitions == 0,
     }
+    if variance is not None and not required["reward_variance_census"]:
+        warnings.append(
+            "Reward variance does not cover the exact occupied-state membership census with finite moments."
+        )
     if (
         executable is not None
         or (completion or {}).get("executable_task_target_reached") is not None

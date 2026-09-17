@@ -228,3 +228,66 @@ content-addressed caches and the optimizer checkpoint. Runtime credentials and
 raw data are ignored by Git. Source code, methods, tests, and concise reports are
 versioned. The earlier September 16 feasibility study remains separately
 documented and is not evidence for the full-corpus run.
+
+## Report and publication handoff
+
+The report builder can run during inference; missing artifacts remain explicitly
+partial. It never starts inference or changes the research run:
+
+```bash
+uv run python scripts/build_full_graph_report.py \
+  --run results/full_graph/run_v1 --corpus results/full_graph/corpus \
+  --output reports/full-corpus-2026-09-17
+```
+
+After the run writes `completion.json`, publish the full research artifacts to a
+new output directory. Include the executed tasks explicitly:
+
+```bash
+uv run python scripts/export_full_graph_artifacts.py \
+  --run results/full_graph/run_v1 --corpus results/full_graph/corpus \
+  --output reports/full-corpus-2026-09-17/artifacts --include-tasks
+```
+
+The exporter refuses incomplete results or replacement of an existing export.
+It verifies all 103 original task IDs, 1,030 rollout IDs, 37,532 history
+assignments, and 36,502 transition witnesses against the immutable corpus
+indexes. Every witness must match its recorded prefix endpoints and their final
+superstates. Variance must cover every occupied state with exact membership
+counts; the exporter recomputes the three descriptive reward weightings and
+manual-grade sensitivity from immutable terminal outcomes. Unoccupied state
+definitions have no empirical reward estimate.
+
+The compressed JSONL artifacts retain every membership and witness ID, while
+the compact HTML report displays only a labeled subset of witness references.
+The export includes graph definitions, routing stages, full splits, variance,
+paired frozen held-out aggregates, and a SHA-256 manifest. Raw transcripts,
+assignment evidence, judge prompts, and runtime credentials remain local.
+
+Each exported executable example includes its instruction, DuckDB fixture,
+reference queries, expected result, execution receipt, and validated links to
+the exact graph edges and recorded source witnesses. Verify a submitted query:
+
+```bash
+uv run python -m superstate_graphs.graph_task_examples verify \
+  --task-dir reports/full-corpus-2026-09-17/artifacts/executable_tasks/PATH_ID \
+  --submission answer.sql
+```
+
+Execution means two independently prompted reference queries ran and agreed on
+a synthetic fixture. It does not establish learner success or execution of the
+composed original histories. The report separately records whether the requested
+number of examples was reached. A completed artifact workflow may still report
+exhausted supported paths, failed semantic requests, or contradicted edges.
+
+Only the reviewed report/export directory should be staged for publication.
+The repository ignores `*.duckdb`, so include the sanitized exported fixtures
+explicitly when at least one executed example exists:
+
+```bash
+git add reports/full-corpus-2026-09-17
+git add -f reports/full-corpus-2026-09-17/artifacts/executable_tasks/*/fixture.duckdb
+```
+
+Do not stage the unrestricted `results/` directory. Retain the exported manifest
+with its files so a downloaded copy can be checked against the local final export.
