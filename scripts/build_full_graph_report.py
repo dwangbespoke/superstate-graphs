@@ -401,6 +401,70 @@ def collect_usage(run_dir: Path, completion: dict | None = None) -> dict:
     }
 
 
+def optimizer_continuation_receipts(value: Any, *, declared: bool) -> dict:
+    """Validate declared repair receipts without treating their claims as independent proof."""
+    records, errors = [], []
+    hash_fields = (
+        "old_graph_evolution_sha256",
+        "new_graph_evolution_sha256",
+        "archived_checkpoint_sha256",
+    )
+    boolean_fields = ("unchanged_evaluation_identity", "evidence_only_repair")
+    if declared and not isinstance(value, list):
+        errors.append("Continuation ledger must be a JSON list.")
+    for index, row in enumerate(value if declared and isinstance(value, list) else []):
+        invalid = []
+        if not isinstance(row, dict):
+            errors.append(f"Continuation record {index + 1} must be an object.")
+            continue
+        boundary = row.get("boundary_after_proposal")
+        if not isinstance(boundary, int) or isinstance(boundary, bool) or boundary < 0:
+            invalid.append("boundary_after_proposal")
+        if not isinstance(row.get("reason"), str) or not row["reason"].strip():
+            invalid.append("reason")
+        for field in hash_fields:
+            if not isinstance(row.get(field), str) or not re.fullmatch(r"[0-9a-f]{64}", row[field]):
+                invalid.append(field)
+        for field in boolean_fields:
+            if not isinstance(row.get(field), bool):
+                invalid.append(field)
+        try:
+            timestamp = datetime.fromisoformat(row["resumed_at_utc"].replace("Z", "+00:00"))
+            if timestamp.tzinfo is None or timestamp.utcoffset().total_seconds() != 0:
+                raise ValueError("Timestamp is not UTC")
+        except (KeyError, TypeError, ValueError, AttributeError):
+            invalid.append("resumed_at_utc")
+        if invalid:
+            errors.append(
+                f"Continuation record {index + 1} has invalid fields: {', '.join(invalid)}."
+            )
+            continue
+        records.append(
+            {
+                "boundary_after_proposal": boundary,
+                "reason": safe_text(row["reason"]),
+                **{field: row[field] for field in (*hash_fields, *boolean_fields)},
+                "resumed_at_utc": row["resumed_at_utc"],
+            }
+        )
+    if not declared:
+        disclosure = "No optimizer continuation receipt has been declared; absence of a receipt does not establish an unchanged optimization run."
+    elif errors:
+        disclosure = "An optimizer continuation ledger is present but has invalid receipts; method-change provenance is incomplete."
+    elif not records:
+        disclosure = "The declared optimizer continuation ledger has no records; this does not establish an unchanged optimization run."
+    else:
+        disclosure = f"{len(records)} optimizer continuation receipt(s) declare a method change during optimization. Boundaries, source hashes, and retained-checkpoint hashes are recorded below."
+    return {
+        "declared": declared,
+        "validation_status": "invalid" if errors else "valid" if declared else "not_declared",
+        "records": records,
+        "validation_errors": errors,
+        "disclosure": disclosure,
+        "validation_scope": "The reporter validates receipt field types, SHA-256 syntax, and UTC timestamps; the receipt's claims of unchanged evaluation identity and evidence-only repair are declarations by the run operator, not independently established by this report.",
+    }
+
+
 def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
     warnings: list[str] = []
     receipts: dict[str, str] = {}
@@ -422,6 +486,10 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
     contract = read("run_contract.json") or {}
     completion = read("completion.json")
     result = read("gepa_result.json")
+    continuations = optimizer_continuation_receipts(
+        read("optimizer_continuations.json"),
+        declared=(run_dir / "optimizer_continuations.json").exists(),
+    )
     heldout = read("heldout_test.json")
     baseline = read("baseline_heldout.json")
     comparison = read("heldout_comparison.json")
@@ -784,6 +852,9 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
         "transition_census": transition_census,
         "all_transitions_have_edges": graph_source == "graph.json" and unassigned_transitions == 0,
     }
+    if continuations["declared"]:
+        required["optimizer_continuation_receipts"] = continuations["validation_status"] == "valid"
+        warnings.extend(continuations["validation_errors"])
     if variance is not None and not required["reward_variance_census"]:
         warnings.append(
             "Reward variance does not cover the exact occupied-state membership census with finite moments."
@@ -903,6 +974,7 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
             "independent_audit": audit_model,
         },
         "usage": collect_usage(run_dir, completion),
+        "optimizer_continuations": continuations,
         "optimization": {
             "proposals_observed": attempts,
             "proposal_budget": numeric(contract.get("max_proposals")),
@@ -1127,6 +1199,23 @@ def markdown_report(report: dict) -> str:
             + ".",
             "",
         ]
+    continuation = report["optimizer_continuations"]
+    lines += ["## Optimizer continuation disclosure", "", continuation["disclosure"], ""]
+    for record in continuation["records"]:
+        lines.append(
+            f"- After proposal {md(record['boundary_after_proposal'])}; resumed {md(record['resumed_at_utc'])}: "
+            f"{md(record['reason'])} Receipt declares unchanged evaluation identity: "
+            f"{'Yes' if record['unchanged_evaluation_identity'] else 'No'}; evidence-only repair: "
+            f"{'Yes' if record['evidence_only_repair'] else 'No'}."
+        )
+    lines += [
+        "",
+        continuation["validation_scope"],
+        "",
+        "Full source and archived-checkpoint SHA-256 values are retained in `report.json` and, "
+        "when declared, the final export's `optimizer_continuations.json`.",
+        "",
+    ]
     comparison = report["heldout_comparison"]
     lines += ["## Frozen seed versus selected graph", ""]
     if comparison["identities_and_census_verified"]:
@@ -1661,6 +1750,14 @@ def html_report(report: dict) -> str:
         for task in report["executable_tasks"]["selected_examples"]
     )
     models = report["model_provenance"]
+    continuation = report["optimizer_continuations"]
+    continuation_items = "".join(
+        f"<li>After proposal {esc(record['boundary_after_proposal'])}; resumed {esc(record['resumed_at_utc'])}: "
+        f"{esc(record['reason'])} Receipt declares unchanged evaluation identity: "
+        f"{'Yes' if record['unchanged_evaluation_identity'] else 'No'}; evidence-only repair: "
+        f"{'Yes' if record['evidence_only_repair'] else 'No'}.</li>"
+        for record in continuation["records"]
+    )
     usage = report["usage"]
     usage_rows = "".join(
         "<tr><td>"
@@ -1754,6 +1851,8 @@ Best Pareto mean: <b>{esc(optimization["best_pareto_score"])}</b>. Frozen test m
 <p>{esc(stages["frozen_test_applies_to"])}. Observed endpoint-pair edges receive newly proposed contracts after assignment; they are not the edge specification scored by GEPA.</p>
 <p>Assignment records: {esc(report["assignments"]["recorded"])}; missing history IDs: {esc(report["assignments"]["missing_ids"])}; explicitly unassigned: {esc(report["assignments"]["unassigned"])}.
 Available graph: {esc(graph["artifact"])}. Scope: {esc(stages["displayed_graph_scope"])}.</p><p>Observed transitions: {esc(graph["observed_transitions"])}; unassigned transitions: {esc(graph["unassigned_transitions"])}.</p></section>
+<section><h2>Optimizer continuation disclosure</h2><p>{esc(continuation["disclosure"])}</p><ul>{continuation_items}</ul>
+<p>{esc(continuation["validation_scope"])}</p><p>Full source and archived-checkpoint SHA-256 values are retained in report.json and, when declared, the final export's optimizer_continuations.json.</p></section>
 <section><h2>Directed adjacency matrix</h2><p>All source/destination state pairs are represented. Blank cells mean zero recorded witnesses; color uses a logarithmic witness-count scale. A sampled-eligible edge is not universally certified.</p>
 <div class="matrix-tools"><label>Edges <select id="matrix-mode"><option value="all">All observed edges</option><option value="eligible">Sampled-traversable only</option></select></label><label>Zoom <input id="matrix-zoom" type="range" min="1" max="4" value="1" step="0.25"></label><button id="matrix-clear" type="button">Clear state/pair focus</button></div>
 <p><span class="matrix-legend"></span>More observed witnesses → darker. Hover any cell for exact counts; click an axis state or cell to filter the tables.</p><p id="matrix-focus" class="muted">Focus: all states and pairs</p><p id="matrix-detail" aria-live="polite">No cell selected.</p><div class="matrix-viewport">{adjacency_matrix(graph)}</div></section>

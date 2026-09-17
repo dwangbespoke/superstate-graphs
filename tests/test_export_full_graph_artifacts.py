@@ -584,3 +584,37 @@ def test_paired_comparison_export_keeps_all_ids_and_aggregates_without_inference
     assert not (output / "baseline_heldout.json").exists()
     manifest = exporter.read_json(output / "manifest.json")
     assert "heldout_comparison.json" in manifest["files"]
+
+
+def test_declared_optimizer_continuation_exports_only_validated_receipt_fields(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    receipt = {
+        "boundary_after_proposal": 7,
+        "reason": "Repair reflection evidence attachment.",
+        "old_graph_evolution_sha256": "a" * 64,
+        "new_graph_evolution_sha256": "b" * 64,
+        "unchanged_evaluation_identity": True,
+        "evidence_only_repair": True,
+        "archived_checkpoint_sha256": "c" * 64,
+        "resumed_at_utc": "2026-09-17T15:00:00+00:00",
+    }
+    write(
+        run,
+        "optimizer_continuations.json",
+        [{**receipt, "source_path": "RAW_PRIVATE_SOURCE_SECRET"}],
+    )
+    manifest = exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    assert exporter.read_json(output / "optimizer_continuations.json") == [receipt]
+    provenance = exporter.read_json(output / "provenance.json")
+    assert provenance["optimizer_continuations"]["validation_status"] == "valid"
+    assert "optimizer_continuations.json" in manifest["files"]
+    assert "RAW_" not in (output / "optimizer_continuations.json").read_text()
+    assert "RAW_" not in (output / "provenance.json").read_text()
+
+
+def test_invalid_optimizer_continuation_cannot_be_exported_as_complete(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    write(run, "optimizer_continuations.json", {"reason": "RAW_INVALID_RECEIPT_SECRET"})
+    with pytest.raises(ValueError, match="optimizer_continuation_receipts"):
+        exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    assert not output.exists()

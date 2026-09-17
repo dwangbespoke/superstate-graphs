@@ -618,6 +618,8 @@ def export_artifacts(
         if report["heldout_comparison"]["identities_and_census_verified"]:
             save_json("heldout_comparison.json", report["heldout_comparison"])
         save_json("usage_accounting.json", report["usage"])
+        if report["optimizer_continuations"]["declared"]:
+            save_json("optimizer_continuations.json", report["optimizer_continuations"]["records"])
         task_receipts = []
         if include_tasks and (run_dir / "executable_task_summary.json").exists():
             summary = load("executable_task_summary.json")
@@ -828,6 +830,7 @@ def export_artifacts(
             "formation_uses_terminal_rewards": False,
             "graph_scope": "All-corpus transductive completion after frozen held-out evaluation",
             "graph_stages": report["graph_stages"],
+            "optimizer_continuations": report["optimizer_continuations"],
             "edge_construction_scope": "Final observed endpoint-pair contracts are reconstructed after frozen evaluation; selected_candidate.json preserves the edge specification evaluated by GEPA",
             "retention_scope": "Previously evaluated training histories per candidate",
             "universal_contract_certified": False,
@@ -860,6 +863,7 @@ def export_artifacts(
                 "| state_reward_variance.json | Full outcome moments, weightings, intervals, and manual-grade sensitivity |\n"
                 "| evaluation_summary.json; provenance.json | Observed evaluation summaries and source fingerprints |\n"
                 "| usage_accounting.json | Deduplicated successful cached-request usage and separate overlapping process snapshots; not billing |\n"
+                "| optimizer_continuations.json (when declared) | Allowlisted method-repair receipts, boundaries, source/checkpoint hashes, and declared invariants |\n"
                 "| heldout_comparison.json (when available) | Paired seed-versus-selected held-out aggregates, task-cluster intervals, and common rollout IDs; no inference evidence |\n"
                 "| manifest.json | Exported-file SHA-256 hashes and record counts |\n\n"
                 "JSONL compression uses gzip with a fixed timestamp. Read with Python's `gzip.open(path, 'rt')`; "

@@ -903,3 +903,78 @@ def test_audit_reporting_separates_missing_failures_and_non_error_unknowns(tmp_p
     for name in ("README.md", "report.html", "report.json"):
         assert "RAW_" not in (output / name).read_text()
     assert "non-error unknown: 2" in (output / "report.html").read_text()
+
+
+def continuation_receipt():
+    return {
+        "boundary_after_proposal": 7,
+        "reason": "Attach the producing transition when explaining membership at a history.",
+        "old_graph_evolution_sha256": "a" * 64,
+        "new_graph_evolution_sha256": "b" * 64,
+        "unchanged_evaluation_identity": True,
+        "evidence_only_repair": True,
+        "archived_checkpoint_sha256": "c" * 64,
+        "resumed_at_utc": "2026-09-17T15:00:00Z",
+    }
+
+
+def test_optimizer_continuation_is_explicit_allowlisted_method_disclosure(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    receipt = continuation_receipt()
+    write(run, "optimizer_continuations.json", [{**receipt, "private": "RAW_CONTINUATION_SECRET"}])
+    report = report_module.build_report(run, corpus, output)
+    continuation = report["optimizer_continuations"]
+    assert report["status"] == "complete"
+    assert continuation["validation_status"] == "valid"
+    assert continuation["records"] == [receipt]
+    assert "not independently established" in continuation["validation_scope"]
+    for name in ("README.md", "report.html"):
+        text = (output / name).read_text()
+        assert "After proposal 7" in text
+        assert "unchanged evaluation identity: Yes" in text
+        assert "evidence-only repair: Yes" in text
+        assert "RAW_" not in text
+    assert "RAW_" not in (output / "report.json").read_text()
+
+
+def test_absent_continuation_receipt_does_not_claim_an_unchanged_run(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    report = report_module.build_report(run, corpus, output)
+    assert report["optimizer_continuations"]["validation_status"] == "not_declared"
+    assert report["optimizer_continuations"]["records"] == []
+    assert (
+        "does not establish an unchanged optimization run" in (output / "report.html").read_text()
+    )
+
+
+def test_invalid_continuation_fields_make_provenance_incomplete_without_leaking_values(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    for field, invalid in (
+        ("boundary_after_proposal", True),
+        ("reason", " "),
+        ("old_graph_evolution_sha256", "RAW_INVALID_HASH_SECRET"),
+        ("unchanged_evaluation_identity", "true"),
+        ("evidence_only_repair", None),
+        ("resumed_at_utc", "2026-09-17T15:00:00"),
+    ):
+        write(run, "optimizer_continuations.json", [{**continuation_receipt(), field: invalid}])
+        report = report_module.collect_report(run, corpus)
+        assert report["status"] == "partial"
+        assert not report["completion_checks"]["optimizer_continuation_receipts"]
+        assert report["optimizer_continuations"]["records"] == []
+        assert field in report["optimizer_continuations"]["validation_errors"][0]
+        assert "RAW_" not in json.dumps(report)
+
+
+def test_continuation_false_invariant_flags_are_not_rewritten_as_true(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    receipt = {
+        **continuation_receipt(),
+        "unchanged_evaluation_identity": False,
+        "evidence_only_repair": False,
+    }
+    write(run, "optimizer_continuations.json", [receipt])
+    report_module.build_report(run, corpus, output)
+    text = (output / "report.html").read_text()
+    assert "unchanged evaluation identity: No" in text
+    assert "evidence-only repair: No" in text
