@@ -17,7 +17,7 @@ import math
 import re
 import shutil
 import tempfile
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -78,6 +78,132 @@ def _state(state: dict) -> dict:
 
 def _contract(edge: dict) -> dict:
     return select(edge, ("id", "source", "target", "operation", "effect", "bindings"))
+
+
+def sampled_edge_eligibility(
+    graph: dict, assignments: dict, jobs: list, results: list, summary: dict
+) -> dict:
+    """Recompute finite-sample eligibility; never trust a stored traversable flag alone."""
+    from superstate_graphs.graph_analysis import aggregate_independent_audits
+
+    if not isinstance(jobs, list) or not isinstance(results, list):
+        raise ValueError("Sampled graph requires recorded audit jobs and results")
+    job_index = {job["audit_id"]: job for job in jobs}
+    if len(job_index) != len(jobs) or any(not isinstance(key, str) or not key for key in job_index):
+        raise ValueError("Audit jobs have duplicate or invalid identifiers")
+    edge_index = {edge["id"]: edge for edge in graph["edges"]}
+    members = defaultdict(set)
+    for hid, assignment in assignments.items():
+        members[assignment["state_id"]].add(hid)
+    observed_sources = defaultdict(set)
+    for edge in graph["edges"]:
+        observed_sources[edge["source"], edge["target"]].update(
+            witness.get("source_id", witness.get("source_history_id"))
+            for witness in edge.get("witnesses", [])
+        )
+    for job in jobs:
+        if job["kind"] != "edge_source_applicability":
+            continue
+        edge = edge_index.get(job.get("edge_id"))
+        if edge is None or job.get("state_ids") != [edge["source"], edge["target"]]:
+            raise ValueError("Edge audit references an absent or mismatched operation")
+        source_ids, target_ids = job.get("history_ids"), job.get("target_history_ids")
+        if (
+            not isinstance(source_ids, list)
+            or len(source_ids) != 1
+            or not isinstance(target_ids, list)
+            or not target_ids
+            or not set(source_ids) <= members[edge["source"]]
+            or not set(target_ids) <= members[edge["target"]]
+            or job.get("source_member_count") != len(members[edge["source"]])
+            or job.get("source_observed_to_target")
+            is not (source_ids[0] in observed_sources[edge["source"], edge["target"]])
+        ):
+            raise ValueError("Edge audit history membership or sampling metadata is inconsistent")
+    for result in results:
+        job = job_index.get(result.get("audit_id"))
+        if job is None or result.get("kind") != job["kind"]:
+            raise ValueError("Audit result does not match its planned job")
+        if result.get("execution_status") == "error" and result.get("verdict") != "unknown":
+            raise ValueError("Failed audit request cannot support or contradict an edge")
+        if job["kind"] == "edge_source_applicability" and result.get("verdict") in {
+            "supported",
+            "contradicted",
+        }:
+            evidence = result.get("verified_evidence", [])
+            if (
+                result.get("schema_and_citations_checked") is not True
+                or result.get("citation_errors") != []
+                or not isinstance(evidence, list)
+                or any(
+                    not isinstance(item, dict)
+                    or not isinstance(item.get("quote"), str)
+                    or not item["quote"].strip()
+                    for item in evidence
+                )
+                or not set(job["history_ids"]) <= {item.get("history_id") for item in evidence}
+                or any(
+                    item.get("history_id")
+                    not in set(job["history_ids"] + job["target_history_ids"])
+                    for item in evidence
+                )
+            ):
+                raise ValueError(
+                    "Definitive edge audit lacks its validated source-citation receipt"
+                )
+    recomputed = aggregate_independent_audits(jobs, results, graph)
+    for field in ("planned_checks", "completed_checks", "by_kind"):
+        if summary.get(field) != recomputed[field]:
+            raise ValueError("Independent audit summary disagrees with jobs/results: " + field)
+    if summary.get("failed_requests") != sum(
+        row.get("execution_status") == "error" for row in results
+    ):
+        raise ValueError("Independent audit failed-request count is inconsistent")
+    saved_reports = {edge["edge_id"]: edge for edge in summary.get("edges", [])}
+    if len(saved_reports) != len(summary.get("edges", [])) or set(saved_reports) != set(edge_index):
+        raise ValueError("Independent edge audit summary census is incomplete or duplicated")
+    comparison_fields = (
+        "edge_id",
+        "observed_witness_count",
+        "independent_sampled_source_ids",
+        "untraversed_sources_tested",
+        "verdicts",
+        "has_independent_counterexample",
+    )
+    eligible, excluded = set(), Counter()
+    for report in recomputed["edges"]:
+        edge = edge_index[report["edge_id"]]
+        # reported_traversable is intentionally the PRE-audit flag. It is not
+        # compared with the post-audit flag on graph.edges here.
+        for saved in (saved_reports[edge["id"]], edge.get("audit", {})):
+            if any(saved.get(field) != report[field] for field in comparison_fields):
+                raise ValueError("Stored edge audit disagrees with recorded jobs/results")
+        if edge["audit"].get("source_member_count") != len(members[edge["source"]]):
+            raise ValueError("Edge audit source member count disagrees with assignments")
+        plausible = edge.get("proposal", {}).get("universal_source_plausible")
+        if type(plausible) is not bool:
+            raise ValueError("Edge proposal lacks its recorded reusability verdict")
+        verdicts = report["verdicts"]
+        reasons = {
+            "no_supported_source_check": not verdicts.get("supported", 0),
+            "contradicted_source_check": bool(verdicts.get("contradicted", 0)),
+            "unknown_source_check": bool(verdicts.get("unknown", 0)),
+            "planned_source_check_not_run": bool(verdicts.get("not_run", 0)),
+            "proposer_rejected": plausible is False,
+        }
+        expected = not any(reasons.values())
+        if edge.get("traversable") is not expected:
+            raise ValueError(
+                "Stored traversable flag disagrees with recomputed sampled eligibility"
+            )
+        if expected:
+            eligible.add(edge["id"])
+        else:
+            excluded.update(reason for reason, applies in reasons.items() if applies)
+    return {
+        "eligible_ids": eligible,
+        "excluded_reason_counts_nonexclusive": dict(sorted(excluded.items())),
+    }
 
 
 def _candidate(candidate: dict) -> dict:
@@ -604,6 +730,44 @@ def export_artifacts(
         or len(witness_ids) != expected_counts["transitions"]
     ):
         raise ValueError("Export must contain each recorded transition exactly once")
+    eligibility = sampled_edge_eligibility(
+        graph,
+        assignments,
+        load("independent_audit_jobs.json"),
+        load("independent_audit_results.json"),
+        load("independent_audit_summary.json"),
+    )
+    sampled_graph = {
+        "format": "sampled-supported-superstate-graph-v1",
+        "directed": True,
+        "nodes": nodes,
+        "edges": sorted(
+            (edge for edge in edges if edge["id"] in eligibility["eligible_ids"]),
+            key=lambda edge: edge["id"],
+        ),
+        "node_count": len(nodes),
+        "edge_count": len(eligibility["eligible_ids"]),
+        "observed_graph_edge_count": len(edges),
+        "excluded_edge_count": len(edges) - len(eligibility["eligible_ids"]),
+        "excluded_reason_counts_nonexclusive": eligibility["excluded_reason_counts_nonexclusive"],
+        "eligibility_rule": "At least one supported source audit; every planned source audit supported; no contradicted, unknown, not-run, or proposer-rejected contract",
+        "semantics": "Finite sampled LLM support for proposing paths. Every retained edge has observed witnesses; the sample does not establish applicability to every source history or execution of a composed path.",
+        "universal_applicability_certified": False,
+        "executable_path_certified": False,
+        "all_nodes_retained": True,
+        "isolated_nodes_and_empty_edge_sets_are_valid": True,
+        "evidence_validation": "Recomputed from recorded audit jobs/results and proposer verdicts, checked against audit summaries, membership identities, and final traversable flags. Source-citation validation receipts are checked; source quotations are not published or rejudged.",
+        "source_artifact_sha256": {
+            name: source_hashes["run/" + name]
+            for name in (
+                "graph.json",
+                "assignments_all.json",
+                "independent_audit_jobs.json",
+                "independent_audit_results.json",
+                "independent_audit_summary.json",
+            )
+        },
+    }
 
     rollout_rows = []
     with (corpus_dir / "rollouts.jsonl").open() as stream:
@@ -665,6 +829,7 @@ def export_artifacts(
     try:
         save_jsonl("nodes.jsonl.gz", nodes)
         save_jsonl("edges.jsonl.gz", sorted(edges, key=lambda edge: edge["id"]))
+        save_json("sampled_supported_graph.json", sampled_graph)
         save_jsonl("assignments.jsonl.gz", classified)
         save_jsonl("witnesses.jsonl.gz", sorted(witnesses, key=lambda w: w["transition_id"]))
         save_jsonl("rollouts.jsonl.gz", sorted(rollout_rows, key=lambda row: row["id"]))
@@ -949,6 +1114,7 @@ def export_artifacts(
                 "| File | Content |\n|---|---|\n"
                 "| nodes.jsonl.gz | All state definitions and complete member-history ID lists |\n"
                 "| edges.jsonl.gz | All directed operation contracts and complete witness-ID lists |\n"
+                "| sampled_supported_graph.json | Ready-to-use directed graph with all nodes and only edges whose finite sampled eligibility was independently recomputed from audit records |\n"
                 "| assignments.jsonl.gz | Every history-to-state mapping, prefix hashes, split, and terminal outcome metadata |\n"
                 "| witnesses.jsonl.gz | Every transition, with exact history/state endpoints and rollout identity |\n"
                 "| rollouts.jsonl.gz | Complete rollout metadata and reward provenance, excluding messages |\n"
@@ -965,6 +1131,13 @@ def export_artifacts(
                 "each line is one JSON object. The `history_id` and `transition_id` columns provide lossless joins. "
                 "The first routing stage is the optimized candidate; later stages classify only histories "
                 "left unassigned by earlier stages. Final graph completion is transductive.\n\n"
+                "For path proposals, load `sampled_supported_graph.json` and traverse its `edges` by "
+                "`source` and `target`. It retains all nodes, including isolated nodes, and can have zero "
+                "eligible edges. Every included edge has at least one supported source check and no "
+                "contradicted, unknown, missing planned check, or proposer rejection. This is finite "
+                "sampled LLM support, not universal source applicability or proof that a composed path "
+                "executes. The complete observed graph and witness ledger remain in the unfiltered "
+                "JSONL files.\n\n"
                 "The accepted-candidate archive preserves the final GEPA result's original indices, "
                 "parent rows, and aggregate Pareto-validation scores. Its candidate zero equals the "
                 "published seed, and best_idx equals the published selected candidate. It does not "

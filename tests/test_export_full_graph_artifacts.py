@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from superstate_graphs.graph_analysis import aggregate_independent_audits
+
 
 PATH = Path(__file__).resolve().parents[1] / "scripts/export_full_graph_artifacts.py"
 SPEC = importlib.util.spec_from_file_location("export_complete_graph", PATH)
@@ -28,6 +30,53 @@ def write(root: Path, name: str, value):
 def write_lines(root: Path, name: str, rows):
     root.mkdir(parents=True, exist_ok=True)
     (root / name).write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+
+def set_edge_audits(run, verdicts=("supported", "supported", "supported"), *, proposer=True):
+    """Tiny synthetic receipts with the same pre-/post-audit boundary as production."""
+    graph = exporter.read_json(run / "graph.json")
+    edge = graph["edges"][0]
+    edge["traversable"] = False
+    edge["proposal"] = {"universal_source_plausible": proposer, "evidence": "RAW_PROPOSER_SECRET"}
+    jobs, results = [], []
+    for index, verdict in enumerate(verdicts):
+        hid = ("r0:h0000", "r0:h0002", "r1:h0000")[index]
+        job = {
+            "audit_id": f"audit{index}",
+            "kind": "edge_source_applicability",
+            "edge_id": "E",
+            "state_ids": ["S", "S"],
+            "history_ids": [hid],
+            "target_history_ids": ["r1:h0002"],
+            "source_observed_to_target": hid != "r0:h0002",
+            "source_member_count": 6,
+        }
+        jobs.append(job)
+        if verdict == "not_run":
+            continue
+        row = {"audit_id": job["audit_id"], "kind": job["kind"], "verdict": verdict}
+        if verdict == "error":
+            row.update(verdict="unknown", execution_status="error", error="RAW_ERROR_SECRET")
+        else:
+            row.update(
+                schema_and_citations_checked=True,
+                citation_errors=[],
+                verified_evidence=[{"history_id": hid, "quote": "RAW_AUDIT_SOURCE_QUOTE"}],
+            )
+        results.append(row)
+    summary = aggregate_independent_audits(jobs, results, graph)
+    summary["failed_requests"] = sum(row.get("execution_status") == "error" for row in results)
+    edge["audit"] = {
+        **summary["edges"][0],
+        "source_member_count": 6,
+        "method": "sampled_independent_llm_proxy",
+        "judge_prompt": "RAW_JUDGE_SECRET",
+    }
+    edge["traversable"] = bool(verdicts) and all(v == "supported" for v in verdicts) and proposer
+    write(run, "graph.json", graph)
+    write(run, "independent_audit_jobs.json", jobs)
+    write(run, "independent_audit_results.json", results)
+    write(run, "independent_audit_summary.json", summary)
 
 
 def fixture(tmp_path):
@@ -240,11 +289,7 @@ def fixture(tmp_path):
             ],
         },
     )
-    write(
-        run,
-        "independent_audit_summary.json",
-        {"planned_checks": 3, "completed_checks": 3, "failed_requests": 0, "by_kind": {}},
-    )
+    set_edge_audits(run)
     write(run, "task_draft_summary.json", {"selected_examples": [], "draft_count": 0})
     write(run, "completion.json", {"status": "complete", "histories": 6, "unassigned": 0})
     return run, corpus, output
@@ -299,6 +344,86 @@ def test_export_requires_actual_completion_and_default_entire_corpus(tmp_path):
         exporter.export_artifacts(run, corpus, output)
     (run / "completion.json").unlink()
     with pytest.raises(ValueError, match="complete verified artifacts"):
+        exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    "verdicts, proposer, included, reason",
+    [
+        (("supported", "supported"), True, True, None),
+        (("supported", "contradicted"), True, False, "contradicted_source_check"),
+        (("supported", "unknown"), True, False, "unknown_source_check"),
+        (("supported", "not_run"), True, False, "planned_source_check_not_run"),
+        (("supported", "error"), True, False, "unknown_source_check"),
+        (("supported", "supported"), False, False, "proposer_rejected"),
+        ((), True, False, "no_supported_source_check"),
+    ],
+)
+def test_sampled_graph_recomputes_eligibility_and_preserves_full_ledger(
+    tmp_path, verdicts, proposer, included, reason
+):
+    run, corpus, output = fixture(tmp_path)
+    set_edge_audits(run, verdicts, proposer=proposer)
+    raw_graph = (run / "graph.json").read_bytes()
+    manifest = exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    filtered = exporter.read_json(output / "sampled_supported_graph.json")
+    full_edges = load_lines(output / "edges.jsonl.gz")
+    assert "sampled_supported_graph.json" in manifest["files"]
+    assert filtered["nodes"] == load_lines(output / "nodes.jsonl.gz")
+    assert filtered["edges"] == (full_edges if included else [])
+    assert filtered["edge_count"] == int(included)
+    assert filtered["observed_graph_edge_count"] == 1
+    assert filtered["excluded_edge_count"] == int(not included)
+    assert filtered["universal_applicability_certified"] is False
+    assert filtered["executable_path_certified"] is False
+    if reason is not None:
+        assert filtered["excluded_reason_counts_nonexclusive"][reason] == 1
+    assert len(load_lines(output / "witnesses.jsonl.gz")) == 4
+    assert len(full_edges) == 1 and full_edges[0]["witness_count"] == 4
+    assert (run / "graph.json").read_bytes() == raw_graph
+    # The summary records the original false flag, even for now-eligible edges.
+    assert (
+        exporter.read_json(run / "independent_audit_summary.json")["edges"][0][
+            "reported_traversable"
+        ]
+        is False
+    )
+    assert "sampled_supported_graph.json" in (output / "README.md").read_text()
+    assert "RAW_" not in (output / "sampled_supported_graph.json").read_text()
+
+
+@pytest.mark.parametrize(
+    "corruption",
+    ["flag", "summary", "edge_audit", "missing_results", "source", "citation", "proposer"],
+)
+def test_sampled_graph_rejects_inconsistent_eligibility_receipts(tmp_path, corruption):
+    run, corpus, output = fixture(tmp_path)
+    filename = "graph.json"
+    value = exporter.read_json(run / filename)
+    if corruption == "flag":
+        value["edges"][0]["traversable"] = False
+    elif corruption == "edge_audit":
+        value["edges"][0]["audit"]["verdicts"] = {"supported": 2, "unknown": 1}
+    elif corruption == "proposer":
+        value["edges"][0]["proposal"]["universal_source_plausible"] = False
+    elif corruption == "summary":
+        filename = "independent_audit_summary.json"
+        value = exporter.read_json(run / filename)
+        value["edges"][0]["verdicts"] = {"supported": 4}
+    elif corruption == "missing_results":
+        filename = "independent_audit_results.json"
+        value = exporter.read_json(run / filename)[:-1]
+    elif corruption == "source":
+        filename = "independent_audit_jobs.json"
+        value = exporter.read_json(run / filename)
+        value[0]["history_ids"] = ["absent-history"]
+    else:
+        filename = "independent_audit_results.json"
+        value = exporter.read_json(run / filename)
+        value[0]["verified_evidence"] = []
+    write(run, filename, value)
+    with pytest.raises(ValueError):
         exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
     assert not output.exists()
 
