@@ -24,6 +24,7 @@ MODEL_ID, REVISION, TENSOR_PARALLEL = MODEL_CONFIGS[MODEL_ROLE]
 GPU = os.environ.get("SG_GRAPH_GPU", "H200:2" if TENSOR_PARALLEL == 2 else "H200")
 MAX_MODEL_LEN = int(os.environ.get("SG_GRAPH_CONTEXT", "262144"))
 MAX_SEQS = int(os.environ.get("SG_GRAPH_MAX_SEQS", "16" if MODEL_ROLE == "teacher" else "32"))
+STRUCTURED_OUTPUTS_CONFIG = {"backend": "xgrammar", "disable_any_whitespace": True}
 REPLICA = os.environ.get("SG_GRAPH_REPLICA", "main")
 API_KEY = secrets.token_urlsafe(32)
 WHEEL = (
@@ -90,6 +91,9 @@ class GraphModelServer:
             "--max-cudagraph-capture-size", str(MAX_SEQS),
             "--gpu-memory-utilization", "0.92",
             "--enable-prefix-caching", "--enable-chunked-prefill",
+            # This pinned vLLM backend reads whitespace policy from its global
+            # config, not the identically named per-request field.
+            "--structured-outputs-config", json.dumps(STRUCTURED_OUTPUTS_CONFIG),
             "--language-model-only", "--reasoning-parser", "qwen3",
             "--generation-config", "vllm",
         ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
@@ -140,6 +144,7 @@ def serve(duration_seconds: int = 28800, runtime_path: str = "results/runtime/gr
         "max_model_len": MAX_MODEL_LEN,
         "max_num_seqs": MAX_SEQS,
         "omp_num_threads": 1,
+        "structured_outputs_config": STRUCTURED_OUTPUTS_CONFIG,
         "app_id": app.app_id,
         "started_at_epoch": started,
         "deadline_epoch": deadline,
