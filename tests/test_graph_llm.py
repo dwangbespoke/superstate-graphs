@@ -78,6 +78,9 @@ def test_thinking_policy_is_bounded_recorded_and_part_of_cache(tmp_path):
             assert request["top_p"] == 0.95
             assert request["extra_body"]["top_k"] == 20
             assert request["extra_body"]["thinking_token_budget"] == 1024
+            assert request["extra_body"]["structured_outputs"] == {
+                "json_object": True, "disable_any_whitespace": True,
+            }
             await client.complete_json(messages, thinking=True, max_tokens=2048)
             assert call.await_count == 1
             await client.complete_json(messages, thinking=True, max_tokens=2048,
@@ -88,7 +91,11 @@ def test_thinking_policy_is_bounded_recorded_and_part_of_cache(tmp_path):
             records = [json.loads(p.read_text()) for p in (tmp_path / "cache").glob("*/*.json")]
             assert {r["decoding"]["thinking_token_budget"] for r in records} == {512, 1024}
             assert all(r["attempt_outcomes"][0]["finish_reason"] == "stop" for r in records)
-    assert qwen_generation_policy(thinking=False, max_tokens=128) == {"temperature": 0.0}
+    assert qwen_generation_policy(thinking=False, max_tokens=128) == {
+        "temperature": 0.0, "structured_output_policy": {
+            "disable_any_whitespace": True, "duplicate_response_format_constraint": True,
+        },
+    }
     assert qwen_generation_policy(thinking=True, max_tokens=16384)["thinking_token_budget"] == 4096
     asyncio.run(run())
 

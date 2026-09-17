@@ -46,6 +46,7 @@ def qwen_generation_policy(
     *, thinking: bool, max_tokens: int, temperature: float | None = None,
     thinking_token_budget: int | None = None, top_p: float | None = None,
     top_k: int | None = None, presence_penalty: float | None = None,
+    compact_json: bool = True,
 ) -> dict[str, Any]:
     """Resolve the recorded Qwen decode policy without changing input context.
 
@@ -55,6 +56,10 @@ def qwen_generation_policy(
     """
     result: dict[str, Any] = {
         "temperature": (0.6 if thinking else 0.0) if temperature is None else temperature,
+        "structured_output_policy": {
+            "disable_any_whitespace": compact_json,
+            "duplicate_response_format_constraint": compact_json,
+        },
     }
     options = {
         "thinking_token_budget": thinking_token_budget,
@@ -157,6 +162,7 @@ class GraphLLM:
         top_p: float | None = None,
         top_k: int | None = None,
         presence_penalty: float | None = None,
+        compact_json: bool = True,
         seed: int = 17,
         cache_namespace: str = "graph-v1",
     ) -> dict[str, Any]:
@@ -172,6 +178,7 @@ class GraphLLM:
             thinking=thinking, max_tokens=max_tokens, temperature=temperature,
             thinking_token_budget=thinking_token_budget, top_p=top_p, top_k=top_k,
             presence_penalty=presence_penalty,
+            compact_json=compact_json,
         )
         thinking_token_budget = policy.get("thinking_token_budget")
         if thinking_token_budget is not None and (
@@ -199,6 +206,14 @@ class GraphLLM:
         for name in ("top_k", "thinking_token_budget"):
             if name in policy:
                 request["extra_body"][name] = policy[name]
+        if compact_json:
+            # vLLM validates structured_outputs before response_format is
+            # merged. Supply the same constraint in both locations so compact
+            # JSON formatting cannot be rejected as a constraint-free request.
+            request["extra_body"]["structured_outputs"] = {
+                **({"json": schema} if schema is not None else {"json_object": True}),
+                "disable_any_whitespace": True,
+            }
         fingerprint = {
             "namespace": cache_namespace,
             "model_revision": self.runtime.get("revision"),
