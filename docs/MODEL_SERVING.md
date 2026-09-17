@@ -120,13 +120,29 @@ to eliminate every output-length retry: an eight-router pre-guard diagnostic
 finished 255 of its first 256 requests and was interrupted after one long tail.
 No completed eight-router throughput measurement is claimed from that run.
 
-Reflection can use a larger output budget. A truncated
-output is rejected and retried with a larger output allowance. Transient
+Reflection can use a larger output budget. Invalid or truncated JSON is rejected;
+each invalid output advances the sampling seed deterministically to the original
+seed plus the number of invalid outputs so far (17, 18, 19, ... by default).
+Length-limited output also doubles the output allowance, capped at 32,768 tokens,
+while retaining the original thinking budget and every input byte. A transient
+failure preserves the current seed, including a seed already advanced by an
+earlier invalid output. This avoids repeatedly sampling the same defective
+continuation solely with a longer output allowance. Transient
 network/server failures are retried with bounded backoff and, for a pool, fail
 over to another replica with the identical model revision. There are at most
 three transient failures per logical request. Read timeout is 900 seconds,
 connection timeout 20 seconds, and output-format retries remain separate from
 replica selection. Context overflow and invalid request schemas fail directly.
+
+The alternate-seed policy is recorded by `qwen_generation_policy`, included in
+the base response-cache fingerprint, and therefore invalidates earlier retry
+policy caches. Successful records contain each attempt's actual seed and the
+final seed. Invalid responses write bounded diagnostics to the sibling directory
+`llm_cache_failed_responses`, outside the successful cache tree. Diagnostics
+include finish reason, usage, seed, output allowance, request hash, and at most
+8,192 combined characters from the start and end of content/reasoning. They do
+not serialize input messages or runtime credentials; known bearer keys are
+redacted from output previews. Failed outputs never become reusable assignments.
 
 Only complete JSON objects enter the atomic response cache. Cache records
 include model revision, token usage, output allowance, and timing. They exclude

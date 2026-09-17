@@ -21,6 +21,17 @@ import httpx
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
 
+OUTPUT_RETRY_POLICY = {
+    "version": "alternate-output-seed-v1",
+    "seed_rule": "base_seed_plus_invalid_output_count",
+    "transient_errors_preserve_seed": True,
+    "length_budget_multiplier": 2,
+    "length_budget_floor": 1024,
+    "length_budget_ceiling": 32768,
+    "failed_response_preview_characters": 8192,
+}
+
+
 class InvalidModelJSON(ValueError):
     """The model did not return a complete JSON object."""
 
@@ -60,6 +71,7 @@ def qwen_generation_policy(
             "disable_any_whitespace": compact_json,
             "duplicate_response_format_constraint": compact_json,
         },
+        "output_retry_policy": dict(OUTPUT_RETRY_POLICY),
     }
     options = {
         "thinking_token_budget": thinking_token_budget,
@@ -104,6 +116,8 @@ class GraphLLM:
         self.runtime = json.loads(Path(runtime_path).read_text())
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        # Failed outputs are evidence, never reusable successful responses.
+        self.failure_dir = self.cache_dir.with_name(self.cache_dir.name + "_failed_responses")
         self._client = AsyncOpenAI(
             api_key=self.runtime["api_key"],
             base_url=self.runtime["api_base"],
@@ -169,8 +183,9 @@ class GraphLLM:
         """Return a complete JSON object; raise instead of truncating history.
 
         ``schema`` is a JSON Schema, not an OpenAI response_format wrapper.
-        Increase ``max_tokens`` for graph edits; unfinished outputs are retried
-        with twice that budget, capped at 32768 output tokens.
+        Increase ``max_tokens`` for graph edits; length-limited outputs retry
+        with twice that budget, capped at 32768. Invalid outputs advance the
+        seed by one; transient errors retain the seed of the interrupted attempt.
         """
         if not messages or max_tokens <= 0:
             raise ValueError("Nonempty messages and positive max_tokens are required")
@@ -217,6 +232,8 @@ class GraphLLM:
         fingerprint = {
             "namespace": cache_namespace,
             "model_revision": self.runtime.get("revision"),
+            "output_retry_policy": policy["output_retry_policy"],
+            "retry_limits": {"attempts": self.attempts, "transient_attempts": self.transient_attempts},
             "request": request,
         }
         encoded = json.dumps(fingerprint, sort_keys=True, ensure_ascii=False).encode()
@@ -228,7 +245,9 @@ class GraphLLM:
         existing = self._inflight.get(key)
         if existing is not None:
             return await asyncio.shield(existing)
-        task = asyncio.create_task(self._request_json(request, path, key, len(encoded)))
+        task = asyncio.create_task(self._request_json(
+            request, path, key, len(encoded), policy["output_retry_policy"]
+        ))
         self._inflight[key] = task
         try:
             return await asyncio.shield(task)
@@ -236,13 +255,68 @@ class GraphLLM:
             if task.done():
                 self._inflight.pop(key, None)
 
+    def _record_invalid_response(
+        self, request: dict[str, Any], *, key: str, attempt: int, choice: Any,
+        usage: dict[str, Any], elapsed_seconds: float, policy: dict[str, Any],
+    ) -> None:
+        """Write bounded output previews without input messages or credentials."""
+        content = getattr(choice.message, "content", None) or ""
+        reasoning = (getattr(choice.message, "reasoning", None)
+                     or getattr(choice.message, "reasoning_content", None) or "")
+        content = content if isinstance(content, str) else ""
+        reasoning = reasoning if isinstance(reasoning, str) else ""
+        for client in self._replicas:
+            secret = client.runtime.get("api_key")
+            if isinstance(secret, str) and secret:
+                content = content.replace(secret, "[REDACTED]")
+                reasoning = reasoning.replace(secret, "[REDACTED]")
+
+        def preview(text: str, limit: int) -> str:
+            if len(text) <= limit:
+                return text
+            # Both the start and tail help distinguish reasoning/format loops.
+            return text[:limit // 2] + text[-(limit - limit // 2):] if limit else ""
+
+        budget = policy["failed_response_preview_characters"]
+        content_budget = budget // 2 if content and reasoning else budget if content else 0
+        reasoning_budget = budget - content_budget
+        payload = {
+            "format": "invalid-model-response-v1", "cache_key": key,
+            "attempt": attempt, "seed": request["seed"], "max_tokens": request["max_tokens"],
+            "finish_reason": choice.finish_reason, "usage": usage,
+            "elapsed_seconds": elapsed_seconds, "recorded_at_epoch": time.time(),
+            "request_sha256": hashlib.sha256(json.dumps(
+                request, sort_keys=True, ensure_ascii=False
+            ).encode()).hexdigest(),
+            "model": self.runtime["model"], "model_revision": self.runtime.get("revision"),
+            "output_retry_policy": policy,
+            "content_preview": preview(content, content_budget),
+            "reasoning_preview": preview(reasoning, reasoning_budget),
+            "content_characters": len(content), "reasoning_characters": len(reasoning),
+            "content_truncated": len(content) > content_budget,
+            "reasoning_truncated": len(reasoning) > reasoning_budget,
+        }
+        directory = self.failure_dir / key[:2]
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"{key}.attempt-{attempt:02d}.{time.time_ns()}.json"
+        fd, temporary = tempfile.mkstemp(dir=directory, prefix=".failure-")
+        try:
+            with os.fdopen(fd, "w") as handle:
+                json.dump(payload, handle, ensure_ascii=False)
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+
     async def _request_json(
-        self, request: dict[str, Any], path: Path, key: str, request_bytes: int
+        self, request: dict[str, Any], path: Path, key: str, request_bytes: int,
+        retry_policy: dict[str, Any],
     ) -> dict[str, Any]:
         last_error: Exception | None = None
         actual_request = dict(request)
         replica_index = 0
         transient_failures = 0
+        invalid_outputs = 0
         attempt_outcomes = []
         for attempt in range(self.attempts):
             started = time.time()
@@ -259,14 +333,11 @@ class GraphLLM:
                 choice = response.choices[0]
                 attempt_outcomes.append({
                     "attempt": attempt + 1, "max_tokens": actual_request["max_tokens"],
+                    "seed": actual_request["seed"],
                     "finish_reason": choice.finish_reason, "usage": usage,
                     "elapsed_seconds": time.time() - started,
                 })
                 if choice.finish_reason != "stop":
-                    if choice.finish_reason == "length":
-                        actual_request["max_tokens"] = min(
-                            max(actual_request["max_tokens"] * 2, 1024), 32768
-                        )
                     raise InvalidModelJSON(f"Incomplete output: {choice.finish_reason}")
                 result = parse_json_object(choice.message.content or "")
                 payload = {
@@ -291,11 +362,15 @@ class GraphLLM:
                     "finish_reason": choice.finish_reason,
                     "requested_max_tokens": request["max_tokens"],
                     "actual_max_tokens": actual_request["max_tokens"],
+                    "requested_seed": request["seed"],
+                    "actual_seed": actual_request["seed"],
+                    "invalid_outputs": invalid_outputs,
+                    "output_retry_policy": retry_policy,
                     "attempt": attempt + 1,
                     "transient_failures": transient_failures,
                     "attempt_outcomes": attempt_outcomes,
                     "decoding": {
-                        name: request.get(name) for name in
+                        name: actual_request.get(name) for name in
                         ("temperature", "top_p", "presence_penalty", "seed")
                     } | request["extra_body"],
                     "elapsed_seconds": time.time() - started,
@@ -317,15 +392,37 @@ class GraphLLM:
                     # Never turn a long-history failure into input truncation.
                     raise
                 last_error = exc
+                attempt_outcomes.append({
+                    "attempt": attempt + 1, "max_tokens": actual_request["max_tokens"],
+                    "seed": actual_request["seed"], "error_type": type(exc).__name__,
+                    "status_code": exc.status_code, "elapsed_seconds": time.time() - started,
+                })
                 transient_failures += 1
                 replica_index += 1
             except (APIConnectionError, APITimeoutError) as exc:
                 last_error = exc
+                attempt_outcomes.append({
+                    "attempt": attempt + 1, "max_tokens": actual_request["max_tokens"],
+                    "seed": actual_request["seed"], "error_type": type(exc).__name__,
+                    "elapsed_seconds": time.time() - started,
+                })
                 transient_failures += 1
                 replica_index += 1
             except InvalidModelJSON as exc:
                 # Content failures are not evidence that a replica is unavailable.
                 last_error = exc
+                self._record_invalid_response(
+                    actual_request, key=key, attempt=attempt + 1, choice=choice,
+                    usage=usage, elapsed_seconds=time.time() - started, policy=retry_policy,
+                )
+                invalid_outputs += 1
+                actual_request["seed"] = request["seed"] + invalid_outputs
+                if choice.finish_reason == "length":
+                    actual_request["max_tokens"] = min(
+                        max(actual_request["max_tokens"] * retry_policy["length_budget_multiplier"],
+                            retry_policy["length_budget_floor"]),
+                        retry_policy["length_budget_ceiling"],
+                    )
             if transient_failures >= self.transient_attempts:
                 raise RuntimeError(
                     f"Inference unavailable after {transient_failures} transient failures"
