@@ -34,6 +34,7 @@ and optional graph reconciliation; it is not a claim to have invented GEPA.
 - [Full method and pseudocode](docs/FULL_CORPUS_METHOD.md)
 - [Model serving and inference provenance](docs/MODEL_SERVING.md)
 - [Research claims and limitations](docs/RESEARCH_CLAIMS.md)
+- [Qualitative review of the selected frozen graph](docs/FROZEN_GRAPH_REVIEW.md)
 - [Related work](docs/RELATED_WORK.md)
 - [Documented reflection-evidence repair](docs/REFLECTION_EVIDENCE_CORRECTION.md)
 
