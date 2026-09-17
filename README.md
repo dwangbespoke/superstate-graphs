@@ -62,8 +62,10 @@ an improved state partition, universal applicability, or learner improvement.
 The [frozen graph review](docs/FROZEN_GRAPH_REVIEW.md) records redundant additions
 and concrete contract conflicts. The [14-prefix census review](docs/CENSUS_QUALITATIVE_REVIEW.md)
 records assignment conflicts alongside consistent and ambiguous cases; it is a
-purposive post-formation inspection, not an accuracy estimate. All-corpus completion
-and reconstructed contracts are separate from this frozen test comparison.
+purposive post-formation inspection, not an accuracy estimate. The
+[ten-response audit review](docs/INDEPENDENT_AUDIT_REVIEW.md) distinguishes citation
+validity from semantic reliability in the independent LLM audits. All-corpus
+completion and reconstructed contracts are separate from this frozen test comparison.
 
 ## Reproduction
 
