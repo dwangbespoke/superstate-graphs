@@ -79,6 +79,53 @@ def md(value: Any) -> str:
     return re.sub(r"([\\|\[\]()*_`])", r"\\\1", escaped)
 
 
+def specification_changes(seed: Any, selected: Any) -> dict:
+    """Compare exact prompt strings without publishing model text or inferring behavior."""
+    components = {}
+    for key in ("state_spec", "edge_spec"):
+        before = seed.get(key) if isinstance(seed, dict) else None
+        after = selected.get(key) if isinstance(selected, dict) else None
+        before = before if isinstance(before, str) and before else None
+        after = after if isinstance(after, str) and after else None
+        components[key] = {
+            "available": before is not None and after is not None,
+            "changed": before != after if before is not None and after is not None else None,
+            "seed_sha256": hashlib.sha256(before.encode()).hexdigest()
+            if before is not None
+            else None,
+            "selected_sha256": hashlib.sha256(after.encode()).hexdigest()
+            if after is not None
+            else None,
+        }
+    state, edge = (components[key]["changed"] for key in ("state_spec", "edge_spec"))
+    scope = (
+        "unknown"
+        if state is None or edge is None
+        else "both"
+        if state and edge
+        else "state_only"
+        if state
+        else "edge_only"
+        if edge
+        else "unchanged"
+    )
+    descriptions = {
+        "unknown": "Seed-versus-selected specification changes are not fully verifiable from the available candidate strings.",
+        "both": "Both the selected state specification and edge specification differ from the seed.",
+        "state_only": "The selected state specification changed; the edge specification is byte-for-byte unchanged from the seed.",
+        "edge_only": "The selected state specification, including routing instructions, is byte-for-byte unchanged from the seed. GEPA selection changed only the edge specification.",
+        "unchanged": "The selected state and edge specifications are both byte-for-byte unchanged from the seed.",
+    }
+    return {
+        "comparison": "Exact UTF-8 prompt strings; formatting changes count as changes",
+        "scope": "Seed versus selected frozen specification, before all-corpus completion and edge reconstruction",
+        "change_scope": scope,
+        "components": components,
+        "disclosure": descriptions[scope],
+        "limitation": "Prompt-text differences alone do not establish semantic or behavioral changes.",
+    }
+
+
 def public_heldout_comparison(value: dict) -> dict:
     """Allowlist paired evaluation summaries; never copy inference rows or evidence."""
     metrics = (
@@ -976,6 +1023,9 @@ def collect_report(run_dir: Path, corpus_dir: Path) -> dict:
         "usage": collect_usage(run_dir, completion),
         "optimizer_continuations": continuations,
         "optimization": {
+            "seed_selected_specification_comparison": specification_changes(
+                seed_candidate, selected_candidate
+            ),
             "proposals_observed": attempts,
             "proposal_budget": numeric(contract.get("max_proposals")),
             "crossover_proposals_observed": sum(e.get("kind") == "crossover" for e in proposed),
@@ -1217,7 +1267,15 @@ def markdown_report(report: dict) -> str:
         "",
     ]
     comparison = report["heldout_comparison"]
-    lines += ["## Frozen seed versus selected graph", ""]
+    spec_changes = o["seed_selected_specification_comparison"]
+    lines += [
+        "## Frozen seed versus selected graph",
+        "",
+        spec_changes["disclosure"],
+        "",
+        spec_changes["scope"] + ". " + spec_changes["limitation"],
+        "",
+    ]
     if comparison["identities_and_census_verified"]:
         lines += [
             f"Both fixed graphs were evaluated on the same {md(comparison['rollouts'])} rollouts "
@@ -1803,7 +1861,12 @@ def html_report(report: dict) -> str:
         else None
     )
     comparison = report["heldout_comparison"]
-    comparison_html = "<h3>Frozen seed versus selected graph</h3>"
+    spec_changes = optimization["seed_selected_specification_comparison"]
+    comparison_html = (
+        "<h3>Frozen seed versus selected graph</h3>"
+        f"<p>{esc(spec_changes['disclosure'])}</p>"
+        f"<p>{esc(spec_changes['scope'])}. {esc(spec_changes['limitation'])}</p>"
+    )
     if comparison["identities_and_census_verified"]:
         comparison_html += (
             f"<p>The same {esc(comparison['rollouts'])} rollouts from {esc(comparison['original_tasks'])} "

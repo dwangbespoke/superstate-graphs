@@ -618,6 +618,10 @@ def test_declared_optimizer_continuation_exports_only_validated_receipt_fields(t
     manifest = exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
     assert exporter.read_json(output / "optimizer_continuations.json") == [receipt]
     provenance = exporter.read_json(output / "provenance.json")
+    changes = provenance["seed_selected_specification_comparison"]
+    assert changes["change_scope"] == "unchanged"
+    assert changes["components"]["state_spec"]["changed"] is False
+    assert changes["components"]["edge_spec"]["changed"] is False
     assert provenance["optimizer_continuations"]["validation_status"] == "valid"
     assert "optimizer_continuations.json" in manifest["files"]
     assert "RAW_" not in (output / "optimizer_continuations.json").read_text()

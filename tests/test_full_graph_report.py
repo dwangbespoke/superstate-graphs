@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+import pytest
+
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts/build_full_graph_report.py"
 SPEC = importlib.util.spec_from_file_location("full_graph_report", SCRIPT)
@@ -786,6 +788,14 @@ def test_report_distinguishes_frozen_specification_from_reconstructed_graph(tmp_
     report = report_module.build_report(run, corpus, output)
     assert report["status"] == "complete"
     stages = report["graph_stages"]
+    changes = report["optimization"]["seed_selected_specification_comparison"]
+    assert changes["change_scope"] == "edge_only"
+    assert changes["components"]["state_spec"]["changed"] is False
+    assert changes["components"]["edge_spec"]["changed"] is True
+    assert (
+        changes["components"]["state_spec"]["seed_sha256"]
+        == hashlib.sha256(seed["state_spec"].encode()).hexdigest()
+    )
     assert stages["initial_seed"]["edges"] == 0
     assert stages["selected_frozen_specification"]["states"] == 1
     assert stages["selected_frozen_specification"]["edges"] == 2
@@ -797,6 +807,52 @@ def test_report_distinguishes_frozen_specification_from_reconstructed_graph(tmp_
         assert "Selected frozen specification" in text
         assert "Final reconstructed witnessed graph" in text
         assert "not the later reconstructed witnessed graph" in text
+        assert "GEPA selection changed only the edge specification." in text
+        assert "including routing instructions, is byte-for-byte unchanged" in text
+
+
+@pytest.mark.parametrize(
+    "selected, expected_scope, state_changed, edge_changed",
+    [
+        ({"state_spec": "STATE", "edge_spec": "EDGE"}, "unchanged", False, False),
+        ({"state_spec": "NEW STATE", "edge_spec": "EDGE"}, "state_only", True, False),
+        ({"state_spec": "STATE", "edge_spec": "NEW EDGE"}, "edge_only", False, True),
+        ({"state_spec": "NEW STATE", "edge_spec": "NEW EDGE"}, "both", True, True),
+        ({"state_spec": "STATE"}, "unknown", False, None),
+        ({"state_spec": {}, "edge_spec": "EDGE"}, "unknown", None, False),
+        ({"state_spec": "", "edge_spec": "EDGE"}, "unknown", None, False),
+        (None, "unknown", None, None),
+    ],
+)
+def test_specification_comparison_is_exact_allowlisted_and_missing_is_unknown(
+    selected, expected_scope, state_changed, edge_changed
+):
+    seed = {"state_spec": "STATE", "edge_spec": "EDGE", "feedback": "RAW_PRIVATE"}
+    value = report_module.specification_changes(seed, selected)
+    assert value["change_scope"] == expected_scope
+    assert value["components"]["state_spec"]["changed"] is state_changed
+    assert value["components"]["edge_spec"]["changed"] is edge_changed
+    assert value["components"]["state_spec"]["available"] is (state_changed is not None)
+    assert "RAW_PRIVATE" not in json.dumps(value)
+    assert '"STATE"' not in json.dumps(value)
+    assert '"EDGE"' not in json.dumps(value)
+    assert "before all-corpus completion" in value["scope"]
+
+
+def test_specification_comparison_does_not_equate_json_formatting_with_exact_identity(tmp_path):
+    seed = {"state_spec": '{"states": []}', "edge_spec": '{"edges": []}'}
+    selected = {"state_spec": '{"states":[]}', "edge_spec": seed["edge_spec"]}
+    assert json.loads(seed["state_spec"]) == json.loads(selected["state_spec"])
+    assert report_module.specification_changes(seed, selected)["change_scope"] == "state_only"
+    run, corpus, output = fixture(tmp_path)
+    # A selected candidate alone does not establish the missing seed's prompt text.
+    write(run, "optimized_candidate.json", selected)
+    report = report_module.build_report(run, corpus, output)
+    changes = report["optimization"]["seed_selected_specification_comparison"]
+    assert changes["change_scope"] == "unknown"
+    assert changes["components"]["state_spec"]["seed_sha256"] is None
+    for filename in ("README.md", "report.html"):
+        assert "not fully verifiable" in (output / filename).read_text()
 
 
 def test_seed_edges_are_not_labeled_optimized(tmp_path):

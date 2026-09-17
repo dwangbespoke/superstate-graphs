@@ -921,6 +921,9 @@ def export_artifacts(
             "formation_uses_terminal_rewards": False,
             "graph_scope": "All-corpus transductive completion after frozen held-out evaluation",
             "graph_stages": report["graph_stages"],
+            "seed_selected_specification_comparison": report["optimization"][
+                "seed_selected_specification_comparison"
+            ],
             "optimizer_continuations": report["optimizer_continuations"],
             "edge_construction_scope": "Final observed endpoint-pair contracts are reconstructed after frozen evaluation; selected_candidate.json preserves the edge specification evaluated by GEPA",
             "retention_scope": "Previously evaluated training histories per candidate",
