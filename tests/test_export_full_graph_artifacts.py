@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gzip
+import copy
 import hashlib
 import importlib.util
 import json
@@ -142,7 +143,18 @@ def fixture(tmp_path):
         {"model": "Qwen/test", "histories": 6, "rollouts": 2, "api_key": "RAW_RUNTIME_SECRET"},
     )
     write(run, "optimized_candidate.json", candidate)
-    write(run, "gepa_result.json", {"candidates": [candidate], "val_aggregate_scores": [0.7]})
+    write(run, "seed_candidate.json", candidate)
+    write(
+        run,
+        "gepa_result.json",
+        {
+            "candidates": [candidate],
+            "parents": [[None]],
+            "val_aggregate_scores": [0.7],
+            "best_idx": 0,
+            "validation_schema_version": 2,
+        },
+    )
     write(
         run,
         "heldout_test.json",
@@ -616,5 +628,119 @@ def test_invalid_optimizer_continuation_cannot_be_exported_as_complete(tmp_path)
     run, corpus, output = fixture(tmp_path)
     write(run, "optimizer_continuations.json", {"reason": "RAW_INVALID_RECEIPT_SECRET"})
     with pytest.raises(ValueError, match="optimizer_continuation_receipts"):
+        exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    assert not output.exists()
+
+
+def archive_fixture(run):
+    selected = exporter.read_json(run / "optimized_candidate.json")
+    candidates = []
+    for instruction in ("Initial seed routing", "First accepted branch", "Second accepted branch"):
+        state = json.loads(selected["state_spec"])
+        state["router_instructions"] = instruction
+        candidates.append({**selected, "state_spec": json.dumps(state)})
+    candidates.append(selected)
+    result = {
+        "candidates": candidates,
+        "parents": [[None], [0], [0], [1, 2]],
+        "val_aggregate_scores": [0.1, 0.3, 0.2, 0.7],
+        "best_idx": 3,
+        "validation_schema_version": 2,
+        "best_outputs_valset": {"private": "RAW_MODEL_OUTPUT_SECRET"},
+        "val_subscores": [{"private": "RAW_PER_ROLLOUT_SECRET"}],
+        "reflection_dataset": "RAW_REFLECTION_SECRET",
+        "run_dir": "/PRIVATE/RUN/PATH",
+    }
+    write(run, "seed_candidate.json", candidates[0])
+    write(run, "gepa_result.json", result)
+    return result, candidates[0], selected
+
+
+def test_export_preserves_seed_accepted_specs_actual_parent_lineage_and_pareto_scores(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    recorded, seed, selected = archive_fixture(run)
+    manifest = exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    assert exporter.read_json(output / "seed_candidate.json") == seed
+    archive = exporter.read_json(output / "accepted_candidate_archive.json")
+    for key in (
+        "candidates",
+        "parents",
+        "val_aggregate_scores",
+        "best_idx",
+        "validation_schema_version",
+    ):
+        assert archive[key] == recorded[key]
+    assert archive["candidates"][archive["best_idx"]] == selected
+    assert archive["candidate_sha256"] == [
+        exporter.digest_bytes(exporter.encoded(c)) for c in recorded["candidates"]
+    ]
+    assert (
+        archive["source_gepa_result_sha256"]
+        == hashlib.sha256((run / "gepa_result.json").read_bytes()).hexdigest()
+    )
+    assert {"seed_candidate.json", "accepted_candidate_archive.json"} <= set(manifest["files"])
+    assert "RAW_" not in (output / "accepted_candidate_archive.json").read_text()
+    assert "/PRIVATE/RUN/PATH" not in (output / "accepted_candidate_archive.json").read_text()
+
+
+@pytest.mark.parametrize(
+    "mutate,match",
+    [
+        (lambda r: r.pop("parents"), "requires recorded"),
+        (lambda r: r["parents"].pop(), "cardinalities"),
+        (lambda r: r["val_aggregate_scores"].pop(), "cardinalities"),
+        (lambda r: r.update(best_idx=0), "best_idx"),
+        (lambda r: r["parents"].__setitem__(1, [1]), "earlier parent"),
+        (lambda r: r["parents"].__setitem__(1, [None]), "earlier parent"),
+        (lambda r: r["parents"].__setitem__(0, []), "seed parent"),
+        (lambda r: r["val_aggregate_scores"].__setitem__(1, float("nan")), "finite numbers"),
+        (lambda r: r.update(validation_schema_version=3), "schema version 2"),
+    ],
+)
+def test_archive_refuses_missing_inconsistent_or_invalid_recorded_values(tmp_path, mutate, match):
+    run, _, _ = fixture(tmp_path)
+    result, seed, selected = archive_fixture(run)
+    mutate(result)
+    with pytest.raises(ValueError, match=match):
+        exporter.accepted_candidate_archive(result, seed, selected)
+
+
+def test_archive_seed_selected_and_first_maximum_tie_rules_are_verified(tmp_path):
+    run, _, _ = fixture(tmp_path)
+    result, seed, selected = archive_fixture(run)
+    with pytest.raises(ValueError, match="index 0 differs"):
+        exporter.accepted_candidate_archive(result, selected, selected)
+    with pytest.raises(ValueError, match="best candidate differs"):
+        exporter.accepted_candidate_archive(result, seed, seed)
+    result["val_aggregate_scores"][1] = 0.7
+    with pytest.raises(ValueError, match="first-maximum"):
+        exporter.accepted_candidate_archive(result, seed, selected)
+    result["best_idx"] = 1
+    archive = exporter.accepted_candidate_archive(result, seed, result["candidates"][1])
+    assert archive["best_idx"] == 1
+
+
+def test_archive_applies_candidate_evidence_allowlist_to_all_older_versions(tmp_path):
+    run, _, _ = fixture(tmp_path)
+    result, seed, selected = archive_fixture(run)
+    old_state = json.loads(result["candidates"][1]["state_spec"])
+    old_state["states"][0]["private_feedback"] = "RAW_CANDIDATE_FEEDBACK_SECRET"
+    result["candidates"][1]["state_spec"] = json.dumps(old_state)
+    with pytest.raises(ValueError, match="Unexpected state evidence fields"):
+        exporter.accepted_candidate_archive(result, seed, selected)
+
+
+def test_final_export_does_not_reconstruct_missing_seed_or_lineage(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    (run / "seed_candidate.json").unlink()
+    with pytest.raises(ValueError, match="recorded seed_candidate"):
+        exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
+    assert not output.exists()
+    result = exporter.read_json(run / "gepa_result.json")
+    write(run, "seed_candidate.json", result["candidates"][0])
+    result = copy.deepcopy(result)
+    result.pop("best_idx")
+    write(run, "gepa_result.json", result)
+    with pytest.raises(ValueError, match="requires recorded"):
         exporter.export_artifacts(run, corpus, output, expected_counts=COUNTS)
     assert not output.exists()

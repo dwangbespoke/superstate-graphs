@@ -98,6 +98,90 @@ def _candidate(candidate: dict) -> dict:
     return candidate
 
 
+def accepted_candidate_archive(result: dict, seed: dict, selected: dict) -> dict:
+    """Publish only GEPA's recorded candidate lineage and aggregate scores (pinned schema v2)."""
+    required = (
+        "candidates",
+        "parents",
+        "val_aggregate_scores",
+        "best_idx",
+        "validation_schema_version",
+    )
+    if not isinstance(result, dict) or any(key not in result for key in required):
+        raise ValueError(
+            "Accepted candidate archive requires recorded candidates, parents, scores, best_idx, and schema version"
+        )
+    if (
+        type(result["validation_schema_version"]) is not int
+        or result["validation_schema_version"] != 2
+    ):
+        raise ValueError("Accepted candidate archive requires pinned GEPA result schema version 2")
+    candidates, parents, scores = (
+        result[key] for key in ("candidates", "parents", "val_aggregate_scores")
+    )
+    if (
+        not isinstance(candidates, list)
+        or not candidates
+        or not isinstance(parents, list)
+        or not isinstance(scores, list)
+        or len(candidates) != len(parents)
+        or len(candidates) != len(scores)
+    ):
+        raise ValueError("Accepted candidate/parent/score cardinalities must match and be nonempty")
+    validated = [_candidate(candidate) for candidate in candidates]
+    if validated[0] != _candidate(seed):
+        raise ValueError("Recorded candidate index 0 differs from seed_candidate.json")
+    if parents[0] != [None]:
+        raise ValueError("Recorded seed parent row must be [null] under pinned GEPA schema")
+    for index, row in enumerate(parents[1:], start=1):
+        if (
+            not isinstance(row, list)
+            or not row
+            or any(
+                not isinstance(parent, int) or isinstance(parent, bool) or not 0 <= parent < index
+                for parent in row
+            )
+            or len(row) != len(set(row))
+        ):
+            raise ValueError(
+                "Each accepted candidate must reference distinct earlier parent indices"
+            )
+    if any(
+        isinstance(score, bool) or not isinstance(score, (int, float)) or not math.isfinite(score)
+        for score in scores
+    ):
+        raise ValueError("Accepted candidate aggregate Pareto scores must be finite numbers")
+    best = result["best_idx"]
+    if (
+        not isinstance(best, int)
+        or isinstance(best, bool)
+        or not 0 <= best < len(candidates)
+        or best != max(range(len(scores)), key=scores.__getitem__)
+    ):
+        raise ValueError(
+            "Recorded best_idx disagrees with pinned GEPA first-maximum score selection"
+        )
+    if validated[best] != _candidate(selected):
+        raise ValueError("Recorded best candidate differs from selected_candidate.json")
+    return {
+        "format": "gepa-accepted-graph-candidate-archive-v1",
+        "validation_schema_version": result["validation_schema_version"],
+        "best_idx": best,
+        "candidates": validated,
+        "parents": [list(row) for row in parents],
+        "val_aggregate_scores": list(scores),
+        "candidate_sha256": [digest_bytes(encoded(candidate)) for candidate in validated],
+        "scope": "Seed and candidates admitted to the recorded GEPA state; excludes rejected proposals and does not imply every archived candidate remains on the Pareto frontier",
+        "index_scope": "Zero-based recorded candidate indices, not proposal-attempt numbers; continuation receipt boundaries cannot be mapped to candidate indices without separate evidence",
+        "score_scope": "Aggregate Pareto-validation scores used adaptively during optimization, not held-out test scores",
+        "omitted_fields": [
+            "per-rollout scores and outputs",
+            "reflection datasets and feedback",
+            "run-directory paths",
+        ],
+    }
+
+
 def _reward_provenance(record: dict) -> dict:
     return select(
         record,
@@ -344,6 +428,11 @@ def export_artifacts(
     selected = _candidate(load("optimized_candidate.json"))
     if digest_bytes(encoded(selected)) != report["frozen_test"]["candidate_hash"]:
         raise ValueError("Selected specification differs from the frozen-test candidate")
+    if not (run_dir / "seed_candidate.json").is_file():
+        raise ValueError("Final candidate archive requires the recorded seed_candidate.json")
+    seed = _candidate(load("seed_candidate.json"))
+    archive = accepted_candidate_archive(load("gepa_result.json"), seed, selected)
+    archive["source_gepa_result_sha256"] = source_hashes["run/gepa_result.json"]
     stages = [_candidate(stage) for stage in graph.get("routing_stages", [selected])]
     if not stages or stages[0] != selected:
         raise ValueError("Routing-stage chain does not begin with the selected candidate")
@@ -580,6 +669,8 @@ def export_artifacts(
         save_jsonl("witnesses.jsonl.gz", sorted(witnesses, key=lambda w: w["transition_id"]))
         save_jsonl("rollouts.jsonl.gz", sorted(rollout_rows, key=lambda row: row["id"]))
         save_json("selected_candidate.json", selected)
+        save_json("seed_candidate.json", seed)
+        save_json("accepted_candidate_archive.json", archive)
         save_json("routing_stages.json", stages)
         save_json("splits.json", split_export)
         save_json("state_reward_variance.json", _variance(variance))
@@ -859,6 +950,7 @@ def export_artifacts(
                 "| witnesses.jsonl.gz | Every transition, with exact history/state endpoints and rollout identity |\n"
                 "| rollouts.jsonl.gz | Complete rollout metadata and reward provenance, excluding messages |\n"
                 "| selected_candidate.json; routing_stages.json | Exact selected specification and ordered completion stages |\n"
+                "| seed_candidate.json; accepted_candidate_archive.json | Validated baseline and every recorded GEPA candidate specification, parent indices, and aggregate Pareto scores; no reflection evidence |\n"
                 "| splits.json | Full original-task and rollout split membership |\n"
                 "| state_reward_variance.json | Full outcome moments, weightings, intervals, and manual-grade sensitivity |\n"
                 "| evaluation_summary.json; provenance.json | Observed evaluation summaries and source fingerprints |\n"
@@ -870,6 +962,13 @@ def export_artifacts(
                 "each line is one JSON object. The `history_id` and `transition_id` columns provide lossless joins. "
                 "The first routing stage is the optimized candidate; later stages classify only histories "
                 "left unassigned by earlier stages. Final graph completion is transductive.\n\n"
+                "The accepted-candidate archive preserves the final GEPA result's original indices, "
+                "parent rows, and aggregate Pareto-validation scores. Its candidate zero equals the "
+                "published seed, and best_idx equals the published selected candidate. It does not "
+                "include rejected proposals or imply that all archived versions remain Pareto-optimal. "
+                "Candidate indices are not proposal-attempt numbers; continuation boundaries do not "
+                "directly index the candidate archive. "
+                "Any declared method continuation remains disclosed separately in optimizer_continuations.json.\n\n"
                 "The source is the audited historical Horizon/Sonnet 4.5 counterpart corpus, not a rerun "
                 "of the current public benchmark. One terminal zero comes from documented manual trace review. "
                 "Formation excludes rewards; descriptive reward statistics are attached afterward. "
