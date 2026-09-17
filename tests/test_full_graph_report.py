@@ -694,3 +694,43 @@ def test_usage_reports_conflicting_copies_and_missing_records_without_guessing_t
     assert usage["final_responses"]["prompt_tokens"] == 0
     assert usage["recorded_response_attempts"]["completion_tokens"] == 0
     assert "RAW_" not in json.dumps(usage)
+
+
+def test_usage_separates_invalid_output_responses_from_transport_failures(tmp_path):
+    run, corpus, output = fixture(tmp_path)
+    name, row = cache_record(
+        run,
+        "invalid-output-transport-success",
+        attempts=[
+            {
+                "attempt": 1,
+                "finish_reason": "length",
+                "usage": {"prompt_tokens": 100, "completion_tokens": 10},
+            },
+            {"attempt": 2, "error_type": "APIConnectionError", "error": "RAW_TRANSPORT_SECRET"},
+            {
+                "attempt": 3,
+                "finish_reason": "stop",
+                "usage": {"prompt_tokens": 100, "completion_tokens": 5},
+            },
+        ],
+    )
+    write(run / "operational_restarts/copy", name, row)
+    report = report_module.build_report(run, corpus, output)
+    usage = report["usage"]
+    assert usage["unique_successful_request_keys"] == 1
+    assert usage["duplicate_cache_copies_not_added"] == 1
+    assert usage["final_responses"]["responses"] == 1
+    assert usage["recorded_response_attempts"] == {
+        "responses": 2,
+        "prompt_tokens": 200,
+        "completion_tokens": 15,
+        "responses_missing_usage": 0,
+    }
+    assert usage["recorded_transport_failures"] == 1
+    assert usage["by_model"][0]["recorded_transport_failures"] == 1
+    assert usage["unclassified_attempt_entries_not_counted_as_responses"] == 0
+    for filename in ("README.md", "report.html"):
+        content = (output / filename).read_text()
+        assert "Recorded transport failures in retained successful request chains: 1" in content
+        assert "RAW_" not in content

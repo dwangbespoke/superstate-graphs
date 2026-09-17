@@ -111,7 +111,7 @@ settings](https://huggingface.co/Qwen/Qwen3.5-35B-A3B-FP8#best-practices) and
 [vLLM reasoning budget
 control](https://docs.vllm.ai/en/latest/features/reasoning_outputs/#thinking-budget-control).
 
-Structured requests disable arbitrary JSON formatting whitespace. vLLM requires
+Structured requests ask vLLM to disable arbitrary JSON formatting whitespace. vLLM requires
 the same JSON constraint in both `response_format` and `structured_outputs` to
 accept this formatting option. The resolved policy records that duplication and
 the whitespace setting so higher-level caches invalidate when it changes. This
@@ -119,6 +119,8 @@ guard passed the seven endpoint regressions under thinking mode. It is not prove
 to eliminate every output-length retry: an eight-router pre-guard diagnostic
 finished 255 of its first 256 requests and was interrupted after one long tail.
 No completed eight-router throughput measurement is claimed from that run.
+The later production-tail diagnostic showed repeated tab characters despite
+that flag, so it must not be treated as a guaranteed prevention mechanism.
 
 Reflection can use a larger output budget. Invalid or truncated JSON is rejected;
 each invalid output advances the sampling seed deterministically to the original
@@ -143,6 +145,13 @@ include finish reason, usage, seed, output allowance, request hash, and at most
 8,192 combined characters from the start and end of content/reasoning. They do
 not serialize input messages or runtime credentials; known bearer keys are
 redacted from output previews. Failed outputs never become reusable assignments.
+
+The exact previously stalled prefix (103,164 input tokens) was re-evaluated with
+this retry policy on the same server. Seed 17 exhausted 2,048 output tokens:
+486 were reasoning tokens, followed by an incomplete JSON evidence field and a
+tab-character loop. Seed 18 then returned a complete assignment in 3.65 seconds
+using 533 tokens; the entire two-attempt request took 16.87 seconds. This is
+evidence of recovery for that request, not a guarantee against every future tail.
 
 Only complete JSON objects enter the atomic response cache. Cache records
 include model revision, token usage, output allowance, and timing. They exclude

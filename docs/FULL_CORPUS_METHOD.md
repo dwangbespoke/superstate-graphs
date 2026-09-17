@@ -306,6 +306,10 @@ all saved response attempts in each successful request chain, including output
 retries. The final response is included once in the latter view. Older records
 without an attempt ledger contribute only their saved final response. Conflicting
 copies of one key are flagged and excluded from token totals.
+Transport-error entries in a saved attempt ledger are counted separately; they
+are not returned model responses and add no reported tokens. This count covers
+only failures recorded within retained successful request chains, not every
+transport failure experienced during the experiment.
 
 Current/final and archived process counters are displayed separately and never
 added to the cache totals or summed across snapshots. This prevents both counting

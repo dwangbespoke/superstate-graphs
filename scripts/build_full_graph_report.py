@@ -263,13 +263,31 @@ def collect_usage(run_dir: Path, completion: dict | None = None) -> dict:
                     and attempts[-1].get("finish_reason") == "stop"
                     and tokens(attempts[-1].get("usage")) == final_usage
                 )
+                response_attempts = (
+                    [item for item in attempts if "finish_reason" in item]
+                    if complete_attempt_ledger
+                    else []
+                )
+                transport_failures = (
+                    sum("error_type" in item and "finish_reason" not in item for item in attempts)
+                    if complete_attempt_ledger
+                    else 0
+                )
                 record = {
                     "model": safe_text(raw.get("model")),
                     "revision": safe_text(raw.get("model_revision")),
                     "final_usage": final_usage,
-                    "recorded_attempt_usage": [tokens(item.get("usage")) for item in attempts]
+                    "recorded_attempt_usage": [
+                        tokens(item.get("usage")) for item in response_attempts
+                    ]
                     if complete_attempt_ledger
                     else [final_usage],
+                    "recorded_transport_failures": transport_failures,
+                    "unclassified_attempt_entries": len(attempts)
+                    - len(response_attempts)
+                    - transport_failures
+                    if complete_attempt_ledger
+                    else 0,
                     "complete_attempt_ledger": complete_attempt_ledger,
                     "finished_at_epoch": numeric(raw.get("finished_at_epoch")),
                 }
@@ -283,7 +301,7 @@ def collect_usage(run_dir: Path, completion: dict | None = None) -> dict:
                 invalid_files += 1
     final_totals, attempt_totals = empty_totals(), empty_totals()
     model_totals = {}
-    ledger_count = 0
+    ledger_count = transport_failure_count = unclassified_attempt_count = 0
     digest = hashlib.sha256()
     for key, record in sorted(records.items()):
         if key in conflicts:
@@ -301,12 +319,16 @@ def collect_usage(run_dir: Path, completion: dict | None = None) -> dict:
                 "successful_cached_requests": 0,
                 "final_responses": empty_totals(),
                 "recorded_response_attempts": empty_totals(),
+                "recorded_transport_failures": 0,
             },
         )
         model["successful_cached_requests"] += 1
         add(final_totals, record["final_usage"])
         add(model["final_responses"], record["final_usage"])
         ledger_count += record["complete_attempt_ledger"]
+        transport_failure_count += record["recorded_transport_failures"]
+        model["recorded_transport_failures"] += record["recorded_transport_failures"]
+        unclassified_attempt_count += record["unclassified_attempt_entries"]
         for usage in record["recorded_attempt_usage"]:
             add(attempt_totals, usage)
             add(model["recorded_response_attempts"], usage)
@@ -360,6 +382,8 @@ def collect_usage(run_dir: Path, completion: dict | None = None) -> dict:
         "request_chains_with_final_response_only": len(records) - len(conflicts) - ledger_count,
         "final_responses": final_totals,
         "recorded_response_attempts": attempt_totals,
+        "recorded_transport_failures": transport_failure_count,
+        "unclassified_attempt_entries_not_counted_as_responses": unclassified_attempt_count,
         "by_model": [model_totals[key] for key in sorted(model_totals)],
         "cache_metadata_sha256": digest.hexdigest(),
         "process_snapshots": snapshots,
@@ -367,6 +391,7 @@ def collect_usage(run_dir: Path, completion: dict | None = None) -> dict:
         "actual_billing_available": False,
         "interpretation": [
             "Final-response totals count each usable cache key once. Recorded-attempt totals replace, rather than add to, final-response totals and include saved output retries.",
+            "Recorded transport failures are counted separately within retained successful request chains. They are not returned model responses and contribute no reported tokens; unclassified attempt entries are also excluded from response totals.",
             "Process counters overlap cached records and are shown separately without summing across snapshots or roles. Completion counters take precedence over duplicate current usage files.",
             "A process's requests counter counts returned API responses, including invalid-output responses; it is not a complete count of attempted network requests.",
             "Calls that never produced a retained cache record, deleted or overwritten records, diagnostics outside this run, and missing token metadata are not fully represented.",
@@ -1110,6 +1135,7 @@ def markdown_report(report: dict) -> str:
         f"Unique successful request keys: {md(usage['unique_successful_request_keys'])}. "
         f"Duplicate cache copies excluded: {md(usage['duplicate_cache_copies_not_added'])}. "
         f"Conflicting keys excluded from token totals: {md(usage['conflicting_request_keys_excluded_from_token_totals'])}.",
+        f"Recorded transport failures in retained successful request chains: {md(usage['recorded_transport_failures'])}.",
         "",
         "| Cache accounting scope | Recorded responses | Prompt tokens | Completion tokens | Responses missing usage |",
         "|---|---:|---:|---:|---:|",
@@ -1533,6 +1559,7 @@ Available graph: {esc(graph["artifact"])}.</p><p>Observed transitions: {esc(grap
 <p>Execution here means two reference queries ran on a new synthetic DuckDB fixture and agreed. It does not establish learner success or reproduce official benchmark verification.</p></section>
 <section><h2>Inference usage accounting</h2><p>{esc(usage["scope"])}.</p>
 <p>Unique successful request keys: {esc(usage["unique_successful_request_keys"])}. Duplicate cache copies excluded: {esc(usage["duplicate_cache_copies_not_added"])}. Conflicting keys excluded from token totals: {esc(usage["conflicting_request_keys_excluded_from_token_totals"])}.</p>
+<p>Recorded transport failures in retained successful request chains: {esc(usage["recorded_transport_failures"])}.</p>
 <table><thead><tr><th>Cache accounting scope</th><th>Recorded responses</th><th>Prompt tokens</th><th>Completion tokens</th><th>Responses missing usage</th></tr></thead><tbody>{usage_rows}</tbody></table>
 <p>Process snapshots overlap the cache totals and are not added to them.</p><div class="scroll"><table><thead><tr><th>Snapshot</th><th>Role</th><th>Returned responses</th><th>Cache hits</th><th>Prompt tokens</th><th>Completion tokens</th><th>Retries</th></tr></thead><tbody>{process_rows}</tbody></table></div>
 <ul>{"".join("<li>" + esc(text) + "</li>" for text in usage["interpretation"])}</ul></section>
