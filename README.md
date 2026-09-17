@@ -1,5 +1,25 @@
 # Superstate Graphs
 
+**Full-corpus formation:** the current research pipeline uses 1,030 archived
+Sonnet 4.5 trajectories across 103 Data Eng Bench task families, yielding
+37,532 complete history prefixes. It jointly optimizes explicit state and edge
+specifications with GEPA and performs an exhaustive full-prefix assignment pass.
+See [the full-corpus method](docs/FULL_CORPUS_METHOD.md) for split definitions,
+optimization, coverage retention, independent checks, and variance estimation;
+see [model serving](docs/MODEL_SERVING.md) for bounded Qwen inference on Modal.
+Run outputs and measured results are recorded separately from this design.
+
+```bash
+uv sync --extra dev
+uv run python -m superstate_graphs.full_corpus \
+  --dataset-root ../data/data_eng_bench_sonnet45 --output results/full_graph/corpus
+uv run python -m superstate_graphs.full_graph \
+  --dataset ../data/data_eng_bench_sonnet45 --output results/full_graph/run_v1
+```
+
+The earlier small feasibility study remains documented below. Its results must
+not be conflated with the full-corpus experiment.
+
 An end-to-end research prototype for turning recurring decisions in an agent's
 experience into reusable task-construction targets.
 
