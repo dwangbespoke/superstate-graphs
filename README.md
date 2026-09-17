@@ -1,105 +1,101 @@
 # Superstate Graphs
 
-**Full-corpus formation:** the current research pipeline uses 1,030 archived
-Sonnet 4.5 trajectories across 103 Data Eng Bench task families, yielding
-37,532 complete history prefixes. It jointly optimizes explicit state and edge
-specifications with GEPA and performs an exhaustive full-prefix assignment pass.
-See [the full-corpus method](docs/FULL_CORPUS_METHOD.md) for split definitions,
-optimization, coverage retention, independent checks, and variance estimation;
-see [model serving](docs/MODEL_SERVING.md) for bounded Qwen inference on Modal.
-Run outputs and measured results are recorded separately from this design.
-The [report and publication handoff](docs/FULL_CORPUS_METHOD.md#report-and-publication-handoff)
-describes the complete graph export, executable fixtures, and exact census checks.
+Experience-grounded graphs of local decision situations, learned from complete
+agent histories with GEPA. The graph supplies explicit directed operation
+contracts for downstream task construction. Terminal outcomes are attached only
+after formation to estimate the reward variance within each superstate.
+
+The full experiment uses **1,030 archived Sonnet 4.5 trajectories from 103 Data
+Eng Bench task families**, with ten trajectories per task. The lossless corpus
+contains **37,532 histories and 36,502 action–observation groups**. Every history
+includes the original query and a complete prefix; commands sharing one aggregate
+observation advance the history once. No embedding, summary, or sampled
+representative replaces a history during final assignment.
+
+## Method
+
+1. Split original tasks into 73 training, 15 Pareto-selection, and 15 test tasks.
+2. Induce an initial state and edge specification from grounded training examples.
+3. Use GEPA to jointly revise both specifications. One rollout is one evaluation
+   example; each minibatch contains six rollouts from different original tasks.
+   Children must retain all previously classified training history IDs.
+4. Compare the selected frozen candidate with the seed on the untouched test
+   tasks, then classify the entire corpus. Add explicit definitions for residual
+   uncovered histories in a separately labeled transductive completion stage.
+5. Preserve every observed transition, audit proposed reusable contracts, estimate
+   outcome variance, and construct small executable tasks from supported paths.
+
+Routing uses **Qwen3.5-35B-A3B-FP8**; graph discovery, reflection, semantic judging,
+and task proposals use **Qwen3.5-122B-A10B-FP8**. Model revisions, full request
+identities, accepted graph versions, and operational continuation receipts are
+recorded. This is a graph-specific application of GEPA with historical retention
+and optional graph reconciliation; it is not a claim to have invented GEPA.
+
+- [Full method and pseudocode](docs/FULL_CORPUS_METHOD.md)
+- [Model serving and inference provenance](docs/MODEL_SERVING.md)
+- [Research claims and limitations](docs/RESEARCH_CLAIMS.md)
+- [Related work](docs/RELATED_WORK.md)
+- [Documented reflection-evidence repair](docs/REFLECTION_EVIDENCE_CORRECTION.md)
+
+## Reproduction
+
+Python 3.12 and an authenticated Modal account are required for inference.
+The historical source trajectories are supplied separately; the current public
+benchmark is not a replacement for those archived instructions and observations.
 
 ```bash
 uv sync --extra dev
 uv run python -m superstate_graphs.full_corpus \
   --dataset-root ../data/data_eng_bench_sonnet45 --output results/full_graph/corpus
+```
+
+Launch the router and teacher as described in [model serving](docs/MODEL_SERVING.md),
+wait for their authenticated readiness markers, then run:
+
+```bash
 uv run python -m superstate_graphs.full_graph \
-  --dataset ../data/data_eng_bench_sonnet45 --output results/full_graph/run_v1
+  --dataset ../data/data_eng_bench_sonnet45 \
+  --output results/full_graph/run_v1 \
+  --runtime results/runtime/graph.json \
+  --teacher-runtime results/runtime/graph-teacher.json \
+  --proposals 100 --minibatch 6 --optimization-hours 2
 ```
 
-The earlier small feasibility study remains documented below. Its results must
-not be conflated with the full-corpus experiment.
-
-An end-to-end research prototype for turning recurring decisions in an agent's
-experience into reusable task-construction targets.
-
-Pipeline: natural rollouts → prefix-only history records → GEPA-evaluated
-superstates → observed transition graph → cross-task paths → executable tasks.
-
-The formation objective is coherent decision sharing and useful cross-task
-composition. Terminal rewards are attached after formation for descriptive
-superstate outcome statistics, not used to assign histories or optimize a value
-function. Pooled variance is an encounter-level statistic; it does not prove
-each individual history has the same continuation difficulty.
-
-The September 16 pilot is documented in [the results note](docs/OVERNIGHT_RESULTS.md)
-and [interactive report](reports/overnight-poc.html). It includes two executable
-critic-assisted examples, with no observed high-variance groups or GEPA validation
-gain. Failed automatic generation attempts remain recorded.
-
-## Initial experiment
-
-- Environment: Snowflake-Labs/data-eng-bench, DuckDB shared retail warehouse.
-- Source revision: `a3278ad102829a6084dde086244a0ef665a8011c`.
-- Rollout learner and frozen classifier: Qwen3.5-9B.
-- GEPA reflective proposer: Qwen3.5-35B-A3B-FP8.
-- Initial target: a small real rollout collection, several evaluated prompt
-  revisions, a graph with cross-task witnesses, and 2–3 constructed task examples.
-- This is a feasibility study, not a benchmark leaderboard submission or a
-  demonstrated training improvement.
-
-## Setup
+Repeat `--runtime` and `--teacher-runtime` to use multiple identical replicas.
+The recorded production fleet has eight routers and two teachers. The proposal
+count is a ceiling, and the optimization deadline is checked between iterations.
+Existing checkpoints resume only when their corpus, candidate, inference, and
+optimizer identities match. Raw inputs, inference caches, runtime credentials,
+and local work products are ignored by Git.
 
 ```bash
-uv sync --extra dev
-GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/Snowflake-Labs/data-eng-bench.git vendor/data-eng-bench
-git -C vendor/data-eng-bench checkout a3278ad102829a6084dde086244a0ef665a8011c
-uv run python scripts/fetch_database.py
+uv run pytest -q
+uv run python scripts/build_full_graph_report.py
+uv run python scripts/export_full_graph_artifacts.py --include-tasks
 ```
 
-Code, prompts, configuration, and concise reports are versioned. Credentials,
-benchmark copies, databases, raw trajectories, and large artifacts remain outside
-Git. Downloaded benchmark material retains its upstream license.
+Export requires an exact completed history and transition census; it also validates
+the selected candidate against GEPA's accepted archive and verifies executable
+task receipts. See the [publication handoff](docs/FULL_CORPUS_METHOD.md#report-and-publication-handoff)
+for artifact locations and integrity checks.
 
-See `docs/EXPERIMENT.md` for the execution plan and interpretation boundaries.
+## Interpretation
 
-## Run the proof of concept
+Observed transitions establish that a progression occurred in the corpus. They
+do not establish that its operation applies to every member of the source state.
+Reusable contracts receive separate sampled semantic checks, with counterexamples
+and unknown judgments retained. These checks use a separate prompt but the same
+Qwen model family. Successful local task execution is additional, narrower evidence.
 
-```bash
-uv run python -m superstate_graphs.prepare
-SG_MODEL_ROLE=learner uv run modal run scripts/modal_models.py --duration-seconds 10800
-# In a second terminal after the runtime endpoint file appears:
-uv run python scripts/run_rollouts.py --name pilot-v2
-# Bring up the reflector when rollouts are available:
-SG_MODEL_ROLE=reflector uv run modal run scripts/modal_models.py --duration-seconds 7200
-uv run python scripts/fetch_runtime_database.py
-uv run python -m superstate_graphs.analyze \
-  --rollouts results/rollouts/pilot-v2 --output results/analysis_v1 \
-  --exclude-task dbt-consolidate --max-metric-calls 144
-uv run python scripts/generate_dbt_examples.py --analysis results/analysis_v1 \
-  --count 3 --max-paths 6 --judge-uncached
-# Supported initial-decision fallback, explicitly not sequential graph traversal:
-uv run python scripts/export_shared_start_paths.py --analysis results/analysis_v1
-uv run python scripts/generate_dbt_examples.py --analysis results/analysis_v1 \
-  --paths results/analysis_v1/shared_start_paths.json --count 3 --max-paths 3 --resume
-uv run python scripts/build_report.py --analysis results/analysis_v1
-uv run python scripts/export_review_bundle.py --analysis results/analysis_v1
-```
+Reward variance is descriptive. Repeated visits from a trajectory are correlated,
+so the analysis reports history-weighted, unique-trajectory, and equal-task
+statistics, with task-level bootstrap intervals. A high pooled variance does not
+establish identical long-term decision problems or training value. No downstream
+post-training lift has been measured.
 
-Endpoint files in `results/runtime/` contain temporary credentials and are ignored
-by Git. Stop a server by creating `results/runtime/learner.stop` or
-`results/runtime/reflector.stop`; remove that marker explicitly before restarting.
+## Earlier feasibility study
 
-`python scripts/fetch_runtime_database.py` exports the pristine materialized
-benchmark database for local task construction. Mutable dbt tasks preserve project
-configuration decisions; the optional `generate_examples.py` backend supports
-read-only SQL targets. Formats and limitations are documented in `docs/TASK_FORMAT.md`.
-
-The recorded pilot contains six tasks and twelve rollouts. The core analysis
-excludes `dbt-consolidate`, which uses separate CSV inputs and a separate database,
-leaving five tasks and ten rollouts. This world-scope correction and the observed
-failures are documented in `docs/PILOT_AUDIT.md`. All nine graded core outcomes
-are failures; one is ungraded. Task construction therefore uses supported groups
-as a fallback in this pilot, with no claim of observed high-variance discovery.
+The September 16 pilot used a separate, small Qwen-generated rollout collection.
+Its [reproduction instructions](docs/PILOT_REPRODUCTION.md),
+[results note](docs/OVERNIGHT_RESULTS.md), and [interactive report](reports/overnight-poc.html)
+remain available. Its measurements must not be combined with the full-corpus run.
